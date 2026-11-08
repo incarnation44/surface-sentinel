@@ -1,0 +1,37 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.16, pytest-8.4.2, pluggy-1.7.0 -- C:\surface-sentinel\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\surface-sentinel
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.16.0
+collecting ... collected 26 items
+
+tests/unit/test_cli.py::test_version_flag PASSED                         [  3%]
+tests/unit/test_cli.py::test_doctor_prints_json PASSED                   [  7%]
+tests/unit/test_cli.py::test_no_command_returns_usage_error PASSED       [ 11%]
+tests/unit/test_cli.py::test_unknown_command_is_rejected PASSED          [ 15%]
+tests/unit/test_config.py::test_valid_config_hash_is_stable PASSED       [ 19%]
+tests/unit/test_config.py::test_default_config_hash_is_stable PASSED     [ 23%]
+tests/unit/test_config.py::test_canonical_toml_round_trips PASSED        [ 26%]
+tests/unit/test_config.py::test_unknown_top_level_key_rejected PASSED    [ 30%]
+tests/unit/test_config.py::test_unknown_section_key_rejected PASSED      [ 34%]
+tests/unit/test_config.py::test_missing_section_rejected PASSED          [ 38%]
+tests/unit/test_config.py::test_schema_version_mismatch_rejected PASSED  [ 42%]
+tests/unit/test_config.py::test_ok_max_must_be_less_than_ng_min PASSED   [ 46%]
+tests/unit/test_config.py::test_kernels_must_be_odd PASSED               [ 50%]
+tests/unit/test_config.py::test_background_kernel_range_must_be_ordered PASSED [ 53%]
+tests/unit/test_config.py::test_bool_is_not_accepted_as_integer PASSED   [ 57%]
+tests/unit/test_config.py::test_invalid_roi_mode_rejected PASSED         [ 61%]
+tests/unit/test_config.py::test_hash_changes_with_value PASSED           [ 65%]
+tests/unit/test_config.py::test_load_config_from_file PASSED             [ 69%]
+tests/unit/test_config.py::test_load_config_invalid_toml PASSED          [ 73%]
+tests/unit/test_config.py::test_load_config_missing_file PASSED          [ 76%]
+tests/unit/test_config.py::test_parse_does_not_mutate_input PASSED       [ 80%]
+tests/unit/test_contracts.py::test_stage_order_is_fixed PASSED           [ 84%]
+tests/unit/test_contracts.py::test_status_values_include_error_but_run_status_does_not PASSED [ 88%]
+tests/unit/test_contracts.py::test_error_codes_are_stable PASSED         [ 92%]
+tests/unit/test_contracts.py::test_sample_result_is_json_serializable PASSED [ 96%]
+tests/unit/test_contracts.py::test_sample_result_allows_error_fields PASSED [100%]
+
+============================= 26 passed in 0.26s ==============================

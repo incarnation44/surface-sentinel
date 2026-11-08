@@ -1,0 +1,59 @@
+T02 — marker-filtered collection: -m "not data and not browser"
+==============================================================
+HEAD: f5cb58b7d85bfba4c53d102ef7cd05d90bb8f3ff
+Working tree at run time: clean
+
+$ cd C:/surface-sentinel && uv run pytest --collect-only -q -m "not data and not browser" > docs/evidence/T02_pytest_marker_collected_ids.txt 2>&1
+exit code: 0 (recorded immediately after the command, before any other command ran)
+
+--- STDOUT+STDERR (verbatim) ---
+tests/unit/test_cli.py: 4
+tests/unit/test_config.py: 17
+tests/unit/test_contracts.py: 5
+
+(as above: addopts "-q" + explicit "-q" => verbosity -2 => per-file counts: 4 + 17 + 5 = 26;
+ pytest prints no "deselected" segment on the closed-quiet summary line)
+
+--- SUPPLEMENTARY: exact node IDs after filtering ---
+$ uv run pytest --collect-only -m "not data and not browser"   (exit code: 0)
+--- verbatim ---
+tests/unit/test_cli.py::test_version_flag
+tests/unit/test_cli.py::test_doctor_prints_json
+tests/unit/test_cli.py::test_no_command_returns_usage_error
+tests/unit/test_cli.py::test_unknown_command_is_rejected
+tests/unit/test_config.py::test_valid_config_hash_is_stable
+tests/unit/test_config.py::test_default_config_hash_is_stable
+tests/unit/test_config.py::test_canonical_toml_round_trips
+tests/unit/test_config.py::test_unknown_top_level_key_rejected
+tests/unit/test_config.py::test_unknown_section_key_rejected
+tests/unit/test_config.py::test_missing_section_rejected
+tests/unit/test_config.py::test_schema_version_mismatch_rejected
+tests/unit/test_config.py::test_ok_max_must_be_less_than_ng_min
+tests/unit/test_config.py::test_kernels_must_be_odd
+tests/unit/test_config.py::test_background_kernel_range_must_be_ordered
+tests/unit/test_config.py::test_bool_is_not_accepted_as_integer
+tests/unit/test_config.py::test_invalid_roi_mode_rejected
+tests/unit/test_config.py::test_hash_changes_with_value
+tests/unit/test_config.py::test_load_config_from_file
+tests/unit/test_config.py::test_load_config_invalid_toml
+tests/unit/test_config.py::test_load_config_missing_file
+tests/unit/test_config.py::test_parse_does_not_mutate_input
+tests/unit/test_contracts.py::test_stage_order_is_fixed
+tests/unit/test_contracts.py::test_status_values_include_error_but_run_status_does_not
+tests/unit/test_contracts.py::test_error_codes_are_stable
+tests/unit/test_contracts.py::test_sample_result_is_json_serializable
+tests/unit/test_contracts.py::test_sample_result_allows_error_fields
+
+26 tests collected in 0.04s
+
+--- DESELECTION ---
+Deselected count: 0
+Deselected node IDs: none (empty list)
+Proof 1: filtered collection (26) == unfiltered collection (26) => 0 tests removed by the filter.
+Proof 2: `grep -rn "pytest.mark\.(data|browser|slow)" tests --include=*.py` => no matches
+         (grep exit status 1). tests/conftest.py contains no marker logic, only a sys.path
+         insert for src/. The markers are declared in pyproject.toml [tool.pytest.ini_options]
+         but no test currently applies them, so the expression selects everything.
+Proof 3: `uv run pytest --collect-only -m "not data and not browser" -v` prints
+         "collected 26 items" with no "/ N deselected" segment (pytest omits that segment
+         exactly when zero tests are deselected).

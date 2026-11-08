@@ -1,0 +1,38 @@
+T02 — exit codes for every command
+==================================
+Revision: f5cb58b7d85bfba4c53d102ef7cd05d90bb8f3ff (main), working tree clean before testing.
+shell: MSYS bash on win32; `$?` captured immediately after each command, before anything else ran.
+No `tee` was used, so `$?` is pytest/uv's own status.
+
+ #  command                                                     exit  stdout log
+ 1  git rev-parse HEAD                                           0    (inline)
+ 2  git status --porcelain                                       0    (inline)
+ 3  uv run pytest --collect-only -q                              0    docs/evidence/T02_pytest_collected_ids.txt
+ 4  uv run pytest -vv                                            0    docs/evidence/T02_pytest_full.log
+ 5  uv run pytest --collect-only -q -m "not data and not browser" 0   docs/evidence/T02_pytest_marker_collected_ids.txt
+ 6  uv run pytest -vv -m "not data and not browser"               0   docs/evidence/T02_pytest_marker_full.log
+
+Measured exit codes (verbatim echo from each invocation):
+  command 1: EXIT_CODE=0
+  command 2: EXIT=0
+  command 3: EXIT_CODE=0
+  command 4: EXIT_CODE=0
+  command 5: EXIT_CODE=0
+  command 6: EXIT_CODE=0
+
+Result summary lines:
+  command 4: 26 passed in 0.27s
+  command 6: 26 passed in 0.26s
+  collection (3,5): 26 tests collected
+
+Supplementary commands run to resolve the 25-vs-26 question (also exit 0):
+  uv run pytest --collect-only                       -> 26 tests collected in 0.03s
+  uv run pytest --collect-only -m "not data and not browser" -> 26 tests collected in 0.04s
+  venv python -m pytest --collect-only  (tree at 8abc17f)    -> 25 tests collected in 0.10s
+  venv python -m pytest                 (tree at 8abc17f)    -> 25 passed in 0.31s
+  grep -rn "pytest.mark\.(data|browser|slow)" tests --include=*.py -> no matches (grep exit 1)
+
+Environment captured from the logs:
+  platform win32 -- Python 3.11.16, pytest-8.4.2, pluggy-1.7.0
+  rootdir C:\surface-sentinel, configfile pyproject.toml, testpaths tests
+  plugins: anyio-4.16.0

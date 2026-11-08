@@ -1,0 +1,117 @@
+TEST TREE AT 8abc17f (pre-amend)
+===============================
+
+$ git archive 8abc17f | tar -x -C .t02_old && cd .t02_old && C:/surface-sentinel/.venv/Scripts/python.exe -m pytest --collect-only
+exit code: 0
+--- verbatim ---
+tests/unit/test_cli.py::test_version_flag
+tests/unit/test_cli.py::test_doctor_prints_json
+tests/unit/test_cli.py::test_no_command_returns_usage_error
+tests/unit/test_cli.py::test_unknown_command_is_rejected
+tests/unit/test_config.py::test_valid_config_hash_is_stable
+tests/unit/test_config.py::test_default_config_hash_is_stable
+tests/unit/test_config.py::test_unknown_top_level_key_rejected
+tests/unit/test_config.py::test_unknown_section_key_rejected
+tests/unit/test_config.py::test_missing_section_rejected
+tests/unit/test_config.py::test_schema_version_mismatch_rejected
+tests/unit/test_config.py::test_ok_max_must_be_less_than_ng_min
+tests/unit/test_config.py::test_kernels_must_be_odd
+tests/unit/test_config.py::test_background_kernel_range_must_be_ordered
+tests/unit/test_config.py::test_bool_is_not_accepted_as_integer
+tests/unit/test_config.py::test_invalid_roi_mode_rejected
+tests/unit/test_config.py::test_hash_changes_with_value
+tests/unit/test_config.py::test_load_config_from_file
+tests/unit/test_config.py::test_load_config_invalid_toml
+tests/unit/test_config.py::test_load_config_missing_file
+tests/unit/test_config.py::test_parse_does_not_mutate_input
+tests/unit/test_contracts.py::test_stage_order_is_fixed
+tests/unit/test_contracts.py::test_status_values_include_error_but_run_status_does_not
+tests/unit/test_contracts.py::test_error_codes_are_stable
+tests/unit/test_contracts.py::test_sample_result_is_json_serializable
+tests/unit/test_contracts.py::test_sample_result_allows_error_fields
+
+25 tests collected in 0.10s
+
+$ cd .t02_old && C:/surface-sentinel/.venv/Scripts/python.exe -m pytest
+exit code: 0
+--- verbatim (full) ---
+.........................                                                [100%]
+25 passed in 0.31s
+git diff 8abc17f f5cb58b (previous commit -> revision under test)
+=========================================================
+ src/surface_sentinel/config.py | 33 ++++++++++++++++++++++++++++++---
+ tests/unit/test_config.py      |  8 ++++++++
+ 2 files changed, 38 insertions(+), 3 deletions(-)
+
+diff --git a/src/surface_sentinel/config.py b/src/surface_sentinel/config.py
+index b8fea2d..678b40b 100644
+--- a/src/surface_sentinel/config.py
++++ b/src/surface_sentinel/config.py
+@@ -101,12 +101,39 @@ class AppConfig:
+     def to_dict(self) -> dict[str, Any]:
+         return asdict(self)
+ 
+-    def canonical_json(self) -> str:
+-        return json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"), ensure_ascii=True)
++    def canonical_toml(self) -> str:
++        lines = [f"schema_version = {_toml_literal(self.schema_version)}", ""]
++        for section_name in (
++            "input",
++            "roi",
++            "preprocess",
++            "candidates",
++            "scoring",
++            "quality",
++            "decision",
++            "artifacts",
++        ):
++            section = getattr(self, section_name)
++            lines.append(f"[{section_name}]")
++            for field in fields(section):
++                lines.append(f"{field.name} = {_toml_literal(getattr(section, field.name))}")
++            lines.append("")
++        return "\n".join(lines)
+ 
+     @property
+     def config_hash(self) -> str:
+-        return hashlib.sha256(self.canonical_json().encode("utf-8")).hexdigest()
++        return hashlib.sha256(self.canonical_toml().encode("utf-8")).hexdigest()
++
++
++def _toml_literal(value: Any) -> str:
++    if isinstance(value, bool):
++        return "true" if value else "false"
++    if isinstance(value, (int, float)):
++        return repr(value)
++    if isinstance(value, str):
++        return json.dumps(value, ensure_ascii=True)
++    raise ConfigError(f"cannot serialize config value {value!r}")
++
+ 
+ 
+ def default_config() -> AppConfig:
+diff --git a/tests/unit/test_config.py b/tests/unit/test_config.py
+index 44ee601..b2d24ba 100644
+--- a/tests/unit/test_config.py
++++ b/tests/unit/test_config.py
+@@ -91,6 +91,14 @@ def test_default_config_hash_is_stable() -> None:
+     assert default_config().config_hash == default_config().config_hash
+ 
+ 
++def test_canonical_toml_round_trips() -> None:
++    config = parse_config(base_data())
++    reparsed = parse_config(tomllib.loads(config.canonical_toml()))
++    assert reparsed == config
++    assert reparsed.config_hash == config.config_hash
++
++
++
+ def test_unknown_top_level_key_rejected() -> None:
+     data = base_data()
+     data["extra"] = {}
+
+git log (only one reachable commit; 8abc17f reachable only via reflog)
+f5cb58b refs/heads/main@{0}: commit (amend): chore(repo): bootstrap SS-DESIGN-1.1 scaffold
+f5cb58b HEAD@{0}: commit (amend): chore(repo): bootstrap SS-DESIGN-1.1 scaffold
+8abc17f refs/heads/main@{1}: commit (initial): chore(repo): bootstrap SS-DESIGN-1.1 scaffold
+8abc17f HEAD@{1}: commit (initial): chore(repo): bootstrap SS-DESIGN-1.1 scaffold

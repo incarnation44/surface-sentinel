@@ -1,0 +1,33 @@
+T02 — git revision evidence
+===========================
+Environment: win32, C:\surface-sentinel, Python 3.11.16 (uv-managed .venv)
+
+--- git rev-parse HEAD ---
+f5cb58b7d85bfba4c53d102ef7cd05d90bb8f3ff
+
+--- git status -sb (branch line) ---
+## main
+
+--- git status --porcelain (BEFORE any test run) ---
+<empty — working tree clean>
+exit code: 0
+
+--- git status --porcelain (AFTER all test runs) ---
+?? .t02_ids.txt
+?? .t02_ids_marker.txt
+?? .t02_ids_old.txt
+?? .t02_old/
+?? .t02_old_full.log
+?? docs/
+exit code: 0
+(All entries are untracked scratch/evidence files created by this verification task.
+ No tracked file — source, tests, configs, pyproject.toml — was modified. The scratch
+ entries were removed after the evidence was captured; only docs/evidence/ remains.)
+
+--- HEAD after all runs ---
+f5cb58b7d85bfba4c53d102ef7cd05d90bb8f3ff
+(unchanged; no commit, tag, push or remote created)
+
+--- reflog (relevant to the 25-vs-26 question) ---
+f5cb58b refs/heads/main@{0}: commit (amend): chore(repo): bootstrap SS-DESIGN-1.1 scaffold
+8abc17f refs/heads/main@{1}: commit (initial): chore(repo): bootstrap SS-DESIGN-1.1 scaffold
