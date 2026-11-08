@@ -1,0 +1,23 @@
+Surface Sentinel
+Copyright (c) 2026 Surface Sentinel contributors
+
+This project is designed to use the Kolektor Surface-Defect Dataset 2
+(KolektorSDD2 / KSDD2), published by the Visual Cognitive Systems Laboratory
+(ViCoS Lab), University of Ljubljana.
+
+Dataset page:
+https://www.vicos.si/resources/kolektorsdd2/
+
+Dataset license:
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+(CC BY-NC-SA 4.0). Commercial use requires a separate agreement with the
+dataset authors. No dataset images are redistributed in this repository.
+
+Citation:
+Bozic, J., Tabernik, D., and Skocaj, D. (2021).
+Mixed supervision for surface-defect detection: from weakly to fully
+supervised learning. Computers in Industry.
+
+The MIT license in LICENSE applies to this repository's source code and
+documentation, not to the KolektorSDD2 dataset or to derived images that
+remain subject to CC BY-NC-SA 4.0.

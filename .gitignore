@@ -1,0 +1,41 @@
+# Python
+.venv/
+.venv-train/
+yolov8n*.pt
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Project data and run artifacts
+data/raw/
+data/derived/
+runs/*
+!runs/.gitkeep
+
+# Local tooling
+.work/
+outputs/
+.env
+.env.*
+node_modules/
+playwright-report/
+test-results/
+docs/assets/*.pdf
+
+# 로컬 측정 로그 (커밋하지 않는다)
+docs/evidence/SYNC_*.log
+docs/evidence/T06_*.log
+docs/evidence/T05_*
+# T05 채택 검증 산출물 (커밋 대상)
+!docs/evidence/t05_adopted.jsonl
+!docs/evidence/t05_adopted_verify.json
+docs/evidence/tune_grid.jsonl
+docs/evidence/failure_cases/
+docs/evidence/REPORT_CORRECTION_*
