@@ -209,6 +209,168 @@ def _add_data_parser(subparsers: Any) -> None:
     )
 
 
+def _add_eval_parser(subparsers: Any) -> None:
+    eval_parser = subparsers.add_parser(
+        "eval",
+        help="tune 표본에서 P/B0·B1·B2, A1–A6, 튜닝 그리드를 실행합니다.",
+        description=(
+            "tune 분할에서 defect 전수 + good 층화 표본을 골라 기준선(B0/B1/B2), "
+            "제안 파이프라인(P), ablation(A1–A6), 튜닝 그리드(최대 24후보)를 "
+            "실행하고 지표·실패 색인·보고서를 남깁니다. 모든 비율에 분모와 "
+            "Wilson 95% 구간을 붙입니다. test/official_test는 봉인되어 거부합니다."
+        ),
+    )
+    eval_parser.add_argument(
+        "--split",
+        default="tune",
+        help="평가 분할 (tune만 허용, test/official_test는 거부).",
+    )
+    eval_parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/base.toml"),
+        help="기본 설정 TOML 경로 (기본 configs/base.toml). 수정하지 않는다.",
+    )
+    eval_parser.add_argument(
+        "--splits-dir",
+        type=Path,
+        default=Path("data/splits"),
+        help="tune.csv가 있는 디렉터리 (기본 data/splits).",
+    )
+    eval_parser.add_argument(
+        "--raw-root",
+        type=Path,
+        default=Path("data/raw/kolektorsdd2"),
+        help="원본 데이터 루트 (기본 data/raw/kolektorsdd2).",
+    )
+    eval_parser.add_argument(
+        "--evidence-dir",
+        type=Path,
+        default=Path("docs/evidence"),
+        help="증거 산출물 디렉터리 (기본 docs/evidence).",
+    )
+    eval_parser.add_argument(
+        "--report-dir",
+        type=Path,
+        default=Path("docs/reports"),
+        help="보고서 디렉터리 (기본 docs/reports).",
+    )
+    eval_parser.add_argument(
+        "--candidate-dir",
+        type=Path,
+        default=Path("configs/candidates"),
+        help="추천 후보 config를 쓸 디렉터리 (기본 configs/candidates).",
+    )
+    eval_parser.add_argument(
+        "--good-target",
+        type=int,
+        default=None,
+        help="good 층화 표본 수 (기본 500).",
+    )
+    eval_parser.add_argument(
+        "--no-baselines",
+        dest="baselines",
+        action="store_false",
+        help="B0/B1/B2를 실행하지 않습니다.",
+    )
+    eval_parser.add_argument(
+        "--no-ablations",
+        dest="ablations",
+        action="store_false",
+        help="A1–A6를 실행하지 않습니다.",
+    )
+    eval_parser.add_argument(
+        "--no-pilot",
+        dest="pilot",
+        action="store_false",
+        help="후보(candidates) 축 파일럿을 실행하지 않습니다.",
+    )
+    eval_parser.add_argument(
+        "--no-cache",
+        dest="use_cache",
+        action="store_false",
+        help="캐시를 읽지 않고 새로 만듭니다(같은 키 파일은 덮어쓴다).",
+    )
+    eval_parser.add_argument(
+        "--no-overlays",
+        dest="overlays",
+        action="store_false",
+        help="실패 색인용 오버레이를 만들지 않습니다.",
+    )
+
+
+def _cmd_eval(args: argparse.Namespace) -> int:
+    from .evaluation.runner import EvalError, SealedSplitAccess, run_evaluation
+
+    try:
+        result = run_evaluation(
+            split=args.split,
+            config_path=args.config,
+            splits_dir=args.splits_dir,
+            raw_root=args.raw_root,
+            evidence_dir=args.evidence_dir,
+            report_dir=args.report_dir,
+            candidate_dir=args.candidate_dir,
+            good_target=args.good_target,
+            ablations=args.ablations,
+            baselines=args.baselines,
+            pilot=args.pilot,
+            use_cache=args.use_cache,
+            overlays=args.overlays,
+        )
+    except SealedSplitAccess as exc:
+        _print_error(str(exc))
+        return EXIT_SEALED
+    except EvalError as exc:
+        _print_error(str(exc))
+        return int(exc.exit_code)
+    except FileNotFoundError as exc:
+        _print_error(f"산출물을 저장하지 못했습니다: {exc}")
+        return EXIT_STORAGE
+
+    proposal = result.by_name("P")
+    print(f"표본: defect {result.plan.defect_taken} (전수) + good {result.plan.good_taken} (층화)")
+    print(
+        "P: escape {} / false-NG {} / review {}".format(
+            proposal.image["defect_escape_rate"].formatted(),
+            proposal.image["good_false_ng_rate"].formatted(),
+            proposal.image["review_rate"].formatted(),
+        )
+    )
+    for report in result.reports:
+        if report.name == "P":
+            continue
+        print(
+            "{}: escape {} / false-NG {}".format(
+                report.name,
+                report.image["defect_escape_rate"].formatted(),
+                report.image["good_false_ng_rate"].formatted(),
+            )
+        )
+    best = result.pilot_best
+    if best is not None:
+        print(
+            f"추천 후보: {result.adopted_label} "
+            f"(escape {_pct_text(best.escape)} / false-NG {_pct_text(best.false_ng)}"
+            f" / review {_pct_text(best.review)})"
+        )
+    else:
+        grid_best = result.selection.best
+        if grid_best is not None:
+            print(
+                f"그리드 최선: {grid_best.candidate_id} "
+                f"(escape {_pct_text(grid_best.escape)} / false-NG "
+                f"{_pct_text(grid_best.false_ng)} / review {_pct_text(grid_best.review)})"
+            )
+    for key, value in result.paths.items():
+        print(f"{key}: {value}")
+    return EXIT_OK
+
+
+def _pct_text(value: float | None) -> str:
+    return "-" if value is None else f"{value:.4f}"
+
+
 def _add_inspect_parser(subparsers: Any) -> None:
     inspect_parser = subparsers.add_parser(
         "inspect",
@@ -442,6 +604,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_data_parser(subparsers)
     _add_inspect_parser(subparsers)
     _add_batch_parser(subparsers)
+    _add_eval_parser(subparsers)
     _add_defect_map_parser(subparsers)
     return parser
 
@@ -721,6 +884,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_inspect(args)
     if args.command == "batch":
         return _cmd_batch(args)
+    if args.command == "eval":
+        return _cmd_eval(args)
     if args.command == "defect-map":
         return _cmd_defect_map(args)
     parser.print_help(sys.stdout)
