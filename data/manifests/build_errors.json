@@ -1,0 +1,33 @@
+{
+  "counts": {
+    "canonical_rows": 3335,
+    "decode_errors": 0,
+    "defect": 357,
+    "duplicate_rows": 1,
+    "good": 2979,
+    "groups": 3335,
+    "mask_missing": 0,
+    "mask_shape_mismatch": 0,
+    "max_group_canonical": 1,
+    "max_group_rows": 2,
+    "official_test": 1004,
+    "official_train": 2332,
+    "pyb_files": 5,
+    "total_rows": 3336
+  },
+  "errors": [],
+  "group_stats": {
+    "dhash_threshold": 2,
+    "group_rebuild_applied": false,
+    "group_size_cap_ratio": 0.02,
+    "group_size_cap_rows": 66.72,
+    "groups": 3335,
+    "groups_over_cap": 0,
+    "max_group_canonical": 1,
+    "max_group_rows": 2
+  },
+  "manifest_path": "data\\manifests\\dataset_manifest.csv",
+  "raw_root": "data\\raw\\kolektorsdd2",
+  "success": true,
+  "warnings": []
+}

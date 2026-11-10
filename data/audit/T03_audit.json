@@ -1,0 +1,282 @@
+{
+  "contact_sheet": {
+    "columns": 8,
+    "defect_rows": 214,
+    "good_rows": 120,
+    "path": "data\\derived\\contact_sheets\\tune_contact_sheet.png",
+    "selection": "tune 결함 전체(최대 400장) + tune 정상에서 정렬 후 균등 간격 표본 120장",
+    "thumb_height": 150,
+    "total_rows": 334
+  },
+  "counts": {
+    "canonical": {
+      "canonical_rows": 3335,
+      "defect": 356,
+      "duplicate_rows": 0,
+      "good": 2979,
+      "official_test": 1004,
+      "official_train": 2331,
+      "total_rows": 3335
+    },
+    "groups": 3335,
+    "manifest": {
+      "canonical_rows": 3335,
+      "defect": 357,
+      "duplicate_rows": 1,
+      "good": 2979,
+      "official_test": 1004,
+      "official_train": 2332,
+      "total_rows": 3336
+    },
+    "non_canonical_sample_ids": [
+      "10301 (copy)"
+    ],
+    "official_test": {
+      "defect": 110,
+      "good": 894
+    },
+    "official_train": {
+      "defect": 246,
+      "good": 2085
+    }
+  },
+  "group_stats": {
+    "decoded_for_dhash": 3336,
+    "dhash_threshold": 2,
+    "group_count_matches_manifest": true,
+    "group_size_cap_ratio": 0.02,
+    "group_size_cap_rows": 66.72,
+    "groups": 3335,
+    "groups_over_cap": 0,
+    "manifest_group_count": 3335,
+    "max_group_rows": 2
+  },
+  "image_stats": {
+    "channels": {
+      "3": 3336
+    },
+    "dtypes": {
+      "uint8": 3336
+    },
+    "formats": {
+      "PNG": 3336
+    },
+    "height_max": 665,
+    "height_min": 597,
+    "image_count": 3336,
+    "width_max": 241,
+    "width_min": 184
+  },
+  "l_checks": {
+    "L1": {
+      "detail": "tune/test original_id 교집합",
+      "status": "PASS",
+      "value": 0
+    },
+    "L2": {
+      "detail": "tune/test image_sha256 교집합",
+      "status": "PASS",
+      "value": 0
+    },
+    "L3": {
+      "detail": "tune/test group_id 교집합",
+      "status": "PASS",
+      "value": 0
+    },
+    "L4": {
+      "detail": "그룹 상속/일관성 위반",
+      "status": "PASS",
+      "value": 0
+    },
+    "L5": {
+      "detail": "test.csv 해시와 test.sha256 일치",
+      "status": "PASS",
+      "value": 1
+    },
+    "L6": {
+      "detail": "T03 범위에서는 run 로그를 만들지 않습니다.",
+      "status": "NOT_APPLICABLE",
+      "value": 0
+    },
+    "L7": {
+      "detail": "공식 test와 내부 test/tune 중복(보고만, 튜닝 없음)",
+      "overlap": {
+        "internal_test": {
+          "groups": 425,
+          "samples": 425
+        },
+        "internal_tune": {
+          "groups": 579,
+          "samples": 579
+        }
+      },
+      "status": "REPORTED",
+      "value": 1004
+    },
+    "L8": {
+      "detail": "라벨/마스크 일치",
+      "status": "PASS",
+      "value": 0
+    },
+    "official_test_identity": {
+      "detail": "official_test.csv 행 집합/라벨/defect_pixels/group_id/original_id 일치",
+      "extra": 0,
+      "mismatch": 0,
+      "missing": 0,
+      "status": "PASS",
+      "value": 0
+    },
+    "split_report": {
+      "detail": "split_report.json 분할 sha256과 split_hash 재계산 검증",
+      "status": "PASS",
+      "value": 0
+    }
+  },
+  "mask_stats": {
+    "defect_masks_empty": 0,
+    "defect_masks_nonempty": 357,
+    "good_masks_empty": 2979,
+    "good_masks_nonempty": 0,
+    "mask_count": 3336,
+    "mask_sha_duplicate_groups": 42,
+    "max_duplicate_mask_sha_rows": 2
+  },
+  "ok": true,
+  "sealed_test_accessed": false,
+  "split": {
+    "counts": {
+      "canonical": {
+        "canonical_rows": 3335,
+        "defect": 356,
+        "duplicate_rows": 0,
+        "good": 2979,
+        "official_test": 1004,
+        "official_train": 2331,
+        "total_rows": 3335
+      },
+      "manifest": {
+        "canonical_rows": 3335,
+        "defect": 357,
+        "duplicate_rows": 1,
+        "good": 2979,
+        "official_test": 1004,
+        "official_train": 2332,
+        "total_rows": 3336
+      },
+      "official_test": {
+        "canonical_rows": 1004,
+        "defect": 110,
+        "duplicate_rows": 0,
+        "good": 894,
+        "official_test": 1004,
+        "official_train": 0,
+        "total_rows": 1004
+      },
+      "official_test_identity": {
+        "actual_rows": 1004,
+        "expected_rows": 1004,
+        "extra": 0,
+        "mismatch": 0,
+        "missing": 0
+      },
+      "test": {
+        "canonical_rows": 1334,
+        "defect": 142,
+        "duplicate_rows": 0,
+        "good": 1192,
+        "official_test": 425,
+        "official_train": 909,
+        "total_rows": 1334
+      },
+      "tune": {
+        "canonical_rows": 2001,
+        "defect": 214,
+        "duplicate_rows": 0,
+        "good": 1787,
+        "official_test": 579,
+        "official_train": 1422,
+        "total_rows": 2001
+      }
+    },
+    "ok": true,
+    "overlap": {
+      "internal_test": {
+        "groups": 425,
+        "samples": 425
+      },
+      "internal_tune": {
+        "groups": 579,
+        "samples": 579
+      }
+    },
+    "p_test": 142,
+    "report": {
+      "adjustments": [],
+      "design_version": "SS-DESIGN-1.1",
+      "dhash_threshold": 2,
+      "group_rebuild_applied": false,
+      "group_size_cap_ratio": 0.02,
+      "manifest": {
+        "canonical": {
+          "canonical_rows": 3335,
+          "defect": 356,
+          "duplicate_rows": 0,
+          "good": 2979,
+          "official_test": 1004,
+          "official_train": 2331,
+          "total_rows": 3335
+        },
+        "canonical_rows": 3335,
+        "defect": 357,
+        "duplicate_rows": 1,
+        "good": 2979,
+        "official_test": 1004,
+        "official_train": 2332,
+        "total_rows": 3336
+      },
+      "official_test_overlap": {
+        "internal_test": {
+          "groups": 425,
+          "samples": 425
+        },
+        "internal_tune": {
+          "groups": 579,
+          "samples": 579
+        }
+      },
+      "p_test_min": 100,
+      "seed": 42,
+      "split_hash": "2490f3cacd80e7a8cd3b9756bad67d21a8e841b4f3bff06bae3c324bf0ffb314",
+      "split_hash_recipe": "sha256(canonical_json({seed,test_ratio_target,p_test_min,dhash_threshold,tune_sha256,test_sha256,official_test_sha256}))",
+      "splits": {
+        "official_test": {
+          "defect": 110,
+          "good": 894,
+          "rows": 1004,
+          "sha256": "060bd376189cefb296e07e4b2874d5719ba13fe27ac9fc80f47a1db5e1fbc7a8"
+        },
+        "test": {
+          "defect": 142,
+          "good": 1192,
+          "rows": 1334,
+          "sha256": "c467b8a71d616fc0bd9c093dad7eed20f28088e53480c1c1de81aa16d4614962"
+        },
+        "tune": {
+          "defect": 214,
+          "good": 1787,
+          "rows": 2001,
+          "sha256": "399e50eb61b32f5a60f2c069a38fdafd383260df4c8d2e94089e7bea4512e463"
+        }
+      },
+      "test_ratio_target": 0.4,
+      "warnings": []
+    },
+    "test_ratio": 0.4,
+    "violations": [],
+    "warnings": []
+  },
+  "violations": [],
+  "warnings": [
+    "마스크 sha256은 빈 마스크 등에서 중복되므로 중복 그룹 키로 사용하지 않았습니다. 중복 마스크 해시 그룹: 42개"
+  ]
+}

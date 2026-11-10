@@ -1,0 +1,61 @@
+{
+  "adjustments": [],
+  "design_version": "SS-DESIGN-1.1",
+  "dhash_threshold": 2,
+  "group_rebuild_applied": false,
+  "group_size_cap_ratio": 0.02,
+  "manifest": {
+    "canonical": {
+      "canonical_rows": 3335,
+      "defect": 356,
+      "duplicate_rows": 0,
+      "good": 2979,
+      "official_test": 1004,
+      "official_train": 2331,
+      "total_rows": 3335
+    },
+    "canonical_rows": 3335,
+    "defect": 357,
+    "duplicate_rows": 1,
+    "good": 2979,
+    "official_test": 1004,
+    "official_train": 2332,
+    "total_rows": 3336
+  },
+  "official_test_overlap": {
+    "internal_test": {
+      "groups": 425,
+      "samples": 425
+    },
+    "internal_tune": {
+      "groups": 579,
+      "samples": 579
+    }
+  },
+  "p_test_min": 100,
+  "seed": 42,
+  "split_hash": "2490f3cacd80e7a8cd3b9756bad67d21a8e841b4f3bff06bae3c324bf0ffb314",
+  "split_hash_recipe": "sha256(canonical_json({seed,test_ratio_target,p_test_min,dhash_threshold,tune_sha256,test_sha256,official_test_sha256}))",
+  "splits": {
+    "official_test": {
+      "defect": 110,
+      "good": 894,
+      "rows": 1004,
+      "sha256": "060bd376189cefb296e07e4b2874d5719ba13fe27ac9fc80f47a1db5e1fbc7a8"
+    },
+    "test": {
+      "defect": 142,
+      "good": 1192,
+      "rows": 1334,
+      "sha256": "c467b8a71d616fc0bd9c093dad7eed20f28088e53480c1c1de81aa16d4614962"
+    },
+    "tune": {
+      "defect": 214,
+      "good": 1787,
+      "rows": 2001,
+      "sha256": "399e50eb61b32f5a60f2c069a38fdafd383260df4c8d2e94089e7bea4512e463"
+    }
+  },
+  "test_ratio_target": 0.4,
+  "warnings": []
+}
