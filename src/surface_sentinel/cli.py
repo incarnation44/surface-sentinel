@@ -23,6 +23,11 @@ from .analysis.defect_map import (
     render_heatmap,
     write_stats,
 )
+from .batch import (
+    BatchError,
+    SealedSplitError,
+    run_batch,
+)
 from .config import CONFIG_SCHEMA_VERSION, ConfigError, load_config
 from .contracts import ErrorCode, Status
 from .io.audit import (
@@ -252,6 +257,108 @@ def _add_inspect_parser(subparsers: Any) -> None:
     )
 
 
+def _add_batch_parser(subparsers: Any) -> None:
+    batch_parser = subparsers.add_parser(
+        "batch",
+        help="tune 분할을 배치 실행하고 run 디렉터리를 원자적으로 만듭니다.",
+        description=(
+            "tune 분할을 순차 실행해 runs/<run_id>/ 아래에 run.json, "
+            "results.jsonl, summary.csv, summary.json, 설정/manifest 스냅샷, "
+            "로그, 오버레이를 남깁니다. 저장은 임시 디렉터리 → fsync → "
+            "os.replace 순서이며, 실패하면 최종 디렉터리를 남기지 않습니다. "
+            "test/official_test는 봉인되어 거부합니다."
+        ),
+    )
+    batch_parser.add_argument(
+        "--split",
+        default="tune",
+        help="데이터 분할 이름 (tune만 허용, test/official_test는 거부).",
+    )
+    batch_parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/base.toml"),
+        help="설정 TOML 경로 (기본 configs/base.toml).",
+    )
+    batch_parser.add_argument(
+        "--manifest",
+        type=Path,
+        default=Path("data/manifests/dataset_manifest.csv"),
+        help="manifest CSV 경로 (기본 data/manifests/dataset_manifest.csv).",
+    )
+    batch_parser.add_argument(
+        "--splits-dir",
+        type=Path,
+        default=Path("data/splits"),
+        help="tune.csv가 있는 디렉터리 (기본 data/splits).",
+    )
+    batch_parser.add_argument(
+        "--raw-root",
+        type=Path,
+        default=Path("data/raw/kolektorsdd2"),
+        help="원본 데이터 루트 (기본 data/raw/kolektorsdd2).",
+    )
+    batch_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("runs"),
+        help="run 디렉터리를 만들 상위 경로 (기본 runs).",
+    )
+    batch_parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="검증용 샘플 수 제한 (기본 전체).",
+    )
+    batch_parser.add_argument(
+        "--run-id",
+        default=None,
+        help="run_id 직접 지정 (형식 YYYYMMDDTHHMMSSZ-<config_hash8>-<split>[-NN]).",
+    )
+
+
+def _cmd_batch(args: argparse.Namespace) -> int:
+    try:
+        outcome = run_batch(
+            split=args.split,
+            config_path=args.config,
+            manifest_path=args.manifest,
+            splits_dir=args.splits_dir,
+            raw_root=args.raw_root,
+            output_dir=args.output_dir,
+            limit=args.limit,
+            run_id=args.run_id,
+        )
+    except SealedSplitError as exc:
+        _print_error(str(exc))
+        return EXIT_SEALED
+    except BatchError as exc:
+        _print_error(str(exc))
+        return int(exc.exit_code)
+    except OSError as exc:
+        _print_error(f"run 디렉터리를 저장하지 못했습니다: {exc}")
+        return EXIT_STORAGE
+    except Exception as exc:  # 미완료 run은 저장 실패와 같은 종료 코드를 쓴다
+        _print_error(f"배치를 완료하지 못했습니다: {exc}")
+        return EXIT_STORAGE
+
+    counts = outcome.counts
+    timing = outcome.timing
+    print(f"run: {outcome.run_id}")
+    print(f"경로: {outcome.run_dir}")
+    print(f"상태: {outcome.status.value}")
+    print(
+        f"샘플 {counts['samples']:,} / OK {counts['ok']:,} / NG {counts['ng']:,} "
+        f"/ REVIEW {counts['review']:,} / ERROR {counts['error']:,}"
+    )
+    print(
+        f"샘플 처리 p50 {timing['p50_ms']:.3f} ms / p95 {timing['p95_ms']:.3f} ms "
+        f"/ wall {timing['wall_ms']:.3f} ms"
+    )
+    print(f"오버레이: {counts['overlays']:,}")
+    return outcome.exit_code
+
+
 def _add_defect_map_parser(subparsers: Any) -> None:
     map_parser = subparsers.add_parser(
         "defect-map",
@@ -334,6 +441,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("doctor", help="환경 진단 정보를 JSON으로 출력합니다.")
     _add_data_parser(subparsers)
     _add_inspect_parser(subparsers)
+    _add_batch_parser(subparsers)
     _add_defect_map_parser(subparsers)
     return parser
 
@@ -611,6 +719,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_data(args)
     if args.command == "inspect":
         return _cmd_inspect(args)
+    if args.command == "batch":
+        return _cmd_batch(args)
     if args.command == "defect-map":
         return _cmd_defect_map(args)
     parser.print_help(sys.stdout)
