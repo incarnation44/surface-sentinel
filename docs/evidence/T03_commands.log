@@ -1,0 +1,195 @@
+======================================================================
+## 1. T02+T03 unit tests
+## $ uv run pytest tests/unit -vv
+## started_utc: 2026-11-10T03:15:20Z
+----------------------------------------------------------------------
+============================= test session starts =============================
+platform win32 -- Python 3.11.16, pytest-8.4.2, pluggy-1.7.0 -- D:\surface-sentinel\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\surface-sentinel
+configfile: pyproject.toml
+plugins: anyio-4.16.0
+collecting ... collected 78 items
+
+tests/unit/test_audit.py::test_verify_dataset_passes_on_consistent_data PASSED [  1%]
+tests/unit/test_audit.py::test_verify_dataset_detects_corrupt_image PASSED [  2%]
+tests/unit/test_audit.py::test_verify_dataset_detects_mask_shape_mismatch PASSED [  3%]
+tests/unit/test_audit.py::test_verify_dataset_detects_empty_defect_mask PASSED [  5%]
+tests/unit/test_audit.py::test_verify_dataset_detects_nonempty_good_mask PASSED [  6%]
+tests/unit/test_audit.py::test_contact_sheet_uses_tune_rows_and_rejects_test PASSED [  7%]
+tests/unit/test_audit.py::test_audit_reports_are_written PASSED          [  8%]
+tests/unit/test_audit.py::test_verify_dataset_uses_split_report_dhash_threshold PASSED [ 10%]
+tests/unit/test_audit.py::test_audit_fails_when_split_verification_fails PASSED [ 11%]
+tests/unit/test_cli.py::test_version_flag PASSED                         [ 12%]
+tests/unit/test_cli.py::test_doctor_prints_json PASSED                   [ 14%]
+tests/unit/test_cli.py::test_no_command_returns_usage_error PASSED       [ 15%]
+tests/unit/test_cli.py::test_unknown_command_is_rejected PASSED          [ 16%]
+tests/unit/test_cli_data.py::test_data_help_is_korean_and_lists_subcommands PASSED [ 17%]
+tests/unit/test_cli_data.py::test_data_without_subcommand_returns_usage_error PASSED [ 19%]
+tests/unit/test_cli_data.py::test_data_commands_run_end_to_end_on_synthetic_dataset PASSED [ 20%]
+tests/unit/test_config.py::test_valid_config_hash_is_stable PASSED       [ 21%]
+tests/unit/test_config.py::test_default_config_hash_is_stable PASSED     [ 23%]
+tests/unit/test_config.py::test_canonical_toml_round_trips PASSED        [ 24%]
+tests/unit/test_config.py::test_unknown_top_level_key_rejected PASSED    [ 25%]
+tests/unit/test_config.py::test_unknown_section_key_rejected PASSED      [ 26%]
+tests/unit/test_config.py::test_missing_section_rejected PASSED          [ 28%]
+tests/unit/test_config.py::test_schema_version_mismatch_rejected PASSED  [ 29%]
+tests/unit/test_config.py::test_ok_max_must_be_less_than_ng_min PASSED   [ 30%]
+tests/unit/test_config.py::test_kernels_must_be_odd PASSED               [ 32%]
+tests/unit/test_config.py::test_background_kernel_range_must_be_ordered PASSED [ 33%]
+tests/unit/test_config.py::test_bool_is_not_accepted_as_integer PASSED   [ 34%]
+tests/unit/test_config.py::test_invalid_roi_mode_rejected PASSED         [ 35%]
+tests/unit/test_config.py::test_hash_changes_with_value PASSED           [ 37%]
+tests/unit/test_config.py::test_load_config_from_file PASSED             [ 38%]
+tests/unit/test_config.py::test_load_config_invalid_toml PASSED          [ 39%]
+tests/unit/test_config.py::test_load_config_missing_file PASSED          [ 41%]
+tests/unit/test_config.py::test_parse_does_not_mutate_input PASSED       [ 42%]
+tests/unit/test_contracts.py::test_stage_order_is_fixed PASSED           [ 43%]
+tests/unit/test_contracts.py::test_status_values_include_error_but_run_status_does_not PASSED [ 44%]
+tests/unit/test_contracts.py::test_error_codes_are_stable PASSED         [ 46%]
+tests/unit/test_contracts.py::test_sample_result_is_json_serializable PASSED [ 47%]
+tests/unit/test_contracts.py::test_sample_result_allows_error_fields PASSED [ 48%]
+tests/unit/test_manifest.py::test_parse_png_stem[10023-image-10023-False] PASSED [ 50%]
+tests/unit/test_manifest.py::test_parse_png_stem[10023_GT-mask-10023-False] PASSED [ 51%]
+tests/unit/test_manifest.py::test_parse_png_stem[10301 (copy)-image-10301-True] PASSED [ 52%]
+tests/unit/test_manifest.py::test_parse_png_stem[10301_GT (copy)-mask-10301-True] PASSED [ 53%]
+tests/unit/test_manifest.py::test_parse_png_stem_rejects_unusable_names[_GT] PASSED [ 55%]
+tests/unit/test_manifest.py::test_parse_png_stem_rejects_unusable_names[ (copy)] PASSED [ 56%]
+tests/unit/test_manifest.py::test_parse_png_stem_rejects_unusable_names[GT_] PASSED [ 57%]
+tests/unit/test_manifest.py::test_dhash_identical_and_inverted PASSED    [ 58%]
+tests/unit/test_manifest.py::test_dhash_different_patterns_differ PASSED [ 60%]
+tests/unit/test_manifest.py::test_compute_groups_exact_and_near PASSED   [ 61%]
+tests/unit/test_manifest.py::test_discover_pairs_records_errors_and_pyb PASSED [ 62%]
+tests/unit/test_manifest.py::test_build_manifest_counts_groups_and_original_ids PASSED [ 64%]
+tests/unit/test_manifest.py::test_build_manifest_decode_failure_is_fatal PASSED [ 65%]
+tests/unit/test_manifest.py::test_build_manifest_missing_mask_is_warning PASSED [ 66%]
+tests/unit/test_manifest.py::test_load_manifest_rejects_bad_header PASSED [ 67%]
+tests/unit/test_manifest.py::test_load_manifest_rejects_duplicate_sample_id PASSED [ 69%]
+tests/unit/test_manifest.py::test_load_manifest_rejects_bad_label PASSED [ 70%]
+tests/unit/test_manifest.py::test_load_manifest_rejects_defect_without_mask PASSED [ 71%]
+tests/unit/test_manifest.py::test_load_manifest_rejects_bad_hash_length PASSED [ 73%]
+tests/unit/test_manifest.py::test_load_manifest_rejects_unknown_original_id PASSED [ 74%]
+tests/unit/test_manifest.py::test_manifest_columns_constant_is_stable PASSED [ 75%]
+tests/unit/test_splits.py::test_assign_groups_is_deterministic_and_60_40 PASSED [ 76%]
+tests/unit/test_splits.py::test_assign_groups_p_test_guard_moves_defect_groups PASSED [ 78%]
+tests/unit/test_splits.py::test_assign_groups_raises_when_p_test_impossible PASSED [ 79%]
+tests/unit/test_splits.py::test_write_splits_files_hashes_and_report PASSED [ 80%]
+tests/unit/test_splits.py::test_verify_splits_clean_passes_without_dataset_counts PASSED [ 82%]
+tests/unit/test_splits.py::test_verify_splits_detects_group_leak PASSED  [ 83%]
+tests/unit/test_splits.py::test_verify_splits_detects_image_hash_leak PASSED [ 84%]
+tests/unit/test_splits.py::test_verify_splits_detects_original_id_leak PASSED [ 85%]
+tests/unit/test_splits.py::test_verify_splits_detects_group_id_mismatch_with_manifest PASSED [ 87%]
+tests/unit/test_splits.py::test_verify_splits_detects_label_mask_mismatch PASSED [ 88%]
+tests/unit/test_splits.py::test_verify_splits_detects_test_hash_mismatch PASSED [ 89%]
+tests/unit/test_splits.py::test_verify_splits_detects_missing_canonical_row PASSED [ 91%]
+tests/unit/test_splits.py::test_verify_splits_enforces_real_dataset_counts_when_requested PASSED [ 92%]
+tests/unit/test_splits.py::test_verify_splits_detects_missing_official_test_rows PASSED [ 93%]
+tests/unit/test_splits.py::test_verify_splits_detects_extra_official_test_rows PASSED [ 94%]
+tests/unit/test_splits.py::test_verify_splits_detects_official_test_row_mismatch PASSED [ 96%]
+tests/unit/test_splits.py::test_verify_splits_detects_report_csv_hash_mismatch PASSED [ 97%]
+tests/unit/test_splits.py::test_verify_splits_detects_tampered_split_hash PASSED [ 98%]
+tests/unit/test_splits.py::test_verify_splits_requires_split_report PASSED [100%]
+
+============================= 78 passed in 9.29s ==============================
+----------------------------------------------------------------------
+## exit_code: 0
+
+======================================================================
+## 2. ruff
+## $ uv run ruff check .
+## started_utc: 2026-11-10T03:15:30Z
+----------------------------------------------------------------------
+All checks passed!
+----------------------------------------------------------------------
+## exit_code: 0
+
+======================================================================
+## 3. data build-manifest
+## $ uv run surface-sentinel data build-manifest --raw data/raw/kolektorsdd2 --manifest data/manifests/dataset_manifest.csv --errors data/manifests/build_errors.json
+## started_utc: 2026-11-10T03:15:30Z
+----------------------------------------------------------------------
+manifest 생성 완료: data\manifests\dataset_manifest.csv
+sha256: c255d66c4eb90238fc1c9042d6e92bcd914ae8f39b485e3ce22c6281a5ff1469
+전체 3,336행 (결함 357 포함) / 정본 3,335 (결함 356 + 정상 2,979)
+공식 train 2,332 / test 1,004 / 중복 1 / 그룹 3,335 / 최대 그룹 2행
+dHash threshold: 2 / 재그룹핑: 아니오 / 2% 초과 그룹: 0 / pyb 파일: 5
+경고: 0건
+----------------------------------------------------------------------
+## exit_code: 0
+
+======================================================================
+## 4. data make-splits
+## $ uv run surface-sentinel data make-splits --manifest data/manifests/dataset_manifest.csv --out-dir data/splits --seed 42
+## started_utc: 2026-11-10T03:15:42Z
+----------------------------------------------------------------------
+분할 생성 완료: data\splits
+tune 2,001 / test 1,334 (0.4000) / official_test 1,004
+P_test: 142 (하한 100)
+test sha256: c467b8a71d616fc0bd9c093dad7eed20f28088e53480c1c1de81aa16d4614962
+split_hash: 2490f3cacd80e7a8cd3b9756bad67d21a8e841b4f3bff06bae3c324bf0ffb314
+조정: 0건 / 경고: 0건
+----------------------------------------------------------------------
+## exit_code: 0
+
+======================================================================
+## 5. data verify
+## $ uv run surface-sentinel data verify --raw data/raw/kolektorsdd2 --manifest data/manifests/dataset_manifest.csv --splits-dir data/splits --audit-json data/audit/T03_audit.json --audit-md docs/research/T03_data_audit.md --contact-sheet data/derived/contact_sheets/tune_contact_sheet.png
+## started_utc: 2026-11-10T03:15:42Z
+----------------------------------------------------------------------
+분할 검증: PASS (위반 0건, 경고 0건)
+데이터 감사: PASS (위반 0건, 경고 1건)
+tune 2,001 / test 1,334 / official_test 1,004
+P_test: 142 / test 비율: 0.4000 / 공식 test 중복: test 425장, tune 579장
+contact sheet: data\derived\contact_sheets\tune_contact_sheet.png (334장)
+감사 JSON: data\audit\T03_audit.json
+감사 Markdown: docs\research\T03_data_audit.md
+[감사 경고] 마스크 sha256은 빈 마스크 등에서 중복되므로 중복 그룹 키로 사용하지 않았습니다. 중복 마스크 해시 그룹: 42개
+----------------------------------------------------------------------
+## exit_code: 0
+
+======================================================================
+## 6. data tests
+## $ uv run pytest -m data -vv
+## started_utc: 2026-11-10T03:15:57Z
+----------------------------------------------------------------------
+============================= test session starts =============================
+platform win32 -- Python 3.11.16, pytest-8.4.2, pluggy-1.7.0 -- D:\surface-sentinel\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\surface-sentinel
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.16.0
+collecting ... collected 80 items / 78 deselected / 2 selected
+
+tests/data/test_t03_real_dataset.py::test_real_manifest_official_counts PASSED [ 50%]
+tests/data/test_t03_real_dataset.py::test_real_splits_pass_leakage_and_quantity_contract PASSED [100%]
+
+====================== 2 passed, 78 deselected in 0.26s =======================
+----------------------------------------------------------------------
+## exit_code: 0
+
+======================================================================
+## 7. non-data non-browser tests
+## $ uv run pytest -m not data and not browser -v
+## started_utc: 2026-11-10T03:15:57Z
+----------------------------------------------------------------------
+============================= test session starts =============================
+platform win32 -- Python 3.11.16, pytest-8.4.2, pluggy-1.7.0
+rootdir: D:\surface-sentinel
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.16.0
+collected 80 items / 2 deselected / 78 selected
+
+tests\unit\test_audit.py .........                                       [ 11%]
+tests\unit\test_cli.py ....                                              [ 16%]
+tests\unit\test_cli_data.py ...                                          [ 20%]
+tests\unit\test_config.py .................                              [ 42%]
+tests\unit\test_contracts.py .....                                       [ 48%]
+tests\unit\test_manifest.py .....................                        [ 75%]
+tests\unit\test_splits.py ...................                            [100%]
+
+====================== 78 passed, 2 deselected in 12.11s ======================
+----------------------------------------------------------------------
+## exit_code: 0
+

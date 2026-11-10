@@ -195,3 +195,19 @@ def test_parse_does_not_mutate_input() -> None:
     snapshot = copy.deepcopy(data)
     parse_config(data)
     assert data == snapshot
+
+
+def test_repository_base_toml_matches_default_config() -> None:
+    path = Path(__file__).resolve().parents[2] / "configs" / "base.toml"
+    config = load_config(path)
+    assert config == default_config()
+    assert config.config_hash == default_config().config_hash
+    assert config.schema_version == CONFIG_SCHEMA_VERSION
+
+
+def test_both_preprocess_channels_disabled_rejected() -> None:
+    data = base_data()
+    data["preprocess"]["use_dark_channel"] = False
+    data["preprocess"]["use_bright_channel"] = False
+    with pytest.raises(ConfigError, match="use_dark_channel"):
+        parse_config(data)

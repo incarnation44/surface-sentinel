@@ -260,6 +260,10 @@ def _validate(config: AppConfig) -> None:
     _require(0 <= config.roi.fixed_margin_px <= 256, "roi.fixed_margin_px must be in [0, 256]")
 
     _require(config.preprocess.median_kernel in {1, 3, 5}, "preprocess.median_kernel in {1,3,5}")
+    _require(
+        config.preprocess.use_dark_channel or config.preprocess.use_bright_channel,
+        "preprocess.use_dark_channel과 use_bright_channel을 둘 다 false로 둘 수 없습니다.",
+    )
     _require(0.0 < config.preprocess.bg_kernel_ratio < 1.0, "preprocess.bg_kernel_ratio in (0,1)")
     _odd("preprocess.bg_kernel_min", config.preprocess.bg_kernel_min)
     _odd("preprocess.bg_kernel_max", config.preprocess.bg_kernel_max)

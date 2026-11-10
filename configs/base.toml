@@ -1,0 +1,54 @@
+schema_version = "1.0"
+
+[input]
+min_width = 64
+min_height = 64
+min_std = 1.0
+
+[roi]
+mode = "auto"
+dark_floor = 8
+margin_px = 2
+min_area_ratio = 0.20
+close_kernel = 7
+fixed_margin_px = 8
+
+[preprocess]
+median_kernel = 3
+bg_kernel_ratio = 0.10
+bg_kernel_min = 21
+bg_kernel_max = 61
+use_dark_channel = true
+use_bright_channel = true
+noise_floor_gray = 2.0
+
+[candidates]
+z_threshold = 4.0
+min_contrast_gray = 12.0
+open_kernel = 3
+close_kernel = 5
+merge_kernel = 7
+min_area_px = 12
+max_candidates = 20
+
+[scoring]
+ng_area_px = 48.0
+ng_contrast_gray = 24.0
+ok_max = 0.55
+ng_min = 1.00
+multi_candidate_margin = 0.15
+
+[quality]
+blur_min_var = 20.0
+dark_mean_min = 20.0
+bright_mean_max = 235.0
+saturated_ratio_max = 0.10
+
+[decision]
+border_touch_escalates = true
+truncation_escalates = true
+multi_candidate_escalates = true
+
+[artifacts]
+save_stages = false
+overlay_scale = 2

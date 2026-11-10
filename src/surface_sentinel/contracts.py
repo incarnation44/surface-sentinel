@@ -6,7 +6,7 @@ member requires a schema version bump and a migration plan.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, fields, is_dataclass
+from dataclasses import dataclass, field, fields, is_dataclass
 from enum import Enum, StrEnum
 from typing import Any
 
@@ -141,7 +141,7 @@ class SampleResult:
     components: tuple[ComponentFeature, ...] = ()
     quality: QualityInfo | None = None
     roi: RoiInfo | None = None
-    timing_ms: dict[str, float] | None = None
+    timing_ms: dict[str, float] = field(default_factory=dict)
     error_code: ErrorCode | None = None
     error_stage: Stage | None = None
     input_sha256: str = ""

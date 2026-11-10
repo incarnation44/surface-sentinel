@@ -1,0 +1,72 @@
+{
+  "components": [
+    {
+      "area_px": 140,
+      "area_ratio": 0.004666666666666667,
+      "aspect_ratio": 1.0,
+      "bbox": [
+        150,
+        50,
+        12,
+        12
+      ],
+      "border_distance_px": 41.0,
+      "elongation": 1.0,
+      "evidence": 1.5,
+      "index": 0,
+      "integrated_contrast": 14140.0,
+      "max_contrast_gray": 101.0,
+      "mean_contrast_gray": 101.0,
+      "solidity": 1.0,
+      "touches_roi_border": false
+    }
+  ],
+  "config_hash": "22ff6bcbbf99d64ecfcd1eabc8fffaebc4f5dd1c246db364fa8d87e0f48d0095",
+  "error_code": null,
+  "error_stage": null,
+  "input_sha256": "019f982c7bf9f050a253a68f3dd587c5b64e2df41627895e9fdf866bf3cadd97",
+  "label": "defect",
+  "mask_sha256": "30f2e4894446df22916c9f56dbbc36f5e18136dd363df8c1a15671a7450bc3d3",
+  "original_id": "dark_defect",
+  "overlay_path": "docs\\evidence\\T04_inspect\\dark_defect_overlay.png",
+  "quality": {
+    "blur_variance": 115.12232959555556,
+    "flags": [],
+    "mean_gray": 119.04646666666666,
+    "saturated_ratio": 0.0
+  },
+  "reasons": [
+    "DEFECT_EVIDENCE_STRONG"
+  ],
+  "roi": {
+    "area_px": 30000,
+    "area_ratio": 0.78125,
+    "bbox": [
+      8,
+      8,
+      304,
+      104
+    ],
+    "mode": "auto",
+    "uncertain": false
+  },
+  "run_id": "inspect-22ff6bcb-dark_defect",
+  "sample_id": "dark_defect",
+  "schema_version": "result-v1",
+  "score": 1.5,
+  "split": "tune",
+  "status": "NG",
+  "timing_ms": {
+    "analyze_components": 0.09420000060345046,
+    "calculate_score": 0.007900000127847306,
+    "decide_status": 0.008900000466383062,
+    "generate_candidates": 0.22480000006908085,
+    "load_image": 0.023800001144991256,
+    "prepare_roi": 5.01070000063919,
+    "preprocess": 10.918699999820092,
+    "refine_mask": 0.9160999998130137,
+    "save_evidence": 23.378500000035274,
+    "total": 42.35240000161866,
+    "validate_input": 1.7687999988993397
+  }
+}
