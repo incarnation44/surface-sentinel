@@ -1,0 +1,184 @@
+T03 데이터 수집/manifest/분할/QA — 실행 요약
+==================================================
+
+1. 기준
+------
+- HEAD: 1db6c7b3aee829141519d5f7ec13becf205ead71 (main)
+- 실행일: 2026-11-10. 명령별 시작 시각은 T03_commands.log의 started_utc 참조.
+- 데이터: data/raw/kolektorsdd2 (기존 반입본). 추가 다운로드·미러 사용 없음.
+- 상세 stdout/stderr: docs/evidence/T03_commands.log (195줄, 12,839바이트, sha256 d30d24b900521e84b728cf84fbfefba80108f443ac88e809b132234cd8ee58ff)
+- 코드 리비전/실행 시각은 docs/research/T03_data_audit.md에 지어내지 않고 이 증거 파일을 참조하도록 했다.
+
+2. 실행 명령과 exit code (R-T03 수정 후 재실행)
+----------------------------------------------
+| # | 명령 | exit |
+|---|---|---|
+| 1 | uv run pytest tests/unit -vv | 0 |
+| 2 | uv run ruff check . | 0 |
+| 3 | uv run surface-sentinel data build-manifest --raw data/raw/kolektorsdd2 --manifest data/manifests/dataset_manifest.csv --errors data/manifests/build_errors.json | 0 |
+| 4 | uv run surface-sentinel data make-splits --manifest data/manifests/dataset_manifest.csv --out-dir data/splits --seed 42 | 0 |
+| 5 | uv run surface-sentinel data verify --raw data/raw/kolektorsdd2 --manifest data/manifests/dataset_manifest.csv --splits-dir data/splits --audit-json data/audit/T03_audit.json --audit-md docs/research/T03_data_audit.md --contact-sheet data/derived/contact_sheets/tune_contact_sheet.png | 0 |
+| 6 | uv run pytest -m data -vv | 0 |
+| 7 | uv run pytest -m "not data and not browser" -v | 0 |
+
+3. 테스트 수집/통과/실패/스킵
+-----------------------------
+- T02 기존 단위 테스트 26개: test_cli 4 + test_config 17 + test_contracts 5. 모두 통과.
+- T03 신규 단위 테스트 52개: test_manifest 21 + test_splits 19 + test_audit 9 + test_cli_data 3. 모두 통과.
+- T03 신규 데이터 테스트 2개: test_t03_real_dataset 2. 모두 통과.
+- `pytest tests/unit -vv`: 78 passed, 0 failed, 0 skipped, 0 error (T02 26 + T03 52).
+  - 과거 26/26과 신규 52개를 합산해 "T03 78개"로 보고하지 않는다. 위 구분을 유지한다.
+- `pytest -m data -vv`: 2 passed, 78 deselected, 0 failed, 0 skipped.
+- `pytest -m "not data and not browser" -v`: 78 passed, 2 deselected, 0 failed, 0 skipped.
+- 전체 수집 80개 = 단위 78 + 데이터 2.
+
+4. manifest 실제 수량과 해시
+---------------------------
+- 파일: data/manifests/dataset_manifest.csv
+- sha256: c255d66c4eb90238fc1c9042d6e92bcd914ae8f39b485e3ce22c6281a5ff1469
+- 전체 행: 3,336 (복사본 포함)
+- 정본 행: 3,335
+- 전체 라벨: defect 357 / good 2,979
+- 정본 라벨: defect 356 / good 2,979
+- 공식 train: 2,332 (정본 2,331 = defect 246 + good 2,085)
+- 공식 test: 1,004 (defect 110 + good 894)
+- 중복 행: 1 (train/10301.png ↔ train/10301 (copy).png, 이미지·마스크 sha256 동일)
+- 그룹 수: 3,335 / 최대 그룹 2행 / 최대 그룹 정본 1행
+- dHash threshold: 2 / 재그룹핑: 아니오 / 2% 초과 그룹: 0 / 2% 상한 66.72행
+- 마스크 누락: 0 / 마스크 크기 불일치: 0 / 디코드 실패: 0
+- `split_weakly_*.pyb`: 5개. manifest/분할에서 제외하고 개수만 기록.
+- CLI 요약 출력은 전체 357과 정본 356을 구분한다: "전체 3,336행 (결함 357 포함) / 정본 3,335 (결함 356 + 정상 2,979)".
+
+5. 분할 실제 수량과 해시
+------------------------
+- 디렉터리: data/splits
+- tune.csv: 2,001행 (defect 214 / good 1,787)
+  - sha256: 399e50eb61b32f5a60f2c069a38fdafd383260df4c8d2e94089e7bea4512e463
+- test.csv: 1,334행 (defect 142 / good 1,192), 비율 0.4000
+  - sha256: c467b8a71d616fc0bd9c093dad7eed20f28088e53480c1c1de81aa16d4614962
+- official_test.csv: 1,004행 (defect 110 / good 894)
+  - sha256: 060bd376189cefb296e07e4b2874d5719ba13fe27ac9fc80f47a1db5e1fbc7a8
+- test.sha256: `c467b8a71d616fc0bd9c093dad7eed20f28088e53480c1c1de81aa16d4614962  test.csv`
+- split_hash: 2490f3cacd80e7a8cd3b9756bad67d21a8e841b4f3bff06bae3c324bf0ffb314
+  - recipe: sha256(canonical_json({seed,test_ratio_target,p_test_min,dhash_threshold,tune_sha256,test_sha256,official_test_sha256}))
+- P_test: 142 (>= 100) / P_test guard 조정: 0건
+- 그룹 누출: L1 0, L2 0, L3 0
+- official_test 행 집합: canonical source_split=test 1,004행과 정확히 일치. missing 0 / extra 0 / 필드 불일치 0.
+- split_report.json 해시 검증: tune/test/official_test의 기록 sha256이 실제 CSV와 일치. split_hash recipe 재계산 일치. 상태 PASS.
+- 공식 test 중복(보고만): 내부 test 425 sample/425 group, 내부 tune 579 sample/579 group. 합 1,004.
+- split_report.json sha256: ace7dba1e59a23dd972441cac83fe0a8d6b20363cd3505cc1dfd53c9152e7dfa
+
+6. 데이터 감사와 L1–L8
+----------------------
+- 감사 JSON: data/audit/T03_audit.json (sha256 a3ebc1c9e40bc7ce2b392eddfd5ab7f8d228e7eb9f1e0bd63b8855da4eecbb41)
+- 감사 Markdown: docs/research/T03_data_audit.md (sha256 79f2cca11370c5e332b843fc85023ead902646f5ad4a08717ae90f1e81f37baf)
+- 감사 결과: PASS (데이터 위반 0, 경고 1)
+- 분할 검증: PASS (위반 0, 경고 0)
+- 전체 3,336행 재디코드 완료.
+- 이미지: 폭 184–241, 높이 597–665, 채널 3, dtype uint8, format PNG (전부 3,336장).
+- 마스크: 3,336개. 결함 마스크 비어 있지 않음 357 / 비어 있음 0. 정상 마스크 비어 있음 2,979 / 비어 있지 않음 0.
+- 마스크 sha256 중복 그룹: 42개, 최대 2행. 마스크 해시는 그룹 키로 쓰지 않았다.
+  - 참고: 정상 마스크 2,979개는 픽셀 기준 모두 빈 마스크이지만 PNG 파일 바이트 해시는 서로 다르다. 중복 42그룹은 파일 해시가 같은 쌍들이다.
+- 감사 dHash threshold는 split_report.json의 dhash_threshold를 사용한다(현재 2).
+
+| 검사 | 결과 | 실제 값 |
+|---|---|---|
+| L1 tune/test same original_id | PASS | 0 |
+| L2 tune/test same image_sha256 | PASS | 0 |
+| L3 tune/test same group_id | PASS | 0 |
+| L4 group_id 상속/일관성 | PASS | 위반 0 |
+| L5 test.csv hash == test.sha256 | PASS | 일치 |
+| L6 tune run 로그에 split=test | NOT_APPLICABLE | T03 범위에서 run 로그 없음 |
+| L7 공식/내부 test 중복 | REPORTED | test 425, tune 579 (튜닝에 사용하지 않음) |
+| L8 라벨/마스크 일치 | PASS | 위반 0 |
+| official_test identity | PASS | expected 1,004 / actual 1,004, missing 0 / extra 0 / mismatch 0 |
+| split_report sha256/split_hash | PASS | 위반 0 |
+
+7. 생성/수정 파일
+-----------------
+코드:
+- src/surface_sentinel/io/manifest.py (신규)
+- src/surface_sentinel/io/splits.py (신규)
+- src/surface_sentinel/io/audit.py (신규)
+- src/surface_sentinel/cli.py (수정: data 서브커맨드 추가, build-manifest 요약 수정)
+테스트:
+- tests/unit/test_manifest.py (신규)
+- tests/unit/test_splits.py (신규)
+- tests/unit/test_audit.py (신규)
+- tests/unit/test_cli_data.py (신규)
+- tests/data/test_t03_real_dataset.py (신규)
+문서/증거:
+- docs/research/T03_data_audit.md (신규, 생성 산출물)
+- docs/evidence/T03_commands.log (신규)
+- docs/evidence/T03_summary.txt (신규, 이 파일)
+데이터 산출물:
+- data/manifests/dataset_manifest.csv
+- data/manifests/build_errors.json
+- data/splits/tune.csv
+- data/splits/test.csv
+- data/splits/official_test.csv
+- data/splits/test.sha256
+- data/splits/split_report.json
+- data/audit/T03_audit.json
+- data/derived/contact_sheets/tune_contact_sheet.png (334장: tune 결함 214 + tune 정상 120, 8열, 썸네일 높이 150px, 552×7,560, sha256 e331914bc04305ff4fe7b4ae15c133189a4095093042f6dedfbb4eccda92f872)
+  - data/derived/는 .gitignore 대상이다.
+
+8. R-T03 검토 수정 반영
+-----------------------
+- R-T03-1: write_audit_markdown이 split_report.json의 splits[name].sha256을 읽어 §6 표를 채운다. test_audit_reports_are_written에 세 sha256 문자열 존재 assert를 추가했다.
+- R-T03-2: verify_splits가 canonical source_split=test 행 집합과 official_test.csv를 비교한다. 누락/추가/라벨/defect_pixels/group_id/original_id 불일치를 violations에 기록하고 l_checks["official_test_identity"], counts["official_test_identity"]에 상태를 남긴다. 누락/추가/필드 불일치 고의 테스트를 추가했다.
+- R-T03-3: verify_splits가 splits의 기록 sha256을 실제 CSV 바이트 해시와 비교하고 split_hash를 recipe대로 재계산한다. split_report.json 부재/손상/해시 변조를 violation으로 처리한다. 관련 테스트 3개를 추가했다.
+- R-T03-4: build-manifest CLI 요약을 "전체 3,336행 (결함 357 포함) / 정본 3,335 (결함 356 + 정상 2,979)"로 수정했고 test_cli_data에 assert를 추가했다.
+- R-T03-5: 감사 Markdown §10에 official test 1,004장 중 internal tune 579장, internal test 425장이 포함된다는 한계를 audit overlap에서 동적으로 생성해 추가했다.
+- R-T03-6: verify_dataset이 split_report.json의 dhash_threshold를 사용하도록 했고, threshold 0 전달 테스트를 추가했다.
+
+9. 발견한 설계/데이터 차이와 경고
+---------------------------------
+- 반입본은 공식 3,335장에 복사본 1장이 더 있어 로컬 파일은 3,336장이다. 정본 기준 수량은 공식과 일치한다.
+- 복사본 마스크 이름은 `<id>_GT (copy).png`로, `_GT`가 ` (copy)` 앞에 온다. 단순 stem+`_GT.png` 탐색은 복사본 마스크를 놓친다. 구현은 ` (copy)`를 먼저 분리한다.
+- dHash threshold 2에서 그룹 3,335, 최대 2행으로 2% 상한을 넘지 않아 재그룹핑(threshold 0)은 일어나지 않았다.
+- 마스크 sha256 중복 42그룹은 빈 마스크의 파일 바이트 해시가 모두 같지 않기 때문이다. decoded pixel 기준 정상 마스크는 모두 비어 있다.
+- 공식 test와 내부 test/tune은 겹친다(425/579). L7은 보고만 하며 임계값 튜닝·성능 측정에 사용하지 않았다. Markdown §10에 official_test 독립 감사의 한계로 명시했다.
+- `split_weakly_*.pyb` 5개는 설계상 사용하지 않으므로 manifest/분할에서 제외했다.
+- 설계 변경이 필요한 충돌이나 중단 조건은 발생하지 않았다.
+
+10. 실행하지 않은 항목과 이유
+-----------------------------
+- `surface-sentinel batch`, `surface-sentinel eval`: T03 범위 밖이며 sealed test 접근 금지. 실행하지 않았다.
+- `--allow-sealed`: 사용하지 않았다.
+- 브라우저 테스트(`-m browser`): T03 범위가 아니며 브라우저 작업이 없다.
+- 데이터 추가 다운로드/미러 사이트: 금지. 기존 반입본만 사용했다.
+- `docs/research/T01_dataset_facts.md`, `src/surface_sentinel/pipeline/`, 저장소 밖 개인 자료, `data/raw/` 원본, 기존 `docs/evidence/` 파일, README/PROJECT_STATUS/ENVIRONMENT/plan.md: 수정 금지 범위라 건드리지 않았다.
+- git commit/push/tag: 금지라 수행하지 않았다.
+
+11. sealed test 미접근 확인
+---------------------------
+- `batch`/`eval` 미실행, `--allow-sealed` 미사용.
+- verify는 test/official_test CSV를 읽어 수량·누출·행 집합만 확인했고 성능 측정·시각 검토·임계값 튜닝에 사용하지 않았다.
+- contact sheet는 tune 행만 사용했다. 내부 test sample_id가 들어가면 예외가 발생한다.
+- T03_audit.json의 `sealed_test_accessed`는 false다.
+
+12. 최종 git status --short
+---------------------------
+ M src/surface_sentinel/cli.py
+?? data/
+?? docs/evidence/T03_commands.log
+?? docs/evidence/T03_summary.txt
+?? docs/research/
+?? src/surface_sentinel/io/audit.py
+?? src/surface_sentinel/io/manifest.py
+?? src/surface_sentinel/io/splits.py
+?? tests/data/
+?? tests/unit/test_audit.py
+?? tests/unit/test_cli_data.py
+?? tests/unit/test_manifest.py
+?? tests/unit/test_splits.py
+
+- `data/raw/`와 `data/derived/`는 .gitignore로 제외된다.
+
+13. 남은 문제/중단 조건
+-----------------------
+- T03 통과 조건(3,335/356/2,979, 공식 수량, 전체 디코드, 마스크 유효, L1–L4/L8 zero, P_test >= 100)을 실제 값으로 충족했다.
+- 합성 데이터 기반 CLI 테스트의 `data verify`는 공식 수량·비율 계약을 만족하지 않으므로 의도적으로 exit 3을 확인한다. 실제 반입본 verify는 exit 0이다.
+- 2% 그룹 상한은 데이터 규모가 매우 작으면 모든 그룹이 상한을 넘어 build가 중단된다. 실제 3,336장에서는 문제가 없으며, 이는 설계 계약을 완화하지 않은 결과다.
+- manifest를 다시 만들면 test.csv 해시와 split_hash가 바뀔 수 있으므로, 이후 단계는 이번에 동결된 data/splits/test.sha256과 split_report.json을 기준으로 해야 한다.

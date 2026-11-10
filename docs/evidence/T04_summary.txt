@@ -1,0 +1,235 @@
+T04 파이프라인 핵심 — 실행 증거 요약
+=====================================
+
+- 날짜: 2026-11-10T12:42:30+0900 (KST)
+- HEAD: 1db6c7b3aee829141519d5f7ec13becf205ead71
+- 브랜치: main
+- 범위: T04만 구현. batch/eval/UI/agent/T06 run 디렉터리와 원자 배치 저장은 미구현.
+- 데이터 접근: 없음. data/raw, data/splits/test.csv, data/splits/official_test.csv를
+  읽지 않았다. T03 manifest/split도 사용하지 않았다. 모든 이미지는
+  tests/fixtures/synthetic/ 또는 테스트가 만든 합성 PNG다.
+- Sealed test: 실행하지 않았다. --allow-sealed를 추가/사용하지 않았다.
+  inspect --split test/official_test는 파일을 읽기 전에 E_SEALED_DENIED로 거부한다.
+- 튜닝: 없음. configs/base.toml은 설계 지정값 그대로이며 어떤 실제/합성 데이터에도
+  적합화하지 않았다.
+- 성능: NOT_MEASURED. 이번 작업은 정확도/성능 목표를 측정하지 않았다.
+
+1. 실행 명령과 종료 코드
+------------------------
+
+1) uv run pytest -vv tests/unit/test_pipeline_stages.py \
+     tests/unit/test_pipeline_schema.py tests/unit/test_cli_inspect.py \
+     tests/unit/test_config.py tests/integration/test_pipeline_inspect.py \
+     tests/integration/test_pipeline_config_effectiveness.py
+   → exit 0, 108 passed, 0 failed, 0 skipped
+
+2) uv run ruff check .
+   → exit 0, All checks passed!
+
+3) uv run pytest -vv -m "not data and not browser"
+   → exit 0, 169 passed, 2 deselected, 0 failed, 0 skipped
+   (선택 해제 2건은 data/browser 마커 테스트다. 이번 T04에서 실행하지 않았다.)
+
+4) uv run surface-sentinel inspect \
+     --image tests/fixtures/synthetic/dark_defect.png \
+     --mask tests/fixtures/synthetic/dark_defect_mask.png \
+     --label defect --output docs/evidence/T04_inspect
+   → exit 0
+
+집계:
+- T04 지정 테스트: collected 108, passed 108, failed 0, skipped 0.
+- 전체 비데이터 테스트: collected 171(선택 169 + deselected 2), passed 169,
+  failed 0, skipped 0, deselected 2.
+- T02/T03 기존 테스트: 전체 실행에 포함되어 모두 통과.
+
+data 마커 테스트에 대한 주의:
+- `uv run pytest -m data`는 이 T04 작업에서는 실행하지 않았다. 해당
+  테스트(tests/data/test_t03_real_dataset.py)는 data/splits/test.csv와
+  official_test.csv를 읽고, T04 절대 규칙은 test/official_test 접근을
+  금지한다.
+- 코디네이터가 별도로 실행해 "2 passed"를 보고했으나, 이는 이 에이전트의
+  실행/로그가 아니므로 T04 증거로 재사용하지 않는다.
+- 실행하지 않은 항목은 section 6에 명시했다.
+
+2. config hash
+--------------
+
+configs/base.toml == default_config() (테스트 test_repository_base_toml_matches_default_config).
+base config hash:
+22ff6bcbbf99d64ecfcd1eabc8fffaebc4f5dd1c246db364fa8d87e0f48d0095
+
+3. inspect 실제 결과 (dark defect fixture)
+------------------------------------------
+
+- run_id: inspect-22ff6bcb-dark_defect
+- sample_id: dark_defect, original_id: dark_defect, split: tune, label: defect
+- status: NG
+- score: 1.5000
+- reasons: DEFECT_EVIDENCE_STRONG
+- components: 1개
+- roi: mode=auto, bbox=[8, 8, 304, 104], area_px=30000,
+  area_ratio=0.78125, uncertain=False
+- quality: blur_variance=115.1223, mean_gray=119.0465,
+  saturated_ratio=0.0, flags=[]
+- input_sha256:
+  019f982c7bf9f050a253a68f3dd587c5b64e2df41627895e9fdf866bf3cadd97
+- mask_sha256:
+  30f2e4894446df22916c9f56dbbc36f5e18136dd363df8c1a15671a7450bc3d3
+- overlay_path: docs\evidence\T04_inspect\dark_defect_overlay.png
+- result JSON: docs\evidence\T04_inspect\dark_defect_result.json
+- schema_version: result-v1
+- config_hash: 22ff6bcbbf99d64ecfcd1eabc8fffaebc4f5dd1c246db364fa8d87e0f48d0095
+- timing_ms 키: 10개 단계 + total 모두 존재
+  (validate_input, load_image, prepare_roi, preprocess, generate_candidates,
+   refine_mask, analyze_components, calculate_score, decide_status,
+   save_evidence, total)
+- 오버레이: 120x320 입력을 overlay_scale=2로 INTER_NEAREST 확대 → 240x640 PNG.
+  ROI 초록 윤곽, 컴포넌트 빨강 윤곽, bbox 노랑, 상태/점수 텍스트와 검은 배경.
+
+4. N18 설정 실효성 측정
+-----------------------
+
+| 설정 | A 값 | B 값 | A 관측 | B 관측 |
+|---|---|---|---|---|
+| candidates.z_threshold | 3.0 | 6.0 | 후보 픽셀 192 | 후보 픽셀 96 |
+| candidates.min_area_px | 12 | 100 | 컴포넌트 1개, NG | 컴포넌트 0개, OK |
+| scoring.ng_min | 1.0 | 1.4 | NG (score 1.2707) | REVIEW EVIDENCE_IN_REVIEW_BAND (score 1.2707) |
+| roi.dark_floor | 8 | 200 | ROI area 30000, uncertain False | ROI area 0, uncertain True |
+| preprocess.use_bright_channel | true | false | bright defect 후보 140, NG | 후보 0, OK |
+
+추가 확인:
+- 설정 변경 시 config hash가 바뀐다. scoring.ng_min, roi.dark_floor,
+  preprocess.use_bright_channel, candidates.min_area_px, quality.blur_min_var,
+  artifacts.overlay_scale, decision.border_touch_escalates, input.min_std의
+  8개 변형 hash가 모두 서로 다르고 base와도 다르다.
+- 잘못된 설정 거부:
+  - preprocess 채널 둘 다 false →
+    "preprocess.use_dark_channel과 use_bright_channel을 둘 다 false로 둘 수 없습니다."
+  - candidates.z_threshold=0.1 → "candidates.z_threshold in [0.5,10]"
+  - candidates.open_kernel=4 → "candidates.open_kernel must be odd and >= 3"
+  - candidates.min_area_px=0 → "candidates.min_area_px out of range"
+  - scoring.ok_max=1.2 → "scoring.ok_max must be < ng_min"
+  - roi.close_kernel=6 → "roi.close_kernel must be odd and >= 3"
+- inspect는 전달한 config를 실제로 사용한다. ng_min=1.4 변형에서 결과
+  config_hash가 변형 hash와 일치하고, 상태는 REVIEW EVIDENCE_IN_REVIEW_BAND이며,
+  저장된 result JSON에도 같은 config_hash가 기록된다.
+
+5. 생성/수정 파일
+-----------------
+
+생성:
+- configs/base.toml
+- src/surface_sentinel/pipeline/errors.py
+- src/surface_sentinel/pipeline/types.py
+- src/surface_sentinel/pipeline/stages.py
+- src/surface_sentinel/pipeline/schema.py
+- src/surface_sentinel/pipeline/evidence.py
+- src/surface_sentinel/pipeline/inspect.py
+- tests/synthetic.py
+- tests/fixtures/synthetic/good.png
+- tests/fixtures/synthetic/dark_defect.png
+- tests/fixtures/synthetic/dark_defect_mask.png
+- tests/fixtures/synthetic/bright_defect.png
+- tests/fixtures/synthetic/bright_defect_mask.png
+- tests/unit/test_pipeline_stages.py
+- tests/unit/test_pipeline_schema.py
+- tests/unit/test_cli_inspect.py
+- tests/integration/test_pipeline_inspect.py
+- tests/integration/test_pipeline_config_effectiveness.py
+- docs/evidence/T04_pipeline_tests.log
+- docs/evidence/T04_ruff.log
+- docs/evidence/T04_pytest_full.log
+- docs/evidence/T04_summary.txt
+- docs/evidence/T04_inspect/dark_defect_overlay.png
+- docs/evidence/T04_inspect/dark_defect_result.json
+
+수정:
+- src/surface_sentinel/contracts.py (timing_ms를 dict 기본값으로 변경)
+- src/surface_sentinel/config.py (preprocess 채널 동시 비활성 검증 추가)
+- src/surface_sentinel/cli.py (inspect 서브커맨드 추가, 기존 data/doctor 유지)
+- src/surface_sentinel/pipeline/__init__.py (공개 API)
+- tests/conftest.py (합성 fixture 헬퍼 import 경로)
+- tests/unit/test_config.py (base.toml/default_config 일치, 채널 검증 테스트 추가)
+
+변경하지 않음:
+- src/surface_sentinel/io/ (T03 산출물)
+- docs/evidence/T02_*, T03_*
+- README, PROJECT_STATUS, ENVIRONMENT, plan.md
+- 저장소 밖 개인 자료
+- data/raw, data/splits
+
+6. 미실행/범위 밖
+-----------------
+
+- batch, eval, UI, agent: T04 범위 밖.
+- T06 run 디렉터리(run.json/results.jsonl/summary), 원자 배치 저장: 미구현.
+- test/official_test/sealed 실행: 없음.
+- data/raw 실제 이미지 열람: 없음. 합성 fixture만 사용.
+- 성능 측정: NOT_MEASURED.
+- 임계값 튜닝: 없음.
+- 커밋/푸시/태그: 없음(지시대로 수행하지 않음).
+- data/browser 마커 테스트 2건: 실행하지 않음(deselected).
+- `uv run pytest -m data`: 이 에이전트는 실행하지 않음. data/splits의
+  test.csv/official_test.csv 접근이 필요한 T03 데이터 테스트라서 절대 규칙상
+  제외했다.
+
+7. 설계 차이/해석 메모
+----------------------
+
+- calculate_score의 "score = max(evidence) if valid else 0.0"은 최소 타당성
+  (area_px >= min_area_px, mean_contrast_gray >= min_contrast_gray)을 통과한
+  컴포넌트로 한정해 해석했다. 타당성 미달 소형 후보가 NG를 유발하지 않게 하기
+  위해서다. decide_status도 같은 valid_components를 쓴다.
+- timing_ms의 save_evidence 값은 오버레이/선택 단계 이미지 저장을 마친 뒤,
+  결과 JSON 직렬화 직전에 측정한다. total은 10단계 값의 합이다. 따라서 결과
+  JSON 자체의 직렬화/교체 시간은 total에 포함되지 않는 측정 관례를 쓴다.
+- save_evidence는 T04 범위대로 단일 샘플 오버레이/결과 JSON만 쓴다.
+  run.json/summary/원자 run 디렉터리는 T06 범위로 남겨두었다.
+- ROI auto에서 distanceTransform은 ROI 마스크 밖을 0으로 두므로 ROI 경계
+  픽셀의 border_distance_px가 1.0이 된다. ROI가 이미지 전체를 덮어 배경 0이
+  없는 직접 단위 테스트에서는 distanceTransform이 최대 float 값을 반환한다.
+
+8. git status --short (이 파일 포함 기준)
+-----------------------------------------
+
+ M src/surface_sentinel/cli.py
+ M src/surface_sentinel/config.py
+ M src/surface_sentinel/contracts.py
+ M src/surface_sentinel/pipeline/__init__.py
+ M tests/conftest.py
+ M tests/unit/test_config.py
+?? configs/base.toml
+?? data/
+?? docs/evidence/T03_commands.log
+?? docs/evidence/T03_summary.txt
+?? docs/evidence/T04_inspect/
+?? docs/evidence/T04_pipeline_tests.log
+?? docs/evidence/T04_pytest_full.log
+?? docs/evidence/T04_ruff.log
+?? docs/evidence/T04_summary.txt
+?? docs/research/
+?? src/surface_sentinel/io/audit.py
+?? src/surface_sentinel/io/manifest.py
+?? src/surface_sentinel/io/splits.py
+?? src/surface_sentinel/pipeline/errors.py
+?? src/surface_sentinel/pipeline/evidence.py
+?? src/surface_sentinel/pipeline/inspect.py
+?? src/surface_sentinel/pipeline/schema.py
+?? src/surface_sentinel/pipeline/stages.py
+?? src/surface_sentinel/pipeline/types.py
+?? tests/data/
+?? tests/fixtures/synthetic/
+?? tests/integration/test_pipeline_config_effectiveness.py
+?? tests/integration/test_pipeline_inspect.py
+?? tests/synthetic.py
+?? tests/unit/test_audit.py
+?? tests/unit/test_cli_data.py
+?? tests/unit/test_cli_inspect.py
+?? tests/unit/test_manifest.py
+?? tests/unit/test_pipeline_schema.py
+?? tests/unit/test_pipeline_stages.py
+?? tests/unit/test_splits.py
+
+(data/, docs/research/, docs/evidence/T03_*, src/surface_sentinel/io/*,
+tests/data/, tests/unit/test_audit.py, test_cli_data.py, test_manifest.py,
+test_splits.py는 T03 범위의 기존 미추적 산출물이며 T04에서 수정하지 않았다.)
