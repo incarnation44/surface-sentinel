@@ -15,6 +15,14 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from .analysis.defect_map import (
+    DEFAULT_GRID,
+    DefectMapError,
+    accumulate,
+    load_excluded_ids,
+    render_heatmap,
+    write_stats,
+)
 from .config import CONFIG_SCHEMA_VERSION, ConfigError, load_config
 from .contracts import ErrorCode, Status
 from .io.audit import (
@@ -244,6 +252,78 @@ def _add_inspect_parser(subparsers: Any) -> None:
     )
 
 
+def _add_defect_map_parser(subparsers: Any) -> None:
+    map_parser = subparsers.add_parser(
+        "defect-map",
+        help="defect 마스크를 누적해 위치 히트맵 PNG와 통계 JSON을 만듭니다.",
+        description=(
+            "manifest의 defect 행 전체를 읽어 마스크 좌표를 정규화 그리드에 "
+            "누적하고 단일 히트맵과 통계를 저장합니다. 판정 파이프라인을 "
+            "변경하지 않는 읽기 전용 분석입니다."
+        ),
+    )
+    map_parser.add_argument(
+        "--manifest",
+        type=Path,
+        default=Path("data/manifests/dataset_manifest.csv"),
+        help="manifest CSV 경로 (기본 data/manifests/dataset_manifest.csv).",
+    )
+    map_parser.add_argument(
+        "--raw-root",
+        type=Path,
+        default=Path("data/raw/kolektorsdd2"),
+        help="원본 데이터 루트 (기본 data/raw/kolektorsdd2).",
+    )
+    map_parser.add_argument(
+        "--audit",
+        type=Path,
+        default=Path("data/audit/T03_audit.json"),
+        help="비정본 목록이 있는 감사 JSON (기본 data/audit/T03_audit.json).",
+    )
+    map_parser.add_argument(
+        "--out-dir",
+        type=Path,
+        default=Path("data/derived/defect_map"),
+        help="산출물 디렉터리 (기본 data/derived/defect_map).",
+    )
+    map_parser.add_argument(
+        "--grid",
+        type=int,
+        default=DEFAULT_GRID,
+        help=f"누적 그리드 크기 (기본 {DEFAULT_GRID}).",
+    )
+
+
+def _cmd_defect_map(args: argparse.Namespace) -> int:
+    try:
+        rows = load_manifest(args.manifest)
+    except ManifestError as exc:
+        _print_error(str(exc))
+        return EXIT_INPUT
+    try:
+        excluded = load_excluded_ids(args.audit)
+        result = accumulate(rows, args.raw_root, excluded, grid=args.grid)
+        heatmap_path = args.out_dir / "heatmap.png"
+        stats_path = args.out_dir / "stats.json"
+        render_heatmap(result.pixel_hits, heatmap_path)
+        payload = write_stats(result, args.grid, stats_path)
+    except DefectMapError as exc:
+        _print_error(str(exc))
+        return EXIT_INPUT
+    except OSError as exc:
+        _print_error(f"산출물을 저장하지 못했습니다: {exc}")
+        return EXIT_STORAGE
+    top = payload["top_bins"][0] if payload["top_bins"] else None
+    top_text = f"y={top['y_pct']}% x={top['x_pct']}%" if top else "-"
+    coverage = top["sample_coverage"] if top else 0.0
+    print(f"결함 샘플: {result.samples:,} / 결함 픽셀: {result.total_defect_pixels:,}")
+    print(f"그리드: {args.grid}x{args.grid} / 채워진 bin: {result.nonzero_bins:,}")
+    print(f"최밀집 구역: {top_text} (샘플 커버리지 {coverage})")
+    print(f"히트맵: {heatmap_path}")
+    print(f"통계: {stats_path}")
+    return EXIT_OK
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="surface-sentinel",
@@ -254,6 +334,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("doctor", help="환경 진단 정보를 JSON으로 출력합니다.")
     _add_data_parser(subparsers)
     _add_inspect_parser(subparsers)
+    _add_defect_map_parser(subparsers)
     return parser
 
 
@@ -530,6 +611,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_data(args)
     if args.command == "inspect":
         return _cmd_inspect(args)
+    if args.command == "defect-map":
+        return _cmd_defect_map(args)
     parser.print_help(sys.stdout)
     return EXIT_USAGE
 
