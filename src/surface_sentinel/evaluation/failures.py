@@ -8,7 +8,7 @@
 | 고득점 escape 상위 2 | defect → OK, score 내림차순 |
 | 고득점 오탐 상위 2 | good → NG, score 내림차순 |
 | 가장 큰 REVIEW 클러스터 | REVIEW 사유 코드별 묶음 중 최대 |
-| 경계 사례 | score가 ``ok_max`` 또는 ``ng_min``에서 ±0.05 이내 |
+| 경계 사례 | score가 ``REVIEW_BAND_MAX`` 또는 ``ng_min``에서 ±0.05 이내 |
 | 품질 플래그 사례 | quality flag가 하나라도 있는 샘플 |
 | 부분 위치 사례 | 정답은 맞았지만 best IoU가 0.30 미만인 defect |
 """
@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..config import AppConfig
+from ..config import REVIEW_BAND_MAX, AppConfig
 from .cache import CachedSample
 from .measure import SampleOutcome, VariantReport, component_iou
 
@@ -194,7 +194,7 @@ def select_cases(
     for row in rows:
         if row.category == CATEGORY_ERROR:
             continue
-        if abs(row.score - config.scoring.ok_max) <= BOUNDARY_MARGIN or abs(
+        if abs(row.score - REVIEW_BAND_MAX) <= BOUNDARY_MARGIN or abs(
             row.score - config.scoring.ng_min
         ) <= BOUNDARY_MARGIN:
             boundary.append(row)

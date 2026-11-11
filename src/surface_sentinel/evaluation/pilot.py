@@ -1,4 +1,4 @@
-"""후보(candidates) 축 파일럿 (그리드 24후보 **밖**의 보정 실험).
+"""후보(candidates) 축 파일럿 (그리드 12후보 **밖**의 보정 실험).
 
 왜 필요한가
 -----------
@@ -12,7 +12,7 @@
 폭으로 측정한다(파이프라인 실행 3회 + 각 실행 위에서 scoring 3조합 재계산).
 
 상한 회계: 설계 §4.4의 "그리드 최대 24회 실행"에서 이 모듈의 파이프라인 실행은
-3회다. 그리드 24후보는 캐시 재계산이라 "실행"이 아니다. 전체 파이프라인 실행
+3회다. 그리드 12후보는 캐시 재계산이라 "실행"이 아니다. 전체 파이프라인 실행
 수는 기본 1 + ablation 6 + 파일럿 3 = 10회다.
 """
 
@@ -76,35 +76,35 @@ PILOT_SCORING: tuple[PilotAxis, ...] = (
         id="S1",
         kind=KIND_SCORING,
         overrides={"scoring": {"ng_area_px": 1500.0, "ng_contrast_gray": 28.0,
-                               "ok_max": 0.55, "ng_min": 0.90}},
+                               "ng_min": 0.90}},
         note="정규화 기준을 실측 규모에 맞춘다(면적 48→1500 px, 대비 24→28).",
     ),
     PilotAxis(
         id="S2",
         kind=KIND_SCORING,
         overrides={"scoring": {"ng_area_px": 1000.0, "ng_contrast_gray": 25.0,
-                               "ok_max": 0.55, "ng_min": 0.90}},
+                               "ng_min": 0.90}},
         note="S1보다 느슨한 정규화.",
     ),
     PilotAxis(
         id="S3",
         kind=KIND_SCORING,
         overrides={"scoring": {"ng_area_px": 800.0, "ng_contrast_gray": 22.0,
-                               "ok_max": 0.60, "ng_min": 0.95}},
-        note="review를 줄이는 쪽(OK 상한↑).",
+                               "ng_min": 0.95}},
+        note="ng_min을 0.95로 올려 review를 줄이는 쪽.",
     ),
     PilotAxis(
         id="S4",
         kind=KIND_SCORING,
         overrides={"scoring": {"ng_area_px": 800.0, "ng_contrast_gray": 22.0,
-                               "ok_max": 0.40, "ng_min": 0.50}},
+                               "ng_min": 0.50}},
         note="ng_min을 크게 낮춰 review를 줄인다(대신 false-NG가 늘 수 있다).",
     ),
     PilotAxis(
         id="S5",
         kind=KIND_SCORING,
         overrides={"scoring": {"ng_area_px": 800.0, "ng_contrast_gray": 25.0,
-                               "ok_max": 0.45, "ng_min": 0.60}},
+                               "ng_min": 0.60}},
         note="S4보다 보수적인 중간점(대비 25, ng_min 0.60).",
     ),
 )

@@ -12,6 +12,10 @@ from typing import Any, get_type_hints
 
 CONFIG_SCHEMA_VERSION = "1.0"
 
+#: OK/REVIEW 밴드의 상한. 채택 시 동결(F4). former ``scoring.ok_max``의 S4 값.
+#: 조정 불가.
+REVIEW_BAND_MAX = 0.40
+
 
 class ConfigError(ValueError):
     """Raised when a configuration file violates the schema."""
@@ -47,21 +51,20 @@ class PreprocessConfig:
 
 @dataclass(frozen=True)
 class CandidatesConfig:
-    z_threshold: float = 4.0
-    min_contrast_gray: float = 12.0
+    z_threshold: float = 7.6
+    min_contrast_gray: float = 16.0
     open_kernel: int = 3
     close_kernel: int = 5
-    merge_kernel: int = 7
-    min_area_px: int = 12
+    merge_kernel: int = 5
+    min_area_px: int = 40
     max_candidates: int = 20
 
 
 @dataclass(frozen=True)
 class ScoringConfig:
-    ng_area_px: float = 48.0
-    ng_contrast_gray: float = 24.0
-    ok_max: float = 0.55
-    ng_min: float = 1.00
+    ng_area_px: float = 800.0
+    ng_contrast_gray: float = 22.0
+    ng_min: float = 0.50
     multi_candidate_margin: float = 0.15
 
 
@@ -203,6 +206,10 @@ def parse_config(data: Mapping[str, Any]) -> AppConfig:
 def _build_section(name: str, section_type: type[Any], payload: Any) -> Any:
     if not isinstance(payload, Mapping):
         raise ConfigError(f"[{name}] must be a table")
+    if name == "scoring":
+        # 채택 이전 TOML 스냅샷 호환(F4). ok_max는 무시하고 해시에도 넣지 않는다.
+        payload = dict(payload)
+        payload.pop("ok_max", None)
     hints = get_type_hints(section_type)
     allowed = {field.name for field in fields(section_type)}
     unknown = set(payload) - allowed
@@ -292,9 +299,11 @@ def _validate(config: AppConfig) -> None:
 
     _require(config.scoring.ng_area_px > 0.0, "scoring.ng_area_px must be > 0")
     _require(config.scoring.ng_contrast_gray > 0.0, "scoring.ng_contrast_gray must be > 0")
-    _require(0.0 <= config.scoring.ok_max <= 1.5, "scoring.ok_max must be in [0, 1.5]")
     _require(0.0 <= config.scoring.ng_min <= 1.5, "scoring.ng_min must be in [0, 1.5]")
-    _require(config.scoring.ok_max < config.scoring.ng_min, "scoring.ok_max must be < ng_min")
+    _require(
+        config.scoring.ng_min > REVIEW_BAND_MAX,
+        "scoring.ng_min must be > REVIEW_BAND_MAX",
+    )
     _require(
         0.0 <= config.scoring.multi_candidate_margin <= 1.5,
         "scoring.multi_candidate_margin must be in [0, 1.5]",
@@ -325,6 +334,7 @@ __all__ = [
     "InputConfig",
     "PreprocessConfig",
     "QualityConfig",
+    "REVIEW_BAND_MAX",
     "RoiConfig",
     "ScoringConfig",
     "default_config",

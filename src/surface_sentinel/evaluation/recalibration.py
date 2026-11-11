@@ -396,7 +396,7 @@ def write_report(
     lines.append("")
     lines.append(
         "스코어링 축은 전 후보 S4 고정(ng_area_px 800, ng_contrast_gray 22, "
-        "ok_max 0.40, ng_min 0.50). max_candidates는 20 고정(안전 상한)."
+        "review band 상한 0.40(동결), ng_min 0.50). max_candidates는 20 고정(안전 상한)."
     )
     lines.append("")
     lines.append("## 3. 후보별 지표 (분자·분모·Wilson 95% CI)")

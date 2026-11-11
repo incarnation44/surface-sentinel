@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 import synthetic as syn
-from surface_sentinel.config import AppConfig, default_config
+from surface_sentinel.config import REVIEW_BAND_MAX, AppConfig, default_config
 from surface_sentinel.contracts import (
     ComponentFeature,
     ErrorCode,
@@ -467,7 +467,7 @@ def test_analyze_components_hand_calculated_features() -> None:
     assert feature.mean_contrast_gray == pytest.approx(24.0)
     assert feature.max_contrast_gray == pytest.approx(24.0)
     assert feature.integrated_contrast == pytest.approx(2400.0)
-    assert feature.evidence == pytest.approx(math.sqrt(1.5))
+    assert feature.evidence == pytest.approx(math.sqrt((100 / 800) * (24 / 22)))
 
 
 def test_analyze_components_aspect_and_elongation_for_wide_rectangle() -> None:
@@ -513,9 +513,9 @@ def test_calculate_score_excludes_invalid_components() -> None:
 def test_component_evidence_caps_norms_at_1_5() -> None:
     config = default_config()
 
-    assert stages._component_evidence(1000, 1000, config) == pytest.approx(1.5)
+    assert stages._component_evidence(2000, 1000, config) == pytest.approx(1.5)
     assert stages._component_evidence(24, 12, config) == pytest.approx(
-        math.sqrt(0.5 * 0.5)
+        math.sqrt((24 / 800) * (12 / 22))
     )
 
 
@@ -549,8 +549,8 @@ def test_decision_truth_table_rows() -> None:
     status, reasons = _decide(ScoreResult(0.0, ()), uncertain=True)
     assert (status, reasons) == (Status.REVIEW, (ReasonCode.ROI_UNCERTAIN,))
 
-    border = _feature(0, evidence=0.6, touches=True)
-    status, reasons = _decide(ScoreResult(0.6, (border,)))
+    border = _feature(0, evidence=0.45, touches=True)
+    status, reasons = _decide(ScoreResult(0.45, (border,)))
     assert (status, reasons) == (
         Status.REVIEW,
         (ReasonCode.BORDER_TOUCHING_CANDIDATE,),
@@ -559,15 +559,36 @@ def test_decision_truth_table_rows() -> None:
     status, reasons = _decide(ScoreResult(0.0, ()), truncated=True)
     assert (status, reasons) == (Status.REVIEW, (ReasonCode.CANDIDATE_TRUNCATED,))
 
-    weak_a = _feature(0, evidence=0.5)
-    weak_b = _feature(1, evidence=0.5)
-    status, reasons = _decide(ScoreResult(0.5, (weak_a, weak_b)))
+    weak_a = _feature(0, evidence=0.45)
+    weak_b = _feature(1, evidence=0.45)
+    status, reasons = _decide(ScoreResult(0.45, (weak_a, weak_b)))
     assert (status, reasons) == (
         Status.REVIEW,
         (ReasonCode.MULTIPLE_WEAK_CANDIDATES,),
     )
 
-    status, reasons = _decide(ScoreResult(0.5, (weak_a,)))
+    status, reasons = _decide(ScoreResult(0.45, (weak_a,)))
+    assert (status, reasons) == (
+        Status.REVIEW,
+        (ReasonCode.EVIDENCE_IN_REVIEW_BAND,),
+    )
+
+
+def test_ok_branch_ignores_score_when_no_valid_components() -> None:
+    status, reasons = _decide(ScoreResult(999.0, ()))
+    assert (status, reasons) == (Status.OK, (ReasonCode.NO_DEFECT_EVIDENCE,))
+
+
+def test_border_escalation_uses_frozen_review_band() -> None:
+    border = _feature(0, evidence=REVIEW_BAND_MAX, touches=True)
+    status, reasons = _decide(ScoreResult(REVIEW_BAND_MAX, (border,)))
+    assert (status, reasons) == (
+        Status.REVIEW,
+        (ReasonCode.BORDER_TOUCHING_CANDIDATE,),
+    )
+
+    below = _feature(0, evidence=REVIEW_BAND_MAX - 0.01, touches=True)
+    status, reasons = _decide(ScoreResult(REVIEW_BAND_MAX - 0.01, (below,)))
     assert (status, reasons) == (
         Status.REVIEW,
         (ReasonCode.EVIDENCE_IN_REVIEW_BAND,),
@@ -589,26 +610,26 @@ def test_ng_priority_over_quality_and_roi_flags() -> None:
 
 def test_decision_config_booleans_disable_escalation() -> None:
     base = default_config()
-    border = _feature(0, evidence=0.6, touches=True)
+    border = _feature(0, evidence=0.45, touches=True)
 
     no_border = replace(
         base,
         decision=replace(base.decision, border_touch_escalates=False),
     )
-    status, reasons = _decide(ScoreResult(0.6, (border,)), config=no_border)
+    status, reasons = _decide(ScoreResult(0.45, (border,)), config=no_border)
     assert (status, reasons) == (
         Status.REVIEW,
         (ReasonCode.EVIDENCE_IN_REVIEW_BAND,),
     )
 
-    weak_a = _feature(0, evidence=0.5)
-    weak_b = _feature(1, evidence=0.5)
+    weak_a = _feature(0, evidence=0.45)
+    weak_b = _feature(1, evidence=0.45)
     no_multi = replace(
         base,
         decision=replace(base.decision, multi_candidate_escalates=False),
     )
     status, reasons = _decide(
-        ScoreResult(0.5, (weak_a, weak_b)),
+        ScoreResult(0.45, (weak_a, weak_b)),
         config=no_multi,
     )
     assert (status, reasons) == (

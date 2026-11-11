@@ -55,7 +55,7 @@ def test_grid_is_deterministic_and_writes_same_jsonl(tmp_path: Path) -> None:
     right = write_jsonl(evaluate_grid(samples, config), tmp_path / "grid_b.jsonl")
     assert left.read_bytes() == right.read_bytes()
     lines = [json.loads(line) for line in left.read_text(encoding="utf-8").splitlines()]
-    assert len(lines) == 24
+    assert len(lines) == 12
     defect_count = sum(1 for row in plan.rows if row.label == "defect")
     for line in lines:
         # 모든 비율에 분모가 있다(escape·review의 분모는 서로 다르다).
@@ -75,7 +75,7 @@ def test_cache_round_trip_requires_matching_meta(tmp_path: Path) -> None:
     path = save_cache(samples, meta, tmp_path / "cache" / "x.pkl")
     assert len(load_cache(path, meta)) == len(samples)
 
-    other = cache_meta(plan, apply_overrides(config, {"scoring": {"ok_max": 0.4}}))
+    other = cache_meta(plan, apply_overrides(config, {"scoring": {"ng_min": 0.6}}))
     try:
         load_cache(path, other)
     except ValueError:
@@ -106,7 +106,7 @@ def test_run_evaluation_writes_all_artifacts(tmp_path: Path) -> None:
     assert result.plan.good_taken == 3
     # P + B0/B1/B2
     assert {report.name for report in result.reports} == {"P", "B0", "B1", "B2"}
-    assert len(result.grid) == 24
+    assert len(result.grid) == 12
     assert result.adopted_label
 
     paths = result.paths

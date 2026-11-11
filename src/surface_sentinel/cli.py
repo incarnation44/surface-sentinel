@@ -521,6 +521,131 @@ def _pct_text(value: float | None) -> str:
     return "-" if value is None else f"{value:.4f}"
 
 
+def _add_adopted_verify_parser(subparsers: Any) -> None:
+    parser = subparsers.add_parser(
+        "adopted-verify",
+        help="채택 캐시의 그룹 부트스트랩 CI와 r18 짝 delta를 계산합니다.",
+        description=(
+            "채택 config의 tune 캐시를 읽어 escape·false-NG·review·recall의 "
+            "이미지 단위 그룹 CI를 내고, r18 캐시를 새 해시로 재빌드해 짝 "
+            "부트스트랩 delta를 계산합니다. 봉인 분할은 거부합니다."
+        ),
+    )
+    parser.add_argument("--split", default="tune", help="분석 분할 (tune만 허용).")
+    parser.add_argument(
+        "--adopted-config",
+        type=Path,
+        default=Path("configs/candidates/adopted/t05_adopted_r20.toml"),
+        help="채택 config TOML.",
+    )
+    parser.add_argument(
+        "--comparison-config",
+        type=Path,
+        default=Path("configs/candidates/fullverify/r18_z7_c16_m5_a45_o3.toml"),
+        help="비교 config TOML (기본 r18).",
+    )
+    parser.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=Path("data/derived/t05_cache"),
+        help="캐시 디렉터리.",
+    )
+    parser.add_argument(
+        "--splits-dir",
+        type=Path,
+        default=Path("data/splits"),
+        help="tune.csv가 있는 디렉터리.",
+    )
+    parser.add_argument(
+        "--raw-root",
+        type=Path,
+        default=Path("data/raw/kolektorsdd2"),
+        help="원본 데이터 루트.",
+    )
+    parser.add_argument(
+        "--good-target",
+        type=int,
+        default=1787,
+        help="good 층화 표본 수 (기본 1787, 전수).",
+    )
+    parser.add_argument(
+        "--seed",
+        default="t05-2026-11-10",
+        help="표본 추출 seed.",
+    )
+    parser.add_argument(
+        "--b",
+        type=int,
+        default=2000,
+        help="부트스트랩 반복 수 (기본 2000).",
+    )
+    parser.add_argument(
+        "--bootstrap-seed",
+        type=int,
+        default=20261111,
+        help="부트스트랩 RNG seed (기본 20261111).",
+    )
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("docs/evidence/t05_adopted_verify.json"),
+        help="결과 JSON 경로.",
+    )
+
+
+def _cmd_adopted_verify(args: argparse.Namespace) -> int:
+    from .evaluation.adopted import (
+        AdoptedVerifyError,
+        build_adopted_verify,
+        write_adopted_verify,
+    )
+
+    if args.split in {"test", "official_test"}:
+        _print_error(f"봉인된 split은 열 수 없습니다: {args.split}")
+        return EXIT_SEALED
+    if args.split != "tune":
+        _print_error(f"지원하지 않는 split입니다: {args.split} (tune만 허용)")
+        return EXIT_INPUT
+    try:
+        payload = build_adopted_verify(
+            adopted_config_path=args.adopted_config,
+            comparison_config_path=args.comparison_config,
+            cache_dir=args.cache_dir,
+            splits_dir=args.splits_dir,
+            raw_root=args.raw_root,
+            good_target=args.good_target,
+            seed=args.seed,
+            b=args.b,
+            bootstrap_seed=args.bootstrap_seed,
+        )
+        out = write_adopted_verify(payload, args.out)
+    except AdoptedVerifyError as exc:
+        _print_error(str(exc))
+        return EXIT_INPUT
+    except FileNotFoundError as exc:
+        _print_error(f"캐시·입력 파일을 찾지 못했습니다: {exc}")
+        return EXIT_INPUT
+    except ValueError as exc:
+        _print_error(str(exc))
+        return EXIT_INPUT
+    except OSError as exc:
+        _print_error(f"검증 JSON을 저장하지 못했습니다: {exc}")
+        return EXIT_STORAGE
+
+    for name, value in payload["group_ci"].items():
+        print(
+            f"{name}: {value['value']} "
+            f"[{value['ci_low']}, {value['ci_high']}] (n={value['n']})"
+        )
+    for name, value in payload["paired_delta"].items():
+        print(
+            f"delta {name} (채택-r18): {value['delta']} "
+            f"[{value['ci_low']}, {value['ci_high']}] (n={value['n']})"
+        )
+    print(f"검증 JSON: {out}")
+    return EXIT_OK
+
+
 def _add_fullverify_details_parser(subparsers: Any) -> None:
     parser = subparsers.add_parser(
         "fullverify-details",
@@ -872,6 +997,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_eval_parser(subparsers)
     _add_recalibrate_parser(subparsers)
     _add_fullverify_details_parser(subparsers)
+    _add_adopted_verify_parser(subparsers)
     _add_defect_map_parser(subparsers)
     return parser
 
@@ -1157,6 +1283,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_recalibrate(args)
     if args.command == "fullverify-details":
         return _cmd_fullverify_details(args)
+    if args.command == "adopted-verify":
+        return _cmd_adopted_verify(args)
     if args.command == "defect-map":
         return _cmd_defect_map(args)
     parser.print_help(sys.stdout)

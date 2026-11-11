@@ -1,16 +1,18 @@
-"""튜닝 그리드 (설계 §4.4). 최대 24후보, 4개 필드.
+"""튜닝 그리드 (설계 §4.4). 최대 12후보, 3개 필드.
 
-후보는 **판정·점수 계층의 4개 필드**만 흔든다.
+후보는 **판정·점수 계층의 3개 필드**만 흔든다.
 
 1. ``scoring.ng_area_px`` — 면적 정규화 기준
 2. ``scoring.ng_contrast_gray`` — 대비 정규화 기준
-3. ``scoring.ok_max`` — OK 상한
-4. ``scoring.ng_min`` — NG 하한
+3. ``scoring.ng_min`` — NG 하한
 
-이 4개를 고른 이유: 이 필드들만이 캐시된 컴포넌트 재료 위에서
+이 3개를 고른 이유: 이 필드들만이 캐시된 컴포넌트 재료 위에서
 evidence·score·판정을 **정확히** 다시 계산할 수 있다(파이프라인 재실행 없음).
 ``candidates.z_threshold``처럼 후보 마스크 자체를 바꾸는 값은 재실행이
 필요하므로 그리드에서 제외했다. 대신 ablation이 그 축을 따로 본다.
+
+F4(2026-11-11): ``scoring.ok_max`` 축은 제거했다. OK 상한은
+``REVIEW_BAND_MAX = 0.40``으로 동결됐고 config 값이 아니다.
 
 선택 규칙(§4.4): ``false-NG ≤ 0.20`` 과 ``review ≤ 0.40`` 을 만족하는 후보 중
 ``escape``가 최소인 것. 만족하는 후보가 없으면 Pareto 점을 보고한다.
@@ -38,13 +40,12 @@ TARGET_FALSE_NG = 0.20
 TARGET_REVIEW = 0.40
 TARGET_LOCALIZATION_RECALL = 0.50
 
-#: 4개 필드의 후보 값. 2 × 3 × 2 × 2 = 24 (상한과 정확히 일치).
-#: 기본값(48 px, 24 gray)은 실측 컴포넌트 규모(면적 중앙 수백~수천 px)에 비해
-#: 40배 가까이 느슨하다. 그래서 아래 구간은 기본값보다 **엄격한 쪽**을 훑는다.
+#: 3개 필드의 후보 값. 2 × 3 × 2 = 12 (상한 24 이내).
+#: 기본값(800 px, 22 gray, ng_min 0.50)은 S4 동결 값이다.
+#: F4(2026-11-11): ``scoring.ok_max`` 축은 제거했다.
 GRID_VALUES: dict[str, tuple[float, ...]] = {
     "scoring.ng_area_px": (500.0, 2000.0),
     "scoring.ng_contrast_gray": (24.0, 30.0, 40.0),
-    "scoring.ok_max": (0.55, 0.75),
     "scoring.ng_min": (0.90, 1.00),
 }
 GRID_FIELDS: tuple[str, ...] = tuple(GRID_VALUES)
@@ -69,7 +70,7 @@ class Candidate:
 
 
 def build_candidates() -> tuple[Candidate, ...]:
-    """24후보를 결정론적 순서로 만든다(사전순 곱, 고정)."""
+    """12후보를 결정론적 순서로 만든다(사전순 곱, 고정)."""
 
     combos = list(itertools.product(*(GRID_VALUES[field] for field in GRID_FIELDS)))
     if len(combos) > MAX_CANDIDATES:

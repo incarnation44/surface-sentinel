@@ -78,7 +78,7 @@ def _row(
         config_hash="deadbeef",
         grid_row=grid_row,
         candidates_params={"z_threshold": 6.0},
-        scoring_params={"ok_max": 0.40},
+        scoring_params={"ng_area_px": 800.0},
         truncated=3,
         samples=714,
         components_total=1428,

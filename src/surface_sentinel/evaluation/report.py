@@ -11,7 +11,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from ..config import AppConfig
+from ..config import REVIEW_BAND_MAX, AppConfig
 from .grid import (
     TARGET_ESCAPE,
     TARGET_FALSE_NG,
@@ -108,7 +108,7 @@ def _section_verdict(result: EvalResult) -> list[str]:
         _table(["집합", "escape", "false-NG", "review", "loc recall@0.10", "목표 충족"], rows)
     )
     lines.append("")
-    lines.append(f"- 그리드 24후보 중 `false-NG ≤ 0.20` 과 `review ≤ 0.40` 을 동시에 만족: "
+    lines.append(f"- 그리드 12후보 중 `false-NG ≤ 0.20` 과 `review ≤ 0.40` 을 동시에 만족: "
                  f"**{feasibility}개**.")
     lines.append(
         "- 후보 축 파일럿(그리드 밖): "
@@ -119,7 +119,7 @@ def _section_verdict(result: EvalResult) -> list[str]:
         )
     )
     lines.append(
-        "- 결론: **scoring 4필드만으로는 목표를 맞출 수 없다.** 후보 생성 단계"
+        "- 결론: **scoring 3필드만으로는 목표를 맞출 수 없다.** 후보 생성 단계"
         "(§3.2 진리표에서 `OK`가 '컴포넌트 0개'를 요구)가 병목이며, 아래 §4의 "
         "추천안은 그 축을 함께 조정한 측정 결과다."
     )
@@ -295,7 +295,7 @@ def _section_diagnosis(result: EvalResult) -> list[str]:
     lines.append("")
     lines.append(
         f"분모: defect {proposal.counts.get('defect')}, good {proposal.counts.get('good')}. "
-        f"OK 상한 `ok_max`={result.base_config.scoring.ok_max}, "
+        f"review band 상한(동결)={REVIEW_BAND_MAX}, "
         f"NG 하한 `ng_min`={result.base_config.scoring.ng_min}."
     )
     lines.append("")
@@ -305,8 +305,7 @@ def _section_diagnosis(result: EvalResult) -> list[str]:
     lines.append("")
     escapes = [outcome for outcome in defect_fail if outcome.status.value == "OK"]
     zero_score = [outcome for outcome in escapes if outcome.score <= 0.0]
-    ok_max = result.base_config.scoring.ok_max
-    band_ok = [outcome for outcome in escapes if 0.0 < outcome.score <= ok_max]
+    band_ok = [outcome for outcome in escapes if 0.0 < outcome.score <= REVIEW_BAND_MAX]
     rows = [
         ["escape 총계", str(len(escapes)), f"P = {proposal.counts.get('defect_evaluated')}"],
         [
@@ -315,9 +314,9 @@ def _section_diagnosis(result: EvalResult) -> list[str]:
             "후보 생성 단계에서 걸러짐 → [candidates] 문제, [scoring] 아님",
         ],
         [
-            f"  · 0 < score ≤ ok_max({ok_max})",
+            f"  · 0 < score ≤ review band 상한({REVIEW_BAND_MAX})",
             str(len(band_ok)),
-            "evidence가 OK 상한을 넘지 못함 → [scoring] 정규화 기준 문제",
+            "evidence가 동결 상한을 넘지 못함 → [scoring] 정규화 기준 문제",
         ],
     ]
     lines.extend(_table(["구분", "건수", "해석"], rows))
@@ -423,7 +422,7 @@ def _section_diagnosis(result: EvalResult) -> list[str]:
         "나온다(우선순위 3). 그런데 후보 생성이 표면 전체를 후보로 만들면 컴포넌트가 "
         "항상 존재하고 절단 플래그까지 걸린다. 그러면 `ng_min` 미만은 전부 "
         "`REVIEW`(우선순위 7 또는 9)가 되어 review rate가 구조적으로 0.6~0.9에 "
-        "고정된다. 이것이 scoring 4필드 그리드만으로 목표를 못 맞추는 이유다."
+        "고정된다. 이것이 scoring 3필드 그리드만으로 목표를 못 맞추는 이유다."
     )
     lines.append("")
 
@@ -431,10 +430,9 @@ def _section_diagnosis(result: EvalResult) -> list[str]:
     field_order = (
         "scoring.ng_area_px",
         "scoring.ng_contrast_gray",
-        "scoring.ok_max",
         "scoring.ng_min",
     )
-    lines.append("### 2.4 필드별 주변 효과 (그리드 24후보 평균)")
+    lines.append("### 2.4 필드별 주변 효과 (그리드 12후보 평균)")
     lines.append("")
     rows: list[list[str]] = []
     for field in field_order:
@@ -469,10 +467,10 @@ def _section_diagnosis(result: EvalResult) -> list[str]:
 def _section_grid(result: EvalResult) -> list[str]:
     grid = result.grid
     selection = result.selection
-    lines = ["## 3. 튜닝 그리드 (24후보, scoring 4개 필드)", ""]
+    lines = ["## 3. 튜닝 그리드 (12후보, scoring 3개 필드)", ""]
     lines.append(
         "후보 필드: `scoring.ng_area_px` × `scoring.ng_contrast_gray` × "
-        "`scoring.ok_max` × `scoring.ng_min` = 2×3×2×2 = 24. 이 4개만 캐시 위에서 "
+        "`scoring.ng_min` = 2×3×2 = 12. 이 3개만 캐시 위에서 "
         "정확히 재계산된다(파이프라인 재실행 없음)."
     )
     lines.append("")
@@ -485,7 +483,6 @@ def _section_grid(result: EvalResult) -> list[str]:
                 row.candidate_id,
                 f"{row.overrides['scoring.ng_area_px']:g}",
                 f"{row.overrides['scoring.ng_contrast_gray']:g}",
-                f"{row.overrides['scoring.ok_max']:g}",
                 f"{row.overrides['scoring.ng_min']:g}",
                 _pct(row.escape),
                 _pct(row.false_ng),
@@ -508,7 +505,6 @@ def _section_grid(result: EvalResult) -> list[str]:
                 "id",
                 "ng_area",
                 "ng_contrast",
-                "ok_max",
                 "ng_min",
                 "escape",
                 "false-NG",

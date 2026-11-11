@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 import synthetic as syn
-from surface_sentinel.config import ConfigError, parse_config
+from surface_sentinel.config import REVIEW_BAND_MAX, ConfigError, parse_config
 from surface_sentinel.contracts import ReasonCode, Status
 from surface_sentinel.pipeline import inspect_image
 from surface_sentinel.pipeline.evidence import sanitize_sample_id
@@ -73,11 +73,11 @@ def test_z_threshold_changes_candidate_pixel_count(tmp_path: Path) -> None:
 
 def test_min_area_threshold_changes_status(tmp_path: Path) -> None:
     image = syn.to_bgr(syn.surface_gray(seed=82))
-    image = syn.add_dark_rect(image, 150, 50, 8, 8, 20)
+    image = syn.add_dark_rect(image, 150, 50, 12, 12, 20)
     path = _write(tmp_path, "min_area.png", image)
     strict = replace(
         BASE,
-        candidates=replace(BASE.candidates, min_area_px=100),
+        candidates=replace(BASE.candidates, min_area_px=200),
     )
 
     default_outcome = _inspect(tmp_path, path, BASE, name="default")
@@ -91,7 +91,7 @@ def test_min_area_threshold_changes_status(tmp_path: Path) -> None:
 
 def test_ng_min_changes_status_but_not_score(tmp_path: Path) -> None:
     image = syn.to_bgr(syn.surface_gray(seed=81))
-    image = syn.add_dark_rect(image, 150, 50, 8, 8, 90)
+    image = syn.add_dark_rect(image, 150, 50, 12, 12, 20)
     path = _write(tmp_path, "ng_min.png", image)
     strict = replace(BASE, scoring=replace(BASE.scoring, ng_min=1.4))
 
@@ -102,7 +102,7 @@ def test_ng_min_changes_status_but_not_score(tmp_path: Path) -> None:
     assert strict_outcome.result.status is Status.REVIEW
     assert strict_outcome.result.reasons == (ReasonCode.EVIDENCE_IN_REVIEW_BAND,)
     assert strict_outcome.result.score == pytest.approx(default_outcome.result.score)
-    assert BASE.scoring.ok_max < BASE.scoring.ng_min < 1.4
+    assert REVIEW_BAND_MAX < BASE.scoring.ng_min < 1.4
 
 
 def test_dark_floor_changes_roi_area_and_uncertainty(tmp_path: Path) -> None:
@@ -180,8 +180,8 @@ def test_invalid_configs_are_rejected() -> None:
         parse_config(data)
 
     data = BASE.to_dict()
-    data["scoring"]["ok_max"] = 1.2
-    with pytest.raises(ConfigError, match="ok_max"):
+    data["scoring"]["ng_min"] = REVIEW_BAND_MAX
+    with pytest.raises(ConfigError, match="REVIEW_BAND_MAX"):
         parse_config(data)
 
     data = BASE.to_dict()

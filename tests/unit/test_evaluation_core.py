@@ -248,7 +248,7 @@ def test_apply_overrides_round_trips_through_validation() -> None:
     assert changed.candidates.z_threshold == 9.0
     assert changed.config_hash != base.config_hash
     # 원본은 그대로다(frozen).
-    assert base.candidates.z_threshold == 4.0
+    assert base.candidates.z_threshold == 7.6
 
 
 def test_apply_overrides_rejects_invalid_values() -> None:
@@ -269,7 +269,7 @@ def test_every_ablation_config_is_valid_and_keeps_scoring_thresholds() -> None:
     base = default_config()
     for spec in ABLATIONS:
         config = spec_config(spec, base)
-        assert config.scoring.ok_max == base.scoring.ok_max
+        assert config.scoring.ng_area_px == base.scoring.ng_area_px
         assert config.scoring.ng_min == base.scoring.ng_min
         assert config.schema_version == base.schema_version
 
@@ -307,10 +307,12 @@ def test_parsed_config_equals_serialised_round_trip() -> None:
 
 def test_candidates_are_unique_and_within_cap() -> None:
     candidates = build_candidates()
-    assert len(candidates) == MAX_CANDIDATES
-    assert len({candidate.candidate_id for candidate in candidates}) == MAX_CANDIDATES
+    expected = 12
+    assert len(candidates) == expected
+    assert len(candidates) <= MAX_CANDIDATES
+    assert len({candidate.candidate_id for candidate in candidates}) == expected
     assert len({tuple(sorted(candidate.overrides.items())) for candidate in candidates}) == (
-        MAX_CANDIDATES
+        expected
     )
     for candidate in candidates:
         assert set(candidate.overrides) == set(GRID_FIELDS)

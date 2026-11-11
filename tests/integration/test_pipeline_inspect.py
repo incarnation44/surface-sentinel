@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 import synthetic as syn
-from surface_sentinel.config import AppConfig, load_config
+from surface_sentinel.config import REVIEW_BAND_MAX, AppConfig, load_config
 from surface_sentinel.contracts import (
     STAGE_ORDER,
     ErrorCode,
@@ -124,21 +124,21 @@ def test_low_contrast_defect_is_ok(tmp_path: Path) -> None:
 
 def test_border_touching_candidate_is_review(tmp_path: Path) -> None:
     image = syn.to_bgr(syn.surface_gray(seed=31))
-    image = syn.add_dark_rect(image, 150, 8, 4, 20, 107)
+    image = syn.add_dark_rect(image, 150, 8, 5, 20, 20)
     path = _write(tmp_path, "border_touch.png", image)
 
     outcome = _run(tmp_path, path)
 
     assert outcome.result.status is Status.REVIEW
     assert outcome.result.reasons == (ReasonCode.BORDER_TOUCHING_CANDIDATE,)
-    assert outcome.result.score >= BASE_CONFIG.scoring.ok_max
+    assert outcome.result.score >= REVIEW_BAND_MAX
 
 
 def test_truncated_candidates_are_review(tmp_path: Path) -> None:
     image = syn.to_bgr(syn.surface_gray(seed=61))
     for y in (25, 55, 85):
         for x in (25, 65, 105, 145, 185, 225, 265):
-            image = syn.add_dark_rect(image, x, y, 6, 6, 105)
+            image = syn.add_dark_rect(image, x, y, 8, 8, 40)
     path = _write(tmp_path, "truncated.png", image)
 
     outcome = _run(tmp_path, path)
@@ -150,8 +150,8 @@ def test_truncated_candidates_are_review(tmp_path: Path) -> None:
 
 def test_multiple_weak_candidates_are_review(tmp_path: Path) -> None:
     image = syn.to_bgr(syn.surface_gray(seed=51))
-    image = syn.add_dark_rect(image, 80, 40, 8, 8, 105)
-    image = syn.add_dark_rect(image, 200, 70, 8, 8, 105)
+    image = syn.add_dark_rect(image, 80, 40, 10, 10, 105)
+    image = syn.add_dark_rect(image, 200, 70, 10, 10, 105)
     path = _write(tmp_path, "multi_weak.png", image)
 
     outcome = _run(tmp_path, path)

@@ -10,6 +10,7 @@ import pytest
 
 from surface_sentinel.config import (
     CONFIG_SCHEMA_VERSION,
+    REVIEW_BAND_MAX,
     ConfigError,
     default_config,
     load_config,
@@ -127,11 +128,24 @@ def test_schema_version_mismatch_rejected() -> None:
         parse_config(data)
 
 
-def test_ok_max_must_be_less_than_ng_min() -> None:
+def test_legacy_ok_max_is_ignored() -> None:
     data = base_data()
     data["scoring"]["ok_max"] = 1.2
-    with pytest.raises(ConfigError, match="ok_max must be < ng_min"):
+    config = parse_config(data)
+    assert not hasattr(config.scoring, "ok_max")
+    assert config.config_hash == parse_config(base_data()).config_hash
+
+
+def test_ng_min_must_exceed_review_band() -> None:
+    data = base_data()
+    data["scoring"]["ng_min"] = REVIEW_BAND_MAX
+    with pytest.raises(ConfigError, match="REVIEW_BAND_MAX"):
         parse_config(data)
+
+
+def test_default_config_matches_base_toml() -> None:
+    repo = Path(__file__).resolve().parents[2]
+    assert default_config() == load_config(repo / "configs" / "base.toml")
 
 
 def test_kernels_must_be_odd() -> None:

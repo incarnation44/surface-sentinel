@@ -14,7 +14,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from ..config import AppConfig
+from ..config import REVIEW_BAND_MAX, AppConfig
 from ..contracts import (
     ComponentFeature,
     ErrorCode,
@@ -706,7 +706,7 @@ def decide_status(
         sum(
             1
             for component in valid
-            if max(scoring.ok_max - scoring.multi_candidate_margin, 0.0)
+            if max(REVIEW_BAND_MAX - scoring.multi_candidate_margin, 0.0)
             <= component.evidence
             < scoring.ng_min
         )
@@ -724,13 +724,13 @@ def decide_status(
 
     if valid and score >= scoring.ng_min:
         return DecisionResult(Status.NG, (ReasonCode.DEFECT_EVIDENCE_STRONG,))
-    if not valid and score <= scoring.ok_max and not effective_flags:
+    if not valid and not effective_flags:
         return DecisionResult(Status.OK, (ReasonCode.NO_DEFECT_EVIDENCE,))
     if quality_low:
         return DecisionResult(Status.REVIEW, (ReasonCode.INPUT_QUALITY_LOW,))
     if roi_uncertain:
         return DecisionResult(Status.REVIEW, (ReasonCode.ROI_UNCERTAIN,))
-    if border_flag and score >= scoring.ok_max:
+    if border_flag and score >= REVIEW_BAND_MAX:
         return DecisionResult(Status.REVIEW, (ReasonCode.BORDER_TOUCHING_CANDIDATE,))
     if truncated_flag:
         return DecisionResult(Status.REVIEW, (ReasonCode.CANDIDATE_TRUNCATED,))

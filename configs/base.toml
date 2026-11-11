@@ -23,19 +23,18 @@ use_bright_channel = true
 noise_floor_gray = 2.0
 
 [candidates]
-z_threshold = 4.0
-min_contrast_gray = 12.0
+z_threshold = 7.6
+min_contrast_gray = 16.0
 open_kernel = 3
 close_kernel = 5
-merge_kernel = 7
-min_area_px = 12
+merge_kernel = 5
+min_area_px = 40
 max_candidates = 20
 
 [scoring]
-ng_area_px = 48.0
-ng_contrast_gray = 24.0
-ok_max = 0.55
-ng_min = 1.00
+ng_area_px = 800.0
+ng_contrast_gray = 22.0
+ng_min = 0.50
 multi_candidate_margin = 0.15
 
 [quality]
