@@ -1,0 +1,5260 @@
+{
+  "candidates": [
+    {
+      "baseline_714": {
+        "metrics": {
+          "escape": 0.09345794392523364,
+          "false_ng": 0.12,
+          "localization_recall_iou0.10": 0.6446280991735537,
+          "review": 0.3865546218487395
+        },
+        "samples": 714
+      },
+      "candidate_id": "r16_z7_c16_m5_a35_o3",
+      "config_hash": "82ac8264d450c81e628b2fa5e956df64aa96a0fe6b79acf82b46d7dcfe4f0272",
+      "config_path": "configs/candidates/fullverify/r16_z7_c16_m5_a35_o3.toml",
+      "confusion": {
+        "defect": {
+          "evaluated": 214,
+          "status": {
+            "ERROR": 0,
+            "NG": 158,
+            "OK": 20,
+            "REVIEW": 36
+          },
+          "total": 214
+        },
+        "good": {
+          "evaluated": 1787,
+          "status": {
+            "ERROR": 0,
+            "NG": 237,
+            "OK": 738,
+            "REVIEW": 812
+          },
+          "total": 1787
+        }
+      },
+      "counts": {
+        "defect": 214,
+        "errors": 0,
+        "good": 1787,
+        "gt_components": 242,
+        "truncated": 294
+      },
+      "delta_714": {
+        "escape": 0.0,
+        "false_ng": 0.012624510352546164,
+        "recall_iou0.10": 0.0,
+        "review": 0.03723348409828697
+      },
+      "escape_causes": {
+        "all_below_min_area": 8,
+        "morphology_erased": 12
+      },
+      "escapes": [
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 426,
+            "candidate_pixels": 123,
+            "cc_count": 18,
+            "contrast_only_pixels": 38030,
+            "max_cc_area": 25,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 146510,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10090.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10090",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 736,
+            "candidate_pixels": 245,
+            "cc_count": 33,
+            "contrast_only_pixels": 67813,
+            "max_cc_area": 34,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144957,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10235.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10235",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 364,
+            "candidate_pixels": 155,
+            "cc_count": 14,
+            "contrast_only_pixels": 48614,
+            "max_cc_area": 30,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 150285,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10301.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10301",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 572,
+            "candidate_pixels": 244,
+            "cc_count": 30,
+            "contrast_only_pixels": 56947,
+            "max_cc_area": 38,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145928,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10554.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10554",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 491,
+            "candidate_pixels": 240,
+            "cc_count": 23,
+            "contrast_only_pixels": 47817,
+            "max_cc_area": 47,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 150892,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10672.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10672",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 511,
+            "candidate_pixels": 150,
+            "cc_count": 14,
+            "contrast_only_pixels": 48168,
+            "max_cc_area": 47,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 151340,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11074.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11074",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 314,
+            "candidate_pixels": 102,
+            "cc_count": 14,
+            "contrast_only_pixels": 57912,
+            "max_cc_area": 21,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 152692,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11093.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11093",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 496,
+            "candidate_pixels": 166,
+            "cc_count": 16,
+            "contrast_only_pixels": 39557,
+            "max_cc_area": 41,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 148887,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11178.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11178",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 830,
+            "candidate_pixels": 359,
+            "cc_count": 29,
+            "contrast_only_pixels": 55863,
+            "max_cc_area": 63,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 151512,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11269.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11269",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 492,
+            "candidate_pixels": 214,
+            "cc_count": 18,
+            "contrast_only_pixels": 52827,
+            "max_cc_area": 37,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147840,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11299.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11299",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 369,
+            "candidate_pixels": 144,
+            "cc_count": 14,
+            "contrast_only_pixels": 54688,
+            "max_cc_area": 35,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144375,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11363.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11363",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 305,
+            "candidate_pixels": 101,
+            "cc_count": 12,
+            "contrast_only_pixels": 46957,
+            "max_cc_area": 30,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144900,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11543.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11543",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 169,
+            "candidate_pixels": 52,
+            "cc_count": 8,
+            "contrast_only_pixels": 27188,
+            "max_cc_area": 10,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144270,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11553.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11553",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 309,
+            "candidate_pixels": 128,
+            "cc_count": 12,
+            "contrast_only_pixels": 53149,
+            "max_cc_area": 52,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144499,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/12041.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "12041",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 428,
+            "candidate_pixels": 156,
+            "cc_count": 17,
+            "contrast_only_pixels": 59211,
+            "max_cc_area": 26,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145761,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20236.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20236",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 571,
+            "candidate_pixels": 269,
+            "cc_count": 27,
+            "contrast_only_pixels": 55485,
+            "max_cc_area": 38,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 142556,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20259.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20259",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 613,
+            "candidate_pixels": 243,
+            "cc_count": 22,
+            "contrast_only_pixels": 56801,
+            "max_cc_area": 40,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 149079,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20281.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20281",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 441,
+            "candidate_pixels": 220,
+            "cc_count": 13,
+            "contrast_only_pixels": 43846,
+            "max_cc_area": 67,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147018,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20632.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20632",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 140,
+            "candidate_pixels": 17,
+            "cc_count": 2,
+            "contrast_only_pixels": 30844,
+            "max_cc_area": 11,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 122850,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20671.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20671",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 652,
+            "candidate_pixels": 290,
+            "cc_count": 26,
+            "contrast_only_pixels": 51566,
+            "max_cc_area": 53,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 35,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 140513,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20969.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20969",
+          "truncated": false
+        }
+      ],
+      "iou": {
+        "distribution": {
+          "count": 242,
+          "histogram": [
+            {
+              "count": 86,
+              "hi": 0.1,
+              "lo": 0.0
+            },
+            {
+              "count": 48,
+              "hi": 0.3,
+              "lo": 0.1
+            },
+            {
+              "count": 50,
+              "hi": 0.5,
+              "lo": 0.3
+            },
+            {
+              "count": 46,
+              "hi": 0.7,
+              "lo": 0.5
+            },
+            {
+              "count": 11,
+              "hi": 0.9,
+              "lo": 0.7
+            },
+            {
+              "count": 1,
+              "hi": 1.0,
+              "lo": 0.9
+            }
+          ],
+          "mean": 0.2817110675882104,
+          "quantiles": {
+            "p10": 0.0,
+            "p25": 0.03013599209573372,
+            "p50": 0.23314049317105823,
+            "p75": 0.4852360936369853,
+            "p90": 0.6588136288998357
+          }
+        },
+        "gt_components": 242,
+        "recall_at": {
+          "0.10": {
+            "ci95_high": 0.7022405231340931,
+            "ci95_low": 0.582495828235571,
+            "definition": "matched_GT(IoU>=0.10) / 전체 GT",
+            "denominator": 242,
+            "numerator": 156,
+            "value": 0.6446280991735537
+          },
+          "0.30": {
+            "ci95_high": 0.5092658021954855,
+            "ci95_low": 0.3849749815814964,
+            "definition": "matched_GT(IoU>=0.30) / 전체 GT",
+            "denominator": 242,
+            "numerator": 108,
+            "value": 0.4462809917355372
+          },
+          "0.50": {
+            "ci95_high": 0.2972536152587774,
+            "ci95_low": 0.19022095227582697,
+            "definition": "matched_GT(IoU>=0.50) / 전체 GT",
+            "denominator": 242,
+            "numerator": 58,
+            "value": 0.2396694214876033
+          }
+        }
+      },
+      "metrics": {
+        "escape": {
+          "ci95_high": 0.13993890401707346,
+          "ci95_low": 0.06131506783031554,
+          "definition": "OK_on_defect / P (P=결함 이미지 수)",
+          "denominator": 214,
+          "numerator": 20,
+          "value": 0.09345794392523364
+        },
+        "false_ng": {
+          "ci95_high": 0.1491408162567328,
+          "ci95_low": 0.11768428792382514,
+          "definition": "NG_on_good / N (N=정상 이미지 수)",
+          "denominator": 1787,
+          "numerator": 237,
+          "value": 0.13262451035254616
+        },
+        "recall_iou0.10": {
+          "ci95_high": 0.7022405231340931,
+          "ci95_low": 0.582495828235571,
+          "definition": "matched_GT(IoU>=0.10) / 전체 GT",
+          "denominator": 242,
+          "numerator": 156,
+          "value": 0.6446280991735537
+        },
+        "recall_iou0.30": {
+          "ci95_high": 0.5092658021954855,
+          "ci95_low": 0.3849749815814964,
+          "definition": "matched_GT(IoU>=0.30) / 전체 GT",
+          "denominator": 242,
+          "numerator": 108,
+          "value": 0.4462809917355372
+        },
+        "recall_iou0.50": {
+          "ci95_high": 0.2972536152587774,
+          "ci95_low": 0.19022095227582697,
+          "definition": "matched_GT(IoU>=0.50) / 전체 GT",
+          "denominator": 242,
+          "numerator": 58,
+          "value": 0.2396694214876033
+        },
+        "review": {
+          "ci95_high": 0.4455654767493403,
+          "ci95_low": 0.402302793004314,
+          "definition": "(REVIEW_defect+REVIEW_good) / T",
+          "denominator": 2001,
+          "numerator": 848,
+          "value": 0.4237881059470265
+        }
+      },
+      "review_breakdown": {
+        "reasons": {
+          "defect": {
+            "CANDIDATE_TRUNCATED": 1,
+            "EVIDENCE_IN_REVIEW_BAND": 14,
+            "MULTIPLE_WEAK_CANDIDATES": 21
+          },
+          "good": {
+            "BORDER_TOUCHING_CANDIDATE": 1,
+            "CANDIDATE_TRUNCATED": 143,
+            "EVIDENCE_IN_REVIEW_BAND": 223,
+            "MULTIPLE_WEAK_CANDIDATES": 445
+          },
+          "total": {
+            "BORDER_TOUCHING_CANDIDATE": 1,
+            "CANDIDATE_TRUNCATED": 144,
+            "EVIDENCE_IN_REVIEW_BAND": 237,
+            "MULTIPLE_WEAK_CANDIDATES": 466
+          }
+        },
+        "samples": {
+          "defect": 36,
+          "good": 812,
+          "total": 848
+        }
+      },
+      "samples": 2001
+    },
+    {
+      "baseline_714": {
+        "metrics": {
+          "escape": 0.09813084112149532,
+          "false_ng": 0.12,
+          "localization_recall_iou0.10": 0.640495867768595,
+          "review": 0.3585434173669468
+        },
+        "samples": 714
+      },
+      "candidate_id": "r17_z7_c16_m5_a40_o3",
+      "config_hash": "803d97fd0a2f1f883356fbb411b43de67aaa191d27e1cf6f4ff4e351503ddcc8",
+      "config_path": "configs/candidates/fullverify/r17_z7_c16_m5_a40_o3.toml",
+      "confusion": {
+        "defect": {
+          "evaluated": 214,
+          "status": {
+            "ERROR": 0,
+            "NG": 158,
+            "OK": 21,
+            "REVIEW": 35
+          },
+          "total": 214
+        },
+        "good": {
+          "evaluated": 1787,
+          "status": {
+            "ERROR": 0,
+            "NG": 237,
+            "OK": 803,
+            "REVIEW": 747
+          },
+          "total": 1787
+        }
+      },
+      "counts": {
+        "defect": 214,
+        "errors": 0,
+        "good": 1787,
+        "gt_components": 242,
+        "truncated": 163
+      },
+      "delta_714": {
+        "escape": 0.0,
+        "false_ng": 0.012624510352546164,
+        "recall_iou0.10": 0.0,
+        "review": 0.032261180334202666
+      },
+      "escape_causes": {
+        "all_below_min_area": 12,
+        "morphology_erased": 9
+      },
+      "escapes": [
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 426,
+            "candidate_pixels": 123,
+            "cc_count": 18,
+            "contrast_only_pixels": 38030,
+            "max_cc_area": 25,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 146510,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10090.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10090",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 736,
+            "candidate_pixels": 245,
+            "cc_count": 33,
+            "contrast_only_pixels": 67813,
+            "max_cc_area": 34,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144957,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10235.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10235",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 364,
+            "candidate_pixels": 155,
+            "cc_count": 14,
+            "contrast_only_pixels": 48614,
+            "max_cc_area": 30,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 150285,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10301.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10301",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 572,
+            "candidate_pixels": 244,
+            "cc_count": 30,
+            "contrast_only_pixels": 56947,
+            "max_cc_area": 38,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145928,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10554.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10554",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 491,
+            "candidate_pixels": 240,
+            "cc_count": 23,
+            "contrast_only_pixels": 47817,
+            "max_cc_area": 47,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 150892,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10672.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10672",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 511,
+            "candidate_pixels": 150,
+            "cc_count": 14,
+            "contrast_only_pixels": 48168,
+            "max_cc_area": 47,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 151340,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11074.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11074",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 314,
+            "candidate_pixels": 102,
+            "cc_count": 14,
+            "contrast_only_pixels": 57912,
+            "max_cc_area": 21,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 152692,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11093.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11093",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 496,
+            "candidate_pixels": 166,
+            "cc_count": 16,
+            "contrast_only_pixels": 39557,
+            "max_cc_area": 41,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 148887,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11178.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11178",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 830,
+            "candidate_pixels": 359,
+            "cc_count": 29,
+            "contrast_only_pixels": 55863,
+            "max_cc_area": 63,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 151512,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11269.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11269",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 492,
+            "candidate_pixels": 214,
+            "cc_count": 18,
+            "contrast_only_pixels": 52827,
+            "max_cc_area": 37,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147840,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11299.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11299",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 369,
+            "candidate_pixels": 144,
+            "cc_count": 14,
+            "contrast_only_pixels": 54688,
+            "max_cc_area": 35,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144375,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11363.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11363",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 305,
+            "candidate_pixels": 101,
+            "cc_count": 12,
+            "contrast_only_pixels": 46957,
+            "max_cc_area": 30,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144900,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11543.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11543",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 169,
+            "candidate_pixels": 52,
+            "cc_count": 8,
+            "contrast_only_pixels": 27188,
+            "max_cc_area": 10,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144270,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11553.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11553",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 309,
+            "candidate_pixels": 128,
+            "cc_count": 12,
+            "contrast_only_pixels": 53149,
+            "max_cc_area": 52,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144499,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/12041.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "12041",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 228,
+            "candidate_pixels": 100,
+            "cc_count": 8,
+            "contrast_only_pixels": 50457,
+            "max_cc_area": 40,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 146223,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20228.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20228",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 428,
+            "candidate_pixels": 156,
+            "cc_count": 17,
+            "contrast_only_pixels": 59211,
+            "max_cc_area": 26,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145761,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20236.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20236",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 571,
+            "candidate_pixels": 269,
+            "cc_count": 27,
+            "contrast_only_pixels": 55485,
+            "max_cc_area": 38,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 142556,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20259.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20259",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 613,
+            "candidate_pixels": 243,
+            "cc_count": 22,
+            "contrast_only_pixels": 56801,
+            "max_cc_area": 40,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 149079,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20281.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20281",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 441,
+            "candidate_pixels": 220,
+            "cc_count": 13,
+            "contrast_only_pixels": 43846,
+            "max_cc_area": 67,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147018,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20632.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20632",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 140,
+            "candidate_pixels": 17,
+            "cc_count": 2,
+            "contrast_only_pixels": 30844,
+            "max_cc_area": 11,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 122850,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20671.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20671",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 652,
+            "candidate_pixels": 290,
+            "cc_count": 26,
+            "contrast_only_pixels": 51566,
+            "max_cc_area": 53,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 140513,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20969.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20969",
+          "truncated": false
+        }
+      ],
+      "iou": {
+        "distribution": {
+          "count": 242,
+          "histogram": [
+            {
+              "count": 87,
+              "hi": 0.1,
+              "lo": 0.0
+            },
+            {
+              "count": 48,
+              "hi": 0.3,
+              "lo": 0.1
+            },
+            {
+              "count": 49,
+              "hi": 0.5,
+              "lo": 0.3
+            },
+            {
+              "count": 46,
+              "hi": 0.7,
+              "lo": 0.5
+            },
+            {
+              "count": 11,
+              "hi": 0.9,
+              "lo": 0.7
+            },
+            {
+              "count": 1,
+              "hi": 1.0,
+              "lo": 0.9
+            }
+          ],
+          "mean": 0.27976795397555887,
+          "quantiles": {
+            "p10": 0.0,
+            "p25": 0.02846135584991187,
+            "p50": 0.22374875872658112,
+            "p75": 0.4852360936369853,
+            "p90": 0.6588136288998357
+          }
+        },
+        "gt_components": 242,
+        "recall_at": {
+          "0.10": {
+            "ci95_high": 0.6983240135349069,
+            "ci95_low": 0.5782770135099098,
+            "definition": "matched_GT(IoU>=0.10) / 전체 GT",
+            "denominator": 242,
+            "numerator": 155,
+            "value": 0.640495867768595
+          },
+          "0.30": {
+            "ci95_high": 0.5051410586122386,
+            "ci95_low": 0.3809644008398958,
+            "definition": "matched_GT(IoU>=0.30) / 전체 GT",
+            "denominator": 242,
+            "numerator": 107,
+            "value": 0.44214876033057854
+          },
+          "0.50": {
+            "ci95_high": 0.2972536152587774,
+            "ci95_low": 0.19022095227582697,
+            "definition": "matched_GT(IoU>=0.50) / 전체 GT",
+            "denominator": 242,
+            "numerator": 58,
+            "value": 0.2396694214876033
+          }
+        }
+      },
+      "metrics": {
+        "escape": {
+          "ci95_high": 0.14535309456285148,
+          "ci95_low": 0.06508186611387787,
+          "definition": "OK_on_defect / P (P=결함 이미지 수)",
+          "denominator": 214,
+          "numerator": 21,
+          "value": 0.09813084112149532
+        },
+        "false_ng": {
+          "ci95_high": 0.1491408162567328,
+          "ci95_low": 0.11768428792382514,
+          "definition": "NG_on_good / N (N=정상 이미지 수)",
+          "denominator": 1787,
+          "numerator": 237,
+          "value": 0.13262451035254616
+        },
+        "recall_iou0.10": {
+          "ci95_high": 0.6983240135349069,
+          "ci95_low": 0.5782770135099098,
+          "definition": "matched_GT(IoU>=0.10) / 전체 GT",
+          "denominator": 242,
+          "numerator": 155,
+          "value": 0.640495867768595
+        },
+        "recall_iou0.30": {
+          "ci95_high": 0.5051410586122386,
+          "ci95_low": 0.3809644008398958,
+          "definition": "matched_GT(IoU>=0.30) / 전체 GT",
+          "denominator": 242,
+          "numerator": 107,
+          "value": 0.44214876033057854
+        },
+        "recall_iou0.50": {
+          "ci95_high": 0.2972536152587774,
+          "ci95_low": 0.19022095227582697,
+          "definition": "matched_GT(IoU>=0.50) / 전체 GT",
+          "denominator": 242,
+          "numerator": 58,
+          "value": 0.2396694214876033
+        },
+        "review": {
+          "ci95_high": 0.4123731278116132,
+          "ci95_low": 0.3696545242616554,
+          "definition": "(REVIEW_defect+REVIEW_good) / T",
+          "denominator": 2001,
+          "numerator": 782,
+          "value": 0.39080459770114945
+        }
+      },
+      "review_breakdown": {
+        "reasons": {
+          "defect": {
+            "EVIDENCE_IN_REVIEW_BAND": 16,
+            "MULTIPLE_WEAK_CANDIDATES": 19
+          },
+          "good": {
+            "BORDER_TOUCHING_CANDIDATE": 1,
+            "CANDIDATE_TRUNCATED": 75,
+            "EVIDENCE_IN_REVIEW_BAND": 190,
+            "MULTIPLE_WEAK_CANDIDATES": 481
+          },
+          "total": {
+            "BORDER_TOUCHING_CANDIDATE": 1,
+            "CANDIDATE_TRUNCATED": 75,
+            "EVIDENCE_IN_REVIEW_BAND": 206,
+            "MULTIPLE_WEAK_CANDIDATES": 500
+          }
+        },
+        "samples": {
+          "defect": 35,
+          "good": 747,
+          "total": 782
+        }
+      },
+      "samples": 2001
+    },
+    {
+      "baseline_714": {
+        "metrics": {
+          "escape": 0.11214953271028037,
+          "false_ng": 0.12,
+          "localization_recall_iou0.10": 0.640495867768595,
+          "review": 0.3333333333333333
+        },
+        "samples": 714
+      },
+      "candidate_id": "r18_z7_c16_m5_a45_o3",
+      "config_hash": "c29bfeb33c0831e2d1ddf89f0e8cf33f53e190eaef9b8560e0d7574808b42e7c",
+      "config_path": "configs/candidates/fullverify/r18_z7_c16_m5_a45_o3.toml",
+      "confusion": {
+        "defect": {
+          "evaluated": 214,
+          "status": {
+            "ERROR": 0,
+            "NG": 158,
+            "OK": 24,
+            "REVIEW": 32
+          },
+          "total": 214
+        },
+        "good": {
+          "evaluated": 1787,
+          "status": {
+            "ERROR": 0,
+            "NG": 237,
+            "OK": 850,
+            "REVIEW": 700
+          },
+          "total": 1787
+        }
+      },
+      "counts": {
+        "defect": 214,
+        "errors": 0,
+        "good": 1787,
+        "gt_components": 242,
+        "truncated": 65
+      },
+      "delta_714": {
+        "escape": 0.0,
+        "false_ng": 0.012624510352546164,
+        "recall_iou0.10": 0.0,
+        "review": 0.032483758120939565
+      },
+      "escape_causes": {
+        "all_below_min_area": 16,
+        "morphology_erased": 8
+      },
+      "escapes": [
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 426,
+            "candidate_pixels": 123,
+            "cc_count": 18,
+            "contrast_only_pixels": 38030,
+            "max_cc_area": 25,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 146510,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10090.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10090",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 736,
+            "candidate_pixels": 245,
+            "cc_count": 33,
+            "contrast_only_pixels": 67813,
+            "max_cc_area": 34,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144957,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10235.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10235",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 364,
+            "candidate_pixels": 155,
+            "cc_count": 14,
+            "contrast_only_pixels": 48614,
+            "max_cc_area": 30,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 150285,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10301.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10301",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 572,
+            "candidate_pixels": 244,
+            "cc_count": 30,
+            "contrast_only_pixels": 56947,
+            "max_cc_area": 38,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145928,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10554.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10554",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 442,
+            "candidate_pixels": 216,
+            "cc_count": 21,
+            "contrast_only_pixels": 60990,
+            "max_cc_area": 49,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 138627,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10612.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10612",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 491,
+            "candidate_pixels": 240,
+            "cc_count": 23,
+            "contrast_only_pixels": 47817,
+            "max_cc_area": 47,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 150892,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10672.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10672",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 511,
+            "candidate_pixels": 150,
+            "cc_count": 14,
+            "contrast_only_pixels": 48168,
+            "max_cc_area": 47,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 151340,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11074.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11074",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 314,
+            "candidate_pixels": 102,
+            "cc_count": 14,
+            "contrast_only_pixels": 57912,
+            "max_cc_area": 21,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 152692,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11093.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11093",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 496,
+            "candidate_pixels": 166,
+            "cc_count": 16,
+            "contrast_only_pixels": 39557,
+            "max_cc_area": 41,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 148887,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11178.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11178",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 830,
+            "candidate_pixels": 359,
+            "cc_count": 29,
+            "contrast_only_pixels": 55863,
+            "max_cc_area": 63,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 151512,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11269.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11269",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 492,
+            "candidate_pixels": 214,
+            "cc_count": 18,
+            "contrast_only_pixels": 52827,
+            "max_cc_area": 37,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147840,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11299.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11299",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 369,
+            "candidate_pixels": 144,
+            "cc_count": 14,
+            "contrast_only_pixels": 54688,
+            "max_cc_area": 35,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144375,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11363.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11363",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 305,
+            "candidate_pixels": 101,
+            "cc_count": 12,
+            "contrast_only_pixels": 46957,
+            "max_cc_area": 30,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144900,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11543.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11543",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 169,
+            "candidate_pixels": 52,
+            "cc_count": 8,
+            "contrast_only_pixels": 27188,
+            "max_cc_area": 10,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144270,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11553.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11553",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 309,
+            "candidate_pixels": 128,
+            "cc_count": 12,
+            "contrast_only_pixels": 53149,
+            "max_cc_area": 52,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144499,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/12041.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "12041",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 228,
+            "candidate_pixels": 100,
+            "cc_count": 8,
+            "contrast_only_pixels": 50457,
+            "max_cc_area": 40,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 146223,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20228.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20228",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 428,
+            "candidate_pixels": 156,
+            "cc_count": 17,
+            "contrast_only_pixels": 59211,
+            "max_cc_area": 26,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145761,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20236.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20236",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 571,
+            "candidate_pixels": 269,
+            "cc_count": 27,
+            "contrast_only_pixels": 55485,
+            "max_cc_area": 38,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 142556,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20259.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20259",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 613,
+            "candidate_pixels": 243,
+            "cc_count": 22,
+            "contrast_only_pixels": 56801,
+            "max_cc_area": 40,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 149079,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20281.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20281",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 584,
+            "candidate_pixels": 222,
+            "cc_count": 25,
+            "contrast_only_pixels": 50786,
+            "max_cc_area": 42,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 134196,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20465.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20465",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 790,
+            "candidate_pixels": 403,
+            "cc_count": 37,
+            "contrast_only_pixels": 52767,
+            "max_cc_area": 56,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147784,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20561.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20561",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 441,
+            "candidate_pixels": 220,
+            "cc_count": 13,
+            "contrast_only_pixels": 43846,
+            "max_cc_area": 67,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147018,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20632.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20632",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 140,
+            "candidate_pixels": 17,
+            "cc_count": 2,
+            "contrast_only_pixels": 30844,
+            "max_cc_area": 11,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 122850,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20671.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20671",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 652,
+            "candidate_pixels": 290,
+            "cc_count": 26,
+            "contrast_only_pixels": 51566,
+            "max_cc_area": 53,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 140513,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20969.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20969",
+          "truncated": false
+        }
+      ],
+      "iou": {
+        "distribution": {
+          "count": 242,
+          "histogram": [
+            {
+              "count": 87,
+              "hi": 0.1,
+              "lo": 0.0
+            },
+            {
+              "count": 48,
+              "hi": 0.3,
+              "lo": 0.1
+            },
+            {
+              "count": 49,
+              "hi": 0.5,
+              "lo": 0.3
+            },
+            {
+              "count": 46,
+              "hi": 0.7,
+              "lo": 0.5
+            },
+            {
+              "count": 11,
+              "hi": 0.9,
+              "lo": 0.7
+            },
+            {
+              "count": 1,
+              "hi": 1.0,
+              "lo": 0.9
+            }
+          ],
+          "mean": 0.27970466735677674,
+          "quantiles": {
+            "p10": 0.0,
+            "p25": 0.02846135584991187,
+            "p50": 0.22374875872658112,
+            "p75": 0.4852360936369853,
+            "p90": 0.6588136288998357
+          }
+        },
+        "gt_components": 242,
+        "recall_at": {
+          "0.10": {
+            "ci95_high": 0.6983240135349069,
+            "ci95_low": 0.5782770135099098,
+            "definition": "matched_GT(IoU>=0.10) / 전체 GT",
+            "denominator": 242,
+            "numerator": 155,
+            "value": 0.640495867768595
+          },
+          "0.30": {
+            "ci95_high": 0.5051410586122386,
+            "ci95_low": 0.3809644008398958,
+            "definition": "matched_GT(IoU>=0.30) / 전체 GT",
+            "denominator": 242,
+            "numerator": 107,
+            "value": 0.44214876033057854
+          },
+          "0.50": {
+            "ci95_high": 0.2972536152587774,
+            "ci95_low": 0.19022095227582697,
+            "definition": "matched_GT(IoU>=0.50) / 전체 GT",
+            "denominator": 242,
+            "numerator": 58,
+            "value": 0.2396694214876033
+          }
+        }
+      },
+      "metrics": {
+        "escape": {
+          "ci95_high": 0.1614465915196719,
+          "ci95_low": 0.07653133564507854,
+          "definition": "OK_on_defect / P (P=결함 이미지 수)",
+          "denominator": 214,
+          "numerator": 24,
+          "value": 0.11214953271028037
+        },
+        "false_ng": {
+          "ci95_high": 0.1491408162567328,
+          "ci95_low": 0.11768428792382514,
+          "definition": "NG_on_good / N (N=정상 이미지 수)",
+          "denominator": 1787,
+          "numerator": 237,
+          "value": 0.13262451035254616
+        },
+        "recall_iou0.10": {
+          "ci95_high": 0.6983240135349069,
+          "ci95_low": 0.5782770135099098,
+          "definition": "matched_GT(IoU>=0.10) / 전체 GT",
+          "denominator": 242,
+          "numerator": 155,
+          "value": 0.640495867768595
+        },
+        "recall_iou0.30": {
+          "ci95_high": 0.5051410586122386,
+          "ci95_low": 0.3809644008398958,
+          "definition": "matched_GT(IoU>=0.30) / 전체 GT",
+          "denominator": 242,
+          "numerator": 107,
+          "value": 0.44214876033057854
+        },
+        "recall_iou0.50": {
+          "ci95_high": 0.2972536152587774,
+          "ci95_low": 0.19022095227582697,
+          "definition": "matched_GT(IoU>=0.50) / 전체 GT",
+          "denominator": 242,
+          "numerator": 58,
+          "value": 0.2396694214876033
+        },
+        "review": {
+          "ci95_high": 0.3871594904118037,
+          "ci95_low": 0.34498890584299086,
+          "definition": "(REVIEW_defect+REVIEW_good) / T",
+          "denominator": 2001,
+          "numerator": 732,
+          "value": 0.3658170914542729
+        }
+      },
+      "review_breakdown": {
+        "reasons": {
+          "defect": {
+            "EVIDENCE_IN_REVIEW_BAND": 15,
+            "MULTIPLE_WEAK_CANDIDATES": 17
+          },
+          "good": {
+            "BORDER_TOUCHING_CANDIDATE": 1,
+            "CANDIDATE_TRUNCATED": 26,
+            "EVIDENCE_IN_REVIEW_BAND": 171,
+            "MULTIPLE_WEAK_CANDIDATES": 502
+          },
+          "total": {
+            "BORDER_TOUCHING_CANDIDATE": 1,
+            "CANDIDATE_TRUNCATED": 26,
+            "EVIDENCE_IN_REVIEW_BAND": 186,
+            "MULTIPLE_WEAK_CANDIDATES": 519
+          }
+        },
+        "samples": {
+          "defect": 32,
+          "good": 700,
+          "total": 732
+        }
+      },
+      "samples": 2001
+    },
+    {
+      "baseline_714": {
+        "metrics": {
+          "escape": 0.10747663551401869,
+          "false_ng": 0.076,
+          "localization_recall_iou0.10": 0.6115702479338843,
+          "review": 0.3641456582633053
+        },
+        "samples": 714
+      },
+      "candidate_id": "r19_z7p3_c16_m5_a40_o3",
+      "config_hash": "ede33b3a64e01ded3e1f23d88d17e29d9f985f13215a2dcd71ff2c63be889793",
+      "config_path": "configs/candidates/fullverify/r19_z7p3_c16_m5_a40_o3.toml",
+      "confusion": {
+        "defect": {
+          "evaluated": 214,
+          "status": {
+            "ERROR": 0,
+            "NG": 151,
+            "OK": 23,
+            "REVIEW": 40
+          },
+          "total": 214
+        },
+        "good": {
+          "evaluated": 1787,
+          "status": {
+            "ERROR": 0,
+            "NG": 164,
+            "OK": 873,
+            "REVIEW": 750
+          },
+          "total": 1787
+        }
+      },
+      "counts": {
+        "defect": 214,
+        "errors": 0,
+        "good": 1787,
+        "gt_components": 242,
+        "truncated": 19
+      },
+      "delta_714": {
+        "escape": 0.0,
+        "false_ng": 0.015773922775601565,
+        "recall_iou0.10": 0.0,
+        "review": 0.03065694043734435
+      },
+      "escape_causes": {
+        "all_below_min_area": 19,
+        "morphology_erased": 4
+      },
+      "escapes": [
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 351,
+            "candidate_pixels": 100,
+            "cc_count": 15,
+            "contrast_only_pixels": 38105,
+            "max_cc_area": 17,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 146510,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10090.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10090",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 536,
+            "candidate_pixels": 182,
+            "cc_count": 25,
+            "contrast_only_pixels": 68013,
+            "max_cc_area": 34,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144957,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10235.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10235",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 292,
+            "candidate_pixels": 128,
+            "cc_count": 12,
+            "contrast_only_pixels": 48686,
+            "max_cc_area": 26,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 150285,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10301.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10301",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 470,
+            "candidate_pixels": 175,
+            "cc_count": 20,
+            "contrast_only_pixels": 57049,
+            "max_cc_area": 32,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145928,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10554.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10554",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 295,
+            "candidate_pixels": 146,
+            "cc_count": 15,
+            "contrast_only_pixels": 61137,
+            "max_cc_area": 36,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 138627,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10612.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10612",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 357,
+            "candidate_pixels": 142,
+            "cc_count": 16,
+            "contrast_only_pixels": 47951,
+            "max_cc_area": 33,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 150892,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10672.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10672",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 378,
+            "candidate_pixels": 107,
+            "cc_count": 13,
+            "contrast_only_pixels": 48301,
+            "max_cc_area": 36,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 151340,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11074.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11074",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 245,
+            "candidate_pixels": 79,
+            "cc_count": 10,
+            "contrast_only_pixels": 57981,
+            "max_cc_area": 21,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 152692,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11093.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11093",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 361,
+            "candidate_pixels": 116,
+            "cc_count": 14,
+            "contrast_only_pixels": 39692,
+            "max_cc_area": 24,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 148887,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11178.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11178",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 655,
+            "candidate_pixels": 260,
+            "cc_count": 20,
+            "contrast_only_pixels": 56038,
+            "max_cc_area": 42,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 151512,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11269.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11269",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 372,
+            "candidate_pixels": 166,
+            "cc_count": 14,
+            "contrast_only_pixels": 52947,
+            "max_cc_area": 36,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147840,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11299.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11299",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 267,
+            "candidate_pixels": 103,
+            "cc_count": 10,
+            "contrast_only_pixels": 54790,
+            "max_cc_area": 32,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144375,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11363.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11363",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 219,
+            "candidate_pixels": 74,
+            "cc_count": 10,
+            "contrast_only_pixels": 47043,
+            "max_cc_area": 16,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144900,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11543.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11543",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 117,
+            "candidate_pixels": 30,
+            "cc_count": 6,
+            "contrast_only_pixels": 27240,
+            "max_cc_area": 6,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144270,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11553.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11553",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 207,
+            "candidate_pixels": 67,
+            "cc_count": 8,
+            "contrast_only_pixels": 53251,
+            "max_cc_area": 19,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144499,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/12041.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "12041",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 185,
+            "candidate_pixels": 83,
+            "cc_count": 6,
+            "contrast_only_pixels": 50500,
+            "max_cc_area": 40,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 146223,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20228.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20228",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 295,
+            "candidate_pixels": 106,
+            "cc_count": 12,
+            "contrast_only_pixels": 59344,
+            "max_cc_area": 19,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145761,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20236.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20236",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 454,
+            "candidate_pixels": 215,
+            "cc_count": 22,
+            "contrast_only_pixels": 55602,
+            "max_cc_area": 35,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 142556,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20259.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20259",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 475,
+            "candidate_pixels": 170,
+            "cc_count": 15,
+            "contrast_only_pixels": 56939,
+            "max_cc_area": 33,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 149079,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20281.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20281",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 463,
+            "candidate_pixels": 162,
+            "cc_count": 16,
+            "contrast_only_pixels": 50907,
+            "max_cc_area": 39,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 134196,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20465.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20465",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 349,
+            "candidate_pixels": 174,
+            "cc_count": 11,
+            "contrast_only_pixels": 43938,
+            "max_cc_area": 60,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147018,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20632.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20632",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 97,
+            "candidate_pixels": 6,
+            "cc_count": 1,
+            "contrast_only_pixels": 30887,
+            "max_cc_area": 6,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 122850,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20671.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20671",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 519,
+            "candidate_pixels": 230,
+            "cc_count": 22,
+            "contrast_only_pixels": 51699,
+            "max_cc_area": 47,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 140513,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20969.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20969",
+          "truncated": false
+        }
+      ],
+      "iou": {
+        "distribution": {
+          "count": 242,
+          "histogram": [
+            {
+              "count": 94,
+              "hi": 0.1,
+              "lo": 0.0
+            },
+            {
+              "count": 48,
+              "hi": 0.3,
+              "lo": 0.1
+            },
+            {
+              "count": 45,
+              "hi": 0.5,
+              "lo": 0.3
+            },
+            {
+              "count": 43,
+              "hi": 0.7,
+              "lo": 0.5
+            },
+            {
+              "count": 12,
+              "hi": 0.9,
+              "lo": 0.7
+            },
+            {
+              "count": 0,
+              "hi": 1.0,
+              "lo": 0.9
+            }
+          ],
+          "mean": 0.26515728672210676,
+          "quantiles": {
+            "p10": 0.0,
+            "p25": 0.021858351514697144,
+            "p50": 0.19751741108548931,
+            "p75": 0.4654789889919201,
+            "p90": 0.6521357941928185
+          }
+        },
+        "gt_components": 242,
+        "recall_at": {
+          "0.10": {
+            "ci95_high": 0.6707774348881022,
+            "ci95_low": 0.5488763218827817,
+            "definition": "matched_GT(IoU>=0.10) / 전체 GT",
+            "denominator": 242,
+            "numerator": 148,
+            "value": 0.6115702479338843
+          },
+          "0.30": {
+            "ci95_high": 0.47614704361310234,
+            "ci95_low": 0.35301114556509916,
+            "definition": "matched_GT(IoU>=0.30) / 전체 GT",
+            "denominator": 242,
+            "numerator": 100,
+            "value": 0.4132231404958678
+          },
+          "0.50": {
+            "ci95_high": 0.2840923964338295,
+            "ci95_low": 0.17897619812623222,
+            "definition": "matched_GT(IoU>=0.50) / 전체 GT",
+            "denominator": 242,
+            "numerator": 55,
+            "value": 0.22727272727272727
+          }
+        }
+      },
+      "metrics": {
+        "escape": {
+          "ci95_high": 0.1561055328634091,
+          "ci95_low": 0.07269140547200095,
+          "definition": "OK_on_defect / P (P=결함 이미지 수)",
+          "denominator": 214,
+          "numerator": 23,
+          "value": 0.10747663551401869
+        },
+        "false_ng": {
+          "ci95_high": 0.10604961131333042,
+          "ci95_low": 0.07924957147374807,
+          "definition": "NG_on_good / N (N=정상 이미지 수)",
+          "denominator": 1787,
+          "numerator": 164,
+          "value": 0.09177392277560156
+        },
+        "recall_iou0.10": {
+          "ci95_high": 0.6707774348881022,
+          "ci95_low": 0.5488763218827817,
+          "definition": "matched_GT(IoU>=0.10) / 전체 GT",
+          "denominator": 242,
+          "numerator": 148,
+          "value": 0.6115702479338843
+        },
+        "recall_iou0.30": {
+          "ci95_high": 0.47614704361310234,
+          "ci95_low": 0.35301114556509916,
+          "definition": "matched_GT(IoU>=0.30) / 전체 GT",
+          "denominator": 242,
+          "numerator": 100,
+          "value": 0.4132231404958678
+        },
+        "recall_iou0.50": {
+          "ci95_high": 0.2840923964338295,
+          "ci95_low": 0.17897619812623222,
+          "definition": "matched_GT(IoU>=0.50) / 전체 GT",
+          "denominator": 242,
+          "numerator": 55,
+          "value": 0.22727272727272727
+        },
+        "review": {
+          "ci95_high": 0.4164018062963264,
+          "ci95_low": 0.37360652670789796,
+          "definition": "(REVIEW_defect+REVIEW_good) / T",
+          "denominator": 2001,
+          "numerator": 790,
+          "value": 0.39480259870064965
+        }
+      },
+      "review_breakdown": {
+        "reasons": {
+          "defect": {
+            "EVIDENCE_IN_REVIEW_BAND": 17,
+            "MULTIPLE_WEAK_CANDIDATES": 23
+          },
+          "good": {
+            "BORDER_TOUCHING_CANDIDATE": 1,
+            "CANDIDATE_TRUNCATED": 9,
+            "EVIDENCE_IN_REVIEW_BAND": 196,
+            "MULTIPLE_WEAK_CANDIDATES": 544
+          },
+          "total": {
+            "BORDER_TOUCHING_CANDIDATE": 1,
+            "CANDIDATE_TRUNCATED": 9,
+            "EVIDENCE_IN_REVIEW_BAND": 213,
+            "MULTIPLE_WEAK_CANDIDATES": 567
+          }
+        },
+        "samples": {
+          "defect": 40,
+          "good": 750,
+          "total": 790
+        }
+      },
+      "samples": 2001
+    },
+    {
+      "baseline_714": {
+        "metrics": {
+          "escape": 0.11682242990654206,
+          "false_ng": 0.054,
+          "localization_recall_iou0.10": 0.5991735537190083,
+          "review": 0.36134453781512604
+        },
+        "samples": 714
+      },
+      "candidate_id": "r20_z7p6_c16_m5_a40_o3",
+      "config_hash": "de1da847df46c8d8559286d68bd70dcca97776f29a02d6049650928901942518",
+      "config_path": "configs/candidates/fullverify/r20_z7p6_c16_m5_a40_o3.toml",
+      "confusion": {
+        "defect": {
+          "evaluated": 214,
+          "status": {
+            "ERROR": 0,
+            "NG": 145,
+            "OK": 25,
+            "REVIEW": 44
+          },
+          "total": 214
+        },
+        "good": {
+          "evaluated": 1787,
+          "status": {
+            "ERROR": 0,
+            "NG": 104,
+            "OK": 948,
+            "REVIEW": 735
+          },
+          "total": 1787
+        }
+      },
+      "counts": {
+        "defect": 214,
+        "errors": 0,
+        "good": 1787,
+        "gt_components": 242,
+        "truncated": 0
+      },
+      "delta_714": {
+        "escape": 0.0,
+        "false_ng": 0.004198097369893676,
+        "recall_iou0.10": 0.0,
+        "review": 0.02796080951121077
+      },
+      "escape_causes": {
+        "all_below_min_area": 21,
+        "morphology_erased": 4
+      },
+      "escapes": [
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 271,
+            "candidate_pixels": 83,
+            "cc_count": 12,
+            "contrast_only_pixels": 38185,
+            "max_cc_area": 15,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 146510,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10090.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10090",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 390,
+            "candidate_pixels": 136,
+            "cc_count": 19,
+            "contrast_only_pixels": 68159,
+            "max_cc_area": 27,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144957,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10235.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10235",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 228,
+            "candidate_pixels": 90,
+            "cc_count": 10,
+            "contrast_only_pixels": 48750,
+            "max_cc_area": 26,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 150285,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10301.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10301",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 355,
+            "candidate_pixels": 132,
+            "cc_count": 15,
+            "contrast_only_pixels": 57164,
+            "max_cc_area": 17,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145928,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10554.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10554",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 216,
+            "candidate_pixels": 104,
+            "cc_count": 11,
+            "contrast_only_pixels": 61216,
+            "max_cc_area": 21,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 138627,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10612.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10612",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 271,
+            "candidate_pixels": 103,
+            "cc_count": 14,
+            "contrast_only_pixels": 48037,
+            "max_cc_area": 16,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 150892,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10672.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10672",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 295,
+            "candidate_pixels": 88,
+            "cc_count": 9,
+            "contrast_only_pixels": 48384,
+            "max_cc_area": 35,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 151340,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11074.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11074",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 164,
+            "candidate_pixels": 67,
+            "cc_count": 9,
+            "contrast_only_pixels": 58062,
+            "max_cc_area": 21,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 152692,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11093.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11093",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 274,
+            "candidate_pixels": 74,
+            "cc_count": 12,
+            "contrast_only_pixels": 39779,
+            "max_cc_area": 12,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 148887,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11178.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11178",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 524,
+            "candidate_pixels": 214,
+            "cc_count": 17,
+            "contrast_only_pixels": 56169,
+            "max_cc_area": 32,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 151512,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11269.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11269",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 289,
+            "candidate_pixels": 140,
+            "cc_count": 12,
+            "contrast_only_pixels": 53030,
+            "max_cc_area": 34,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147840,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11299.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11299",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 396,
+            "candidate_pixels": 211,
+            "cc_count": 19,
+            "contrast_only_pixels": 51431,
+            "max_cc_area": 30,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 148030,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11315.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11315",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 210,
+            "candidate_pixels": 92,
+            "cc_count": 10,
+            "contrast_only_pixels": 54847,
+            "max_cc_area": 29,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144375,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11363.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11363",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 178,
+            "candidate_pixels": 63,
+            "cc_count": 9,
+            "contrast_only_pixels": 47084,
+            "max_cc_area": 16,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144900,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11543.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11543",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 86,
+            "candidate_pixels": 25,
+            "cc_count": 5,
+            "contrast_only_pixels": 27271,
+            "max_cc_area": 6,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144270,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11553.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11553",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 342,
+            "candidate_pixels": 169,
+            "cc_count": 8,
+            "contrast_only_pixels": 54959,
+            "max_cc_area": 60,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145692,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11750.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11750",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 137,
+            "candidate_pixels": 47,
+            "cc_count": 6,
+            "contrast_only_pixels": 53321,
+            "max_cc_area": 12,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144499,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/12041.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "12041",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 159,
+            "candidate_pixels": 77,
+            "cc_count": 5,
+            "contrast_only_pixels": 50526,
+            "max_cc_area": 40,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 146223,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20228.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20228",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 233,
+            "candidate_pixels": 89,
+            "cc_count": 12,
+            "contrast_only_pixels": 59406,
+            "max_cc_area": 18,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145761,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20236.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20236",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 353,
+            "candidate_pixels": 152,
+            "cc_count": 17,
+            "contrast_only_pixels": 55703,
+            "max_cc_area": 29,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 142556,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20259.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20259",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 366,
+            "candidate_pixels": 122,
+            "cc_count": 11,
+            "contrast_only_pixels": 57048,
+            "max_cc_area": 25,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 149079,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20281.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20281",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 341,
+            "candidate_pixels": 130,
+            "cc_count": 12,
+            "contrast_only_pixels": 51029,
+            "max_cc_area": 34,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 134196,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20465.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20465",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 267,
+            "candidate_pixels": 155,
+            "cc_count": 9,
+            "contrast_only_pixels": 44020,
+            "max_cc_area": 56,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147018,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20632.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20632",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 68,
+            "candidate_pixels": 0,
+            "cc_count": 0,
+            "contrast_only_pixels": 30916,
+            "max_cc_area": 0,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 122850,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20671.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20671",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 402,
+            "candidate_pixels": 135,
+            "cc_count": 16,
+            "contrast_only_pixels": 51816,
+            "max_cc_area": 31,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 40,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 140513,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20969.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20969",
+          "truncated": false
+        }
+      ],
+      "iou": {
+        "distribution": {
+          "count": 242,
+          "histogram": [
+            {
+              "count": 97,
+              "hi": 0.1,
+              "lo": 0.0
+            },
+            {
+              "count": 51,
+              "hi": 0.3,
+              "lo": 0.1
+            },
+            {
+              "count": 44,
+              "hi": 0.5,
+              "lo": 0.3
+            },
+            {
+              "count": 40,
+              "hi": 0.7,
+              "lo": 0.5
+            },
+            {
+              "count": 10,
+              "hi": 0.9,
+              "lo": 0.7
+            },
+            {
+              "count": 0,
+              "hi": 1.0,
+              "lo": 0.9
+            }
+          ],
+          "mean": 0.25344932487047334,
+          "quantiles": {
+            "p10": 0.0,
+            "p25": 0.018042446307581683,
+            "p50": 0.17903684353832752,
+            "p75": 0.44684938093444504,
+            "p90": 0.6493910155014236
+          }
+        },
+        "gt_components": 242,
+        "recall_at": {
+          "0.10": {
+            "ci95_high": 0.6589032126783935,
+            "ci95_low": 0.5363445711179476,
+            "definition": "matched_GT(IoU>=0.10) / 전체 GT",
+            "denominator": 242,
+            "numerator": 145,
+            "value": 0.5991735537190083
+          },
+          "0.30": {
+            "ci95_high": 0.45112367811721826,
+            "ci95_low": 0.3292225651118979,
+            "definition": "matched_GT(IoU>=0.30) / 전체 GT",
+            "denominator": 242,
+            "numerator": 94,
+            "value": 0.3884297520661157
+          },
+          "0.50": {
+            "ci95_high": 0.26201371338805624,
+            "ci95_low": 0.1603782595477678,
+            "definition": "matched_GT(IoU>=0.50) / 전체 GT",
+            "denominator": 242,
+            "numerator": 50,
+            "value": 0.2066115702479339
+          }
+        }
+      },
+      "metrics": {
+        "escape": {
+          "ci95_high": 0.16676585213905515,
+          "ci95_low": 0.08039306385503565,
+          "definition": "OK_on_defect / P (P=결함 이미지 수)",
+          "denominator": 214,
+          "numerator": 25,
+          "value": 0.11682242990654206
+        },
+        "false_ng": {
+          "ci95_high": 0.0700302293400144,
+          "ci95_low": 0.04826134682228646,
+          "definition": "NG_on_good / N (N=정상 이미지 수)",
+          "denominator": 1787,
+          "numerator": 104,
+          "value": 0.058198097369893675
+        },
+        "recall_iou0.10": {
+          "ci95_high": 0.6589032126783935,
+          "ci95_low": 0.5363445711179476,
+          "definition": "matched_GT(IoU>=0.10) / 전체 GT",
+          "denominator": 242,
+          "numerator": 145,
+          "value": 0.5991735537190083
+        },
+        "recall_iou0.30": {
+          "ci95_high": 0.45112367811721826,
+          "ci95_low": 0.3292225651118979,
+          "definition": "matched_GT(IoU>=0.30) / 전체 GT",
+          "denominator": 242,
+          "numerator": 94,
+          "value": 0.3884297520661157
+        },
+        "recall_iou0.50": {
+          "ci95_high": 0.26201371338805624,
+          "ci95_low": 0.1603782595477678,
+          "definition": "matched_GT(IoU>=0.50) / 전체 GT",
+          "denominator": 242,
+          "numerator": 50,
+          "value": 0.2066115702479339
+        },
+        "review": {
+          "ci95_high": 0.41086198640931537,
+          "ci95_low": 0.36817291031484467,
+          "definition": "(REVIEW_defect+REVIEW_good) / T",
+          "denominator": 2001,
+          "numerator": 779,
+          "value": 0.3893053473263368
+        }
+      },
+      "review_breakdown": {
+        "reasons": {
+          "defect": {
+            "EVIDENCE_IN_REVIEW_BAND": 19,
+            "MULTIPLE_WEAK_CANDIDATES": 25
+          },
+          "good": {
+            "BORDER_TOUCHING_CANDIDATE": 1,
+            "EVIDENCE_IN_REVIEW_BAND": 218,
+            "MULTIPLE_WEAK_CANDIDATES": 516
+          },
+          "total": {
+            "BORDER_TOUCHING_CANDIDATE": 1,
+            "EVIDENCE_IN_REVIEW_BAND": 237,
+            "MULTIPLE_WEAK_CANDIDATES": 541
+          }
+        },
+        "samples": {
+          "defect": 44,
+          "good": 735,
+          "total": 779
+        }
+      },
+      "samples": 2001
+    },
+    {
+      "baseline_714": {
+        "metrics": {
+          "escape": 0.1261682242990654,
+          "false_ng": 0.076,
+          "localization_recall_iou0.10": 0.6074380165289256,
+          "review": 0.3473389355742297
+        },
+        "samples": 714
+      },
+      "candidate_id": "r21_z7p3_c16_m5_a45_o3",
+      "config_hash": "6913a33f985220251ead6187c6a5536e1199c5e4d05d6d4f085f2430d3996b69",
+      "config_path": "configs/candidates/fullverify/r21_z7p3_c16_m5_a45_o3.toml",
+      "confusion": {
+        "defect": {
+          "evaluated": 214,
+          "status": {
+            "ERROR": 0,
+            "NG": 151,
+            "OK": 27,
+            "REVIEW": 36
+          },
+          "total": 214
+        },
+        "good": {
+          "evaluated": 1787,
+          "status": {
+            "ERROR": 0,
+            "NG": 164,
+            "OK": 920,
+            "REVIEW": 703
+          },
+          "total": 1787
+        }
+      },
+      "counts": {
+        "defect": 214,
+        "errors": 0,
+        "good": 1787,
+        "gt_components": 242,
+        "truncated": 5
+      },
+      "delta_714": {
+        "escape": 0.0,
+        "false_ng": 0.015773922775601565,
+        "recall_iou0.10": 0.0,
+        "review": 0.02197640675460588
+      },
+      "escape_causes": {
+        "all_below_min_area": 22,
+        "morphology_erased": 5
+      },
+      "escapes": [
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 351,
+            "candidate_pixels": 100,
+            "cc_count": 15,
+            "contrast_only_pixels": 38105,
+            "max_cc_area": 17,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 146510,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10090.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10090",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 536,
+            "candidate_pixels": 182,
+            "cc_count": 25,
+            "contrast_only_pixels": 68013,
+            "max_cc_area": 34,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144957,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10235.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10235",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 292,
+            "candidate_pixels": 128,
+            "cc_count": 12,
+            "contrast_only_pixels": 48686,
+            "max_cc_area": 26,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 150285,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10301.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10301",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 470,
+            "candidate_pixels": 175,
+            "cc_count": 20,
+            "contrast_only_pixels": 57049,
+            "max_cc_area": 32,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145928,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10554.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10554",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 295,
+            "candidate_pixels": 146,
+            "cc_count": 15,
+            "contrast_only_pixels": 61137,
+            "max_cc_area": 36,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 138627,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10612.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10612",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 357,
+            "candidate_pixels": 142,
+            "cc_count": 16,
+            "contrast_only_pixels": 47951,
+            "max_cc_area": 33,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 150892,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10672.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10672",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 378,
+            "candidate_pixels": 107,
+            "cc_count": 13,
+            "contrast_only_pixels": 48301,
+            "max_cc_area": 36,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 151340,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11074.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11074",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 245,
+            "candidate_pixels": 79,
+            "cc_count": 10,
+            "contrast_only_pixels": 57981,
+            "max_cc_area": 21,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 152692,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11093.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11093",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 361,
+            "candidate_pixels": 116,
+            "cc_count": 14,
+            "contrast_only_pixels": 39692,
+            "max_cc_area": 24,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 148887,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11178.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11178",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 655,
+            "candidate_pixels": 260,
+            "cc_count": 20,
+            "contrast_only_pixels": 56038,
+            "max_cc_area": 42,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 151512,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11269.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11269",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 372,
+            "candidate_pixels": 166,
+            "cc_count": 14,
+            "contrast_only_pixels": 52947,
+            "max_cc_area": 36,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147840,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11299.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11299",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 507,
+            "candidate_pixels": 321,
+            "cc_count": 21,
+            "contrast_only_pixels": 51320,
+            "max_cc_area": 48,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 148030,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11315.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11315",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 267,
+            "candidate_pixels": 103,
+            "cc_count": 10,
+            "contrast_only_pixels": 54790,
+            "max_cc_area": 32,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144375,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11363.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11363",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 219,
+            "candidate_pixels": 74,
+            "cc_count": 10,
+            "contrast_only_pixels": 47043,
+            "max_cc_area": 16,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144900,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11543.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11543",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 117,
+            "candidate_pixels": 30,
+            "cc_count": 6,
+            "contrast_only_pixels": 27240,
+            "max_cc_area": 6,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144270,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11553.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11553",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 455,
+            "candidate_pixels": 259,
+            "cc_count": 16,
+            "contrast_only_pixels": 54846,
+            "max_cc_area": 81,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145692,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11750.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11750",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 207,
+            "candidate_pixels": 67,
+            "cc_count": 8,
+            "contrast_only_pixels": 53251,
+            "max_cc_area": 19,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144499,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/12041.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "12041",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 185,
+            "candidate_pixels": 83,
+            "cc_count": 6,
+            "contrast_only_pixels": 50500,
+            "max_cc_area": 40,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 146223,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20228.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20228",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 295,
+            "candidate_pixels": 106,
+            "cc_count": 12,
+            "contrast_only_pixels": 59344,
+            "max_cc_area": 19,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145761,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20236.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20236",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 454,
+            "candidate_pixels": 215,
+            "cc_count": 22,
+            "contrast_only_pixels": 55602,
+            "max_cc_area": 35,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 142556,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20259.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20259",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 475,
+            "candidate_pixels": 170,
+            "cc_count": 15,
+            "contrast_only_pixels": 56939,
+            "max_cc_area": 33,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 149079,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20281.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20281",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 463,
+            "candidate_pixels": 162,
+            "cc_count": 16,
+            "contrast_only_pixels": 50907,
+            "max_cc_area": 39,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 134196,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20465.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20465",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 594,
+            "candidate_pixels": 270,
+            "cc_count": 27,
+            "contrast_only_pixels": 52963,
+            "max_cc_area": 43,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147784,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20561.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20561",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 349,
+            "candidate_pixels": 174,
+            "cc_count": 11,
+            "contrast_only_pixels": 43938,
+            "max_cc_area": 60,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147018,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20632.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20632",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 97,
+            "candidate_pixels": 6,
+            "cc_count": 1,
+            "contrast_only_pixels": 30887,
+            "max_cc_area": 6,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 122850,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20671.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20671",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 1728,
+            "candidate_pixels": 974,
+            "cc_count": 72,
+            "contrast_only_pixels": 72383,
+            "max_cc_area": 86,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 141875,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20801.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20801",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 519,
+            "candidate_pixels": 230,
+            "cc_count": 22,
+            "contrast_only_pixels": 51699,
+            "max_cc_area": 47,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 45,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 140513,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20969.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20969",
+          "truncated": false
+        }
+      ],
+      "iou": {
+        "distribution": {
+          "count": 242,
+          "histogram": [
+            {
+              "count": 95,
+              "hi": 0.1,
+              "lo": 0.0
+            },
+            {
+              "count": 48,
+              "hi": 0.3,
+              "lo": 0.1
+            },
+            {
+              "count": 45,
+              "hi": 0.5,
+              "lo": 0.3
+            },
+            {
+              "count": 42,
+              "hi": 0.7,
+              "lo": 0.5
+            },
+            {
+              "count": 12,
+              "hi": 0.9,
+              "lo": 0.7
+            },
+            {
+              "count": 0,
+              "hi": 1.0,
+              "lo": 0.9
+            }
+          ],
+          "mean": 0.2625417587921868,
+          "quantiles": {
+            "p10": 0.0,
+            "p25": 0.02081431447163002,
+            "p50": 0.19234814935055106,
+            "p75": 0.461038872195607,
+            "p90": 0.6521357941928185
+          }
+        },
+        "gt_components": 242,
+        "recall_at": {
+          "0.10": {
+            "ci95_high": 0.6668238587652774,
+            "ci95_low": 0.5446945736807588,
+            "definition": "matched_GT(IoU>=0.10) / 전체 GT",
+            "denominator": 242,
+            "numerator": 147,
+            "value": 0.6074380165289256
+          },
+          "0.30": {
+            "ci95_high": 0.47198759508212657,
+            "ci95_low": 0.3490352697712274,
+            "definition": "matched_GT(IoU>=0.30) / 전체 GT",
+            "denominator": 242,
+            "numerator": 99,
+            "value": 0.4090909090909091
+          },
+          "0.50": {
+            "ci95_high": 0.2796913599771347,
+            "ci95_low": 0.17524191025807956,
+            "definition": "matched_GT(IoU>=0.50) / 전체 GT",
+            "denominator": 242,
+            "numerator": 54,
+            "value": 0.2231404958677686
+          }
+        }
+      },
+      "metrics": {
+        "escape": {
+          "ci95_high": 0.1773432233190103,
+          "ci95_low": 0.08817767033376117,
+          "definition": "OK_on_defect / P (P=결함 이미지 수)",
+          "denominator": 214,
+          "numerator": 27,
+          "value": 0.1261682242990654
+        },
+        "false_ng": {
+          "ci95_high": 0.10604961131333042,
+          "ci95_low": 0.07924957147374807,
+          "definition": "NG_on_good / N (N=정상 이미지 수)",
+          "denominator": 1787,
+          "numerator": 164,
+          "value": 0.09177392277560156
+        },
+        "recall_iou0.10": {
+          "ci95_high": 0.6668238587652774,
+          "ci95_low": 0.5446945736807588,
+          "definition": "matched_GT(IoU>=0.10) / 전체 GT",
+          "denominator": 242,
+          "numerator": 147,
+          "value": 0.6074380165289256
+        },
+        "recall_iou0.30": {
+          "ci95_high": 0.47198759508212657,
+          "ci95_low": 0.3490352697712274,
+          "definition": "matched_GT(IoU>=0.30) / 전체 GT",
+          "denominator": 242,
+          "numerator": 99,
+          "value": 0.4090909090909091
+        },
+        "recall_iou0.50": {
+          "ci95_high": 0.2796913599771347,
+          "ci95_low": 0.17524191025807956,
+          "definition": "matched_GT(IoU>=0.50) / 전체 GT",
+          "denominator": 242,
+          "numerator": 54,
+          "value": 0.2231404958677686
+        },
+        "review": {
+          "ci95_high": 0.3906930162682181,
+          "ci95_low": 0.3484384758011628,
+          "definition": "(REVIEW_defect+REVIEW_good) / T",
+          "denominator": 2001,
+          "numerator": 739,
+          "value": 0.36931534232883556
+        }
+      },
+      "review_breakdown": {
+        "reasons": {
+          "defect": {
+            "EVIDENCE_IN_REVIEW_BAND": 14,
+            "MULTIPLE_WEAK_CANDIDATES": 22
+          },
+          "good": {
+            "BORDER_TOUCHING_CANDIDATE": 1,
+            "CANDIDATE_TRUNCATED": 1,
+            "EVIDENCE_IN_REVIEW_BAND": 170,
+            "MULTIPLE_WEAK_CANDIDATES": 531
+          },
+          "total": {
+            "BORDER_TOUCHING_CANDIDATE": 1,
+            "CANDIDATE_TRUNCATED": 1,
+            "EVIDENCE_IN_REVIEW_BAND": 184,
+            "MULTIPLE_WEAK_CANDIDATES": 553
+          }
+        },
+        "samples": {
+          "defect": 36,
+          "good": 703,
+          "total": 739
+        }
+      },
+      "samples": 2001
+    },
+    {
+      "baseline_714": {
+        "metrics": {
+          "escape": 0.12149532710280374,
+          "false_ng": 0.034,
+          "localization_recall_iou0.10": 0.5702479338842975,
+          "review": 0.3851540616246499
+        },
+        "samples": 714
+      },
+      "candidate_id": "r23_z8_c16_m5_a30_o3",
+      "config_hash": "af9c8a02757e77630a188ae029db05741836f599f9b379c88bc649cd9b0a364f",
+      "config_path": "configs/candidates/fullverify/r23_z8_c16_m5_a30_o3.toml",
+      "confusion": {
+        "defect": {
+          "evaluated": 214,
+          "status": {
+            "ERROR": 0,
+            "NG": 139,
+            "OK": 26,
+            "REVIEW": 49
+          },
+          "total": 214
+        },
+        "good": {
+          "evaluated": 1787,
+          "status": {
+            "ERROR": 0,
+            "NG": 67,
+            "OK": 936,
+            "REVIEW": 784
+          },
+          "total": 1787
+        }
+      },
+      "counts": {
+        "defect": 214,
+        "errors": 0,
+        "good": 1787,
+        "gt_components": 242,
+        "truncated": 3
+      },
+      "delta_714": {
+        "escape": 0.0,
+        "false_ng": 0.003493005036373807,
+        "recall_iou0.10": 0.0,
+        "review": 0.03113779244831366
+      },
+      "escape_causes": {
+        "all_below_min_area": 19,
+        "morphology_erased": 7
+      },
+      "escapes": [
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 173,
+            "candidate_pixels": 55,
+            "cc_count": 8,
+            "contrast_only_pixels": 38283,
+            "max_cc_area": 11,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 146510,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10090.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10090",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 224,
+            "candidate_pixels": 80,
+            "cc_count": 11,
+            "contrast_only_pixels": 68325,
+            "max_cc_area": 23,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144957,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10235.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10235",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 133,
+            "candidate_pixels": 49,
+            "cc_count": 4,
+            "contrast_only_pixels": 48845,
+            "max_cc_area": 26,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 150285,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10301.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10301",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 317,
+            "candidate_pixels": 176,
+            "cc_count": 15,
+            "contrast_only_pixels": 72369,
+            "max_cc_area": 50,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 146148,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10402.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10402",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 233,
+            "candidate_pixels": 99,
+            "cc_count": 12,
+            "contrast_only_pixels": 57286,
+            "max_cc_area": 15,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145928,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10554.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10554",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 110,
+            "candidate_pixels": 61,
+            "cc_count": 7,
+            "contrast_only_pixels": 61322,
+            "max_cc_area": 20,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 138627,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10612.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10612",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 147,
+            "candidate_pixels": 44,
+            "cc_count": 7,
+            "contrast_only_pixels": 48161,
+            "max_cc_area": 8,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 150892,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/10672.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "10672",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 172,
+            "candidate_pixels": 61,
+            "cc_count": 5,
+            "contrast_only_pixels": 48507,
+            "max_cc_area": 33,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 151340,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11074.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11074",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 93,
+            "candidate_pixels": 33,
+            "cc_count": 5,
+            "contrast_only_pixels": 58133,
+            "max_cc_area": 13,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 152692,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11093.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11093",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 158,
+            "candidate_pixels": 26,
+            "cc_count": 4,
+            "contrast_only_pixels": 39895,
+            "max_cc_area": 9,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 148887,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11178.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11178",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 347,
+            "candidate_pixels": 155,
+            "cc_count": 13,
+            "contrast_only_pixels": 56346,
+            "max_cc_area": 24,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 151512,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11269.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11269",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 179,
+            "candidate_pixels": 65,
+            "cc_count": 8,
+            "contrast_only_pixels": 53140,
+            "max_cc_area": 16,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147840,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11299.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11299",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 241,
+            "candidate_pixels": 120,
+            "cc_count": 14,
+            "contrast_only_pixels": 51586,
+            "max_cc_area": 17,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 148030,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11315.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11315",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 142,
+            "candidate_pixels": 67,
+            "cc_count": 6,
+            "contrast_only_pixels": 54915,
+            "max_cc_area": 23,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144375,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11363.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11363",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 101,
+            "candidate_pixels": 45,
+            "cc_count": 7,
+            "contrast_only_pixels": 47161,
+            "max_cc_area": 10,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144900,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11543.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11543",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 46,
+            "candidate_pixels": 9,
+            "cc_count": 2,
+            "contrast_only_pixels": 27311,
+            "max_cc_area": 5,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144270,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11553.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11553",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 219,
+            "candidate_pixels": 105,
+            "cc_count": 7,
+            "contrast_only_pixels": 55082,
+            "max_cc_area": 38,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145692,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/11750.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "11750",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 68,
+            "candidate_pixels": 18,
+            "cc_count": 3,
+            "contrast_only_pixels": 53390,
+            "max_cc_area": 8,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 144499,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "train/12041.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "12041",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 91,
+            "candidate_pixels": 54,
+            "cc_count": 5,
+            "contrast_only_pixels": 50594,
+            "max_cc_area": 30,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 146223,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20228.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20228",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 124,
+            "candidate_pixels": 47,
+            "cc_count": 7,
+            "contrast_only_pixels": 59515,
+            "max_cc_area": 12,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 145761,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20236.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20236",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 258,
+            "candidate_pixels": 106,
+            "cc_count": 10,
+            "contrast_only_pixels": 55798,
+            "max_cc_area": 29,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 142556,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20259.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20259",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 202,
+            "candidate_pixels": 52,
+            "cc_count": 8,
+            "contrast_only_pixels": 57212,
+            "max_cc_area": 11,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 149079,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20281.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20281",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 195,
+            "candidate_pixels": 113,
+            "cc_count": 6,
+            "contrast_only_pixels": 44092,
+            "max_cc_area": 43,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 147018,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20632.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20632",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 37,
+            "candidate_pixels": 0,
+            "cc_count": 0,
+            "contrast_only_pixels": 30947,
+            "max_cc_area": 0,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 122850,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20671.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20671",
+          "truncated": false
+        },
+        {
+          "cause": "morphology_erased",
+          "diagnostics": {
+            "both_pixels": 852,
+            "candidate_pixels": 404,
+            "cc_count": 41,
+            "contrast_only_pixels": 73259,
+            "max_cc_area": 63,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 141875,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20801.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20801",
+          "truncated": false
+        },
+        {
+          "cause": "all_below_min_area",
+          "diagnostics": {
+            "both_pixels": 250,
+            "candidate_pixels": 65,
+            "cc_count": 9,
+            "contrast_only_pixels": 51968,
+            "max_cc_area": 20,
+            "max_refined_mean_contrast": 0.0,
+            "min_area_px": 30,
+            "min_contrast_gray": 16.0,
+            "refined_components": 0,
+            "refined_pixels": 0,
+            "roi_area_px": 140513,
+            "roi_uncertain": false,
+            "z_only_pixels": 0
+          },
+          "image_path": "test/20969.png",
+          "label": "defect",
+          "quality_flags": [],
+          "sample_id": "20969",
+          "truncated": false
+        }
+      ],
+      "iou": {
+        "distribution": {
+          "count": 242,
+          "histogram": [
+            {
+              "count": 104,
+              "hi": 0.1,
+              "lo": 0.0
+            },
+            {
+              "count": 51,
+              "hi": 0.3,
+              "lo": 0.1
+            },
+            {
+              "count": 44,
+              "hi": 0.5,
+              "lo": 0.3
+            },
+            {
+              "count": 34,
+              "hi": 0.7,
+              "lo": 0.5
+            },
+            {
+              "count": 9,
+              "hi": 0.9,
+              "lo": 0.7
+            },
+            {
+              "count": 0,
+              "hi": 1.0,
+              "lo": 0.9
+            }
+          ],
+          "mean": 0.23564034933166522,
+          "quantiles": {
+            "p10": 0.0,
+            "p25": 0.014517894807974371,
+            "p50": 0.14799268609913407,
+            "p75": 0.3938337950394724,
+            "p90": 0.6303283846677058
+          }
+        },
+        "gt_components": 242,
+        "recall_at": {
+          "0.10": {
+            "ci95_high": 0.6310415689015912,
+            "ci95_low": 0.507258944620817,
+            "definition": "matched_GT(IoU>=0.10) / 전체 GT",
+            "denominator": 242,
+            "numerator": 138,
+            "value": 0.5702479338842975
+          },
+          "0.30": {
+            "ci95_high": 0.42172298649009027,
+            "ci95_low": 0.30167598646509314,
+            "definition": "matched_GT(IoU>=0.30) / 전체 GT",
+            "denominator": 242,
+            "numerator": 87,
+            "value": 0.359504132231405
+          },
+          "0.50": {
+            "ci95_high": 0.23076922149365225,
+            "ci95_low": 0.1346754811682389,
+            "definition": "matched_GT(IoU>=0.50) / 전체 GT",
+            "denominator": 242,
+            "numerator": 43,
+            "value": 0.17768595041322313
+          }
+        }
+      },
+      "metrics": {
+        "escape": {
+          "ci95_high": 0.17206440045356725,
+          "ci95_low": 0.08427550436986392,
+          "definition": "OK_on_defect / P (P=결함 이미지 수)",
+          "denominator": 214,
+          "numerator": 26,
+          "value": 0.12149532710280374
+        },
+        "false_ng": {
+          "ci95_high": 0.047339124240553615,
+          "ci95_low": 0.029631094503134378,
+          "definition": "NG_on_good / N (N=정상 이미지 수)",
+          "denominator": 1787,
+          "numerator": 67,
+          "value": 0.03749300503637381
+        },
+        "recall_iou0.10": {
+          "ci95_high": 0.6310415689015912,
+          "ci95_low": 0.507258944620817,
+          "definition": "matched_GT(IoU>=0.10) / 전체 GT",
+          "denominator": 242,
+          "numerator": 138,
+          "value": 0.5702479338842975
+        },
+        "recall_iou0.30": {
+          "ci95_high": 0.42172298649009027,
+          "ci95_low": 0.30167598646509314,
+          "definition": "matched_GT(IoU>=0.30) / 전체 GT",
+          "denominator": 242,
+          "numerator": 87,
+          "value": 0.359504132231405
+        },
+        "recall_iou0.50": {
+          "ci95_high": 0.23076922149365225,
+          "ci95_low": 0.1346754811682389,
+          "definition": "matched_GT(IoU>=0.50) / 전체 GT",
+          "denominator": 242,
+          "numerator": 43,
+          "value": 0.17768595041322313
+        },
+        "review": {
+          "ci95_high": 0.4380305305134092,
+          "ci95_low": 0.3948739624947029,
+          "definition": "(REVIEW_defect+REVIEW_good) / T",
+          "denominator": 2001,
+          "numerator": 833,
+          "value": 0.41629185407296354
+        }
+      },
+      "review_breakdown": {
+        "reasons": {
+          "defect": {
+            "EVIDENCE_IN_REVIEW_BAND": 22,
+            "MULTIPLE_WEAK_CANDIDATES": 27
+          },
+          "good": {
+            "BORDER_TOUCHING_CANDIDATE": 1,
+            "CANDIDATE_TRUNCATED": 2,
+            "EVIDENCE_IN_REVIEW_BAND": 322,
+            "MULTIPLE_WEAK_CANDIDATES": 459
+          },
+          "total": {
+            "BORDER_TOUCHING_CANDIDATE": 1,
+            "CANDIDATE_TRUNCATED": 2,
+            "EVIDENCE_IN_REVIEW_BAND": 344,
+            "MULTIPLE_WEAK_CANDIDATES": 486
+          }
+        },
+        "samples": {
+          "defect": 49,
+          "good": 784,
+          "total": 833
+        }
+      },
+      "samples": 2001
+    }
+  ],
+  "inputs": {
+    "baseline_jsonl": "docs/evidence/tune_grid2.jsonl",
+    "cache_dir": "data/derived/t05_cache",
+    "candidate_dir": "configs/candidates/fullverify",
+    "good_target": 1787,
+    "jsonl": "docs/evidence/tune_fullverify.jsonl",
+    "seed": "t05-2026-11-10"
+  },
+  "samples": 2001,
+  "split": "tune",
+  "totals": {
+    "candidates": 7,
+    "defect": 214,
+    "errors": 0,
+    "good": 1787,
+    "gt_components": 242,
+    "samples": 2001
+  }
+}

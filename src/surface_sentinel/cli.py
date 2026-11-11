@@ -359,6 +359,16 @@ def _add_recalibrate_parser(subparsers: Any) -> None:
         default=Path("docs/reports/T04_recalib_2026-11-11.md"),
         help="보고서 경로 (기본 docs/reports/T04_recalib_2026-11-11.md).",
     )
+    parser.add_argument(
+        "--report-title",
+        default="T04 후보 생성 재보정 보고서",
+        help="보고서 제목 (기본 T04 후보 생성 재보정 보고서).",
+    )
+    parser.add_argument(
+        "--report-cap-note",
+        default="(상한 24)",
+        help='보고서의 후보 수 꼬리표 (기본 "(상한 24)").',
+    )
 
 
 def _cmd_recalibrate(args: argparse.Namespace) -> int:
@@ -406,6 +416,10 @@ def _cmd_recalibrate(args: argparse.Namespace) -> int:
         jsonl_path=args.jsonl.as_posix(),
         seed=args.seed,
         code_revision=git_head(),
+        title=args.report_title,
+        candidate_dir=args.candidate_dir,
+        good_target=args.good_target,
+        cap_note=args.report_cap_note,
     )
     passed = [row for row in rows if row.passes()]
     print("")
@@ -505,6 +519,121 @@ def _cmd_eval(args: argparse.Namespace) -> int:
 
 def _pct_text(value: float | None) -> str:
     return "-" if value is None else f"{value:.4f}"
+
+
+def _add_fullverify_details_parser(subparsers: Any) -> None:
+    parser = subparsers.add_parser(
+        "fullverify-details",
+        help="전수 tune 검증의 상세 분석(escape 원인·REVIEW 사유·IoU 분포)을 만듭니다.",
+        description=(
+            "전수 측정 JSONL과 후보별 캐시를 읽어 escape 원인, REVIEW 사유, "
+            "IoU 분포·recall@0.50, 혼동행렬, 714 표본 대비 delta를 남깁니다. "
+            "파이프라인은 escape 샘플만 재실행합니다. 봉인 분할은 거부합니다."
+        ),
+    )
+    parser.add_argument(
+        "--split",
+        default="tune",
+        help="분석 분할 (tune만 허용, 기본 tune).",
+    )
+    parser.add_argument(
+        "--jsonl",
+        type=Path,
+        default=Path("docs/evidence/tune_fullverify.jsonl"),
+        help="전수 측정 JSONL (기본 docs/evidence/tune_fullverify.jsonl).",
+    )
+    parser.add_argument(
+        "--candidate-dir",
+        type=Path,
+        default=Path("configs/candidates/fullverify"),
+        help="후보 TOML 디렉터리 (기본 configs/candidates/fullverify).",
+    )
+    parser.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=Path("data/derived/t05_cache"),
+        help="캐시 디렉터리 (기본 data/derived/t05_cache).",
+    )
+    parser.add_argument(
+        "--splits-dir",
+        type=Path,
+        default=Path("data/splits"),
+        help="tune.csv가 있는 디렉터리 (기본 data/splits).",
+    )
+    parser.add_argument(
+        "--raw-root",
+        type=Path,
+        default=Path("data/raw/kolektorsdd2"),
+        help="원본 데이터 루트 (기본 data/raw/kolektorsdd2).",
+    )
+    parser.add_argument(
+        "--good-target",
+        type=int,
+        default=1787,
+        help="good 층화 표본 수 (기본 1787, 전수).",
+    )
+    parser.add_argument(
+        "--seed",
+        default="t05-2026-11-10",
+        help="표본 추출 seed (기본 t05-2026-11-10).",
+    )
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("docs/evidence/tune_fullverify_details.json"),
+        help="상세 JSON 출력 (기본 docs/evidence/tune_fullverify_details.json).",
+    )
+
+
+def _cmd_fullverify_details(args: argparse.Namespace) -> int:
+    from .evaluation.fullverify import FullVerifyError, build_details, write_details
+
+    if args.split in {"test", "official_test"}:
+        _print_error(f"봉인된 split은 열 수 없습니다: {args.split}")
+        return EXIT_SEALED
+    if args.split != "tune":
+        _print_error(f"지원하지 않는 split입니다: {args.split} (tune만 허용)")
+        return EXIT_INPUT
+    try:
+        details = build_details(
+            jsonl_path=args.jsonl,
+            candidate_dir=args.candidate_dir,
+            cache_dir=args.cache_dir,
+            splits_dir=args.splits_dir,
+            raw_root=args.raw_root,
+            good_target=args.good_target,
+            seed=args.seed,
+        )
+        out = write_details(details, args.out)
+    except FullVerifyError as exc:
+        _print_error(str(exc))
+        return EXIT_INPUT
+    except FileNotFoundError as exc:
+        _print_error(f"캐시·입력 파일을 찾지 못했습니다: {exc}")
+        return EXIT_INPUT
+    except ValueError as exc:
+        _print_error(str(exc))
+        return EXIT_INPUT
+    except OSError as exc:
+        _print_error(f"상세 JSON을 저장하지 못했습니다: {exc}")
+        return EXIT_STORAGE
+
+    print(
+        f"후보 {details['totals']['candidates']}건 · "
+        f"표본 {details['totals']['samples']}장 "
+        f"(defect {details['totals']['defect']} + good {details['totals']['good']})"
+    )
+    for item in details["candidates"]:
+        causes = ", ".join(
+            f"{name} {count}" for name, count in item["escape_causes"].items()
+        ) or "없음"
+        print(
+            f"{item['candidate_id']}: escape {len(item['escapes'])} "
+            f"({causes}) · REVIEW {item['review_breakdown']['samples']['total']} · "
+            f"recall@0.50 {item['metrics']['recall_iou0.50']['value']}"
+        )
+    print(f"상세 JSON: {out}")
+    return EXIT_OK
 
 
 def _add_inspect_parser(subparsers: Any) -> None:
@@ -742,6 +871,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_batch_parser(subparsers)
     _add_eval_parser(subparsers)
     _add_recalibrate_parser(subparsers)
+    _add_fullverify_details_parser(subparsers)
     _add_defect_map_parser(subparsers)
     return parser
 
@@ -1025,6 +1155,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_eval(args)
     if args.command == "recalibrate":
         return _cmd_recalibrate(args)
+    if args.command == "fullverify-details":
+        return _cmd_fullverify_details(args)
     if args.command == "defect-map":
         return _cmd_defect_map(args)
     parser.print_help(sys.stdout)

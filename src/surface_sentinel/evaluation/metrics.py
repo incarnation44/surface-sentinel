@@ -231,6 +231,71 @@ class PixelCounts:
 
 IOU_MATCH_RECALL = 0.10
 IOU_MATCH_STRICT = 0.30
+IOU_MATCH_FULL = 0.50
+
+#: IoU 분포 히스토그램 경계. 각 구간은 [lo, hi), 마지막 구간만 [lo, hi]다.
+IOU_HISTOGRAM_BINS: tuple[tuple[float, float], ...] = (
+    (0.0, 0.1),
+    (0.1, 0.3),
+    (0.3, 0.5),
+    (0.5, 0.7),
+    (0.7, 0.9),
+    (0.9, 1.0),
+)
+
+
+def recall_at(matches: Sequence[GtMatch], threshold: float) -> Ratio:
+    """주어진 IoU 임계값 이상으로 매칭된 GT의 비율(분모=전체 GT)."""
+
+    matched = sum(1 for match in matches if match.iou >= threshold)
+    return ratio(
+        f"matched_GT(IoU>={threshold:.2f}) / 전체 GT",
+        matched,
+        len(matches),
+    )
+
+
+def _quantile(values: Sequence[float], q: float) -> float | None:
+    """정렬된 값의 선형 보간 분위수. 값이 없으면 None."""
+
+    if not values:
+        return None
+    position = (len(values) - 1) * q
+    lower = math.floor(position)
+    upper = math.ceil(position)
+    if lower == upper:
+        return float(values[lower])
+    weight = position - lower
+    return float(values[lower] + (values[upper] - values[lower]) * weight)
+
+
+def iou_distribution(matches: Sequence[GtMatch]) -> dict[str, Any]:
+    """GT별 best IoU의 요약(평균·분위수·히스토그램). 결정론, RNG 없음."""
+
+    values = sorted(float(match.iou) for match in matches)
+    count = len(values)
+    mean = sum(values) / count if count else None
+    histogram: list[dict[str, Any]] = []
+    for index, (low, high) in enumerate(IOU_HISTOGRAM_BINS):
+        last = index == len(IOU_HISTOGRAM_BINS) - 1
+        if last:
+            hits = sum(1 for value in values if low <= value <= high)
+        else:
+            hits = sum(1 for value in values if low <= value < high)
+        histogram.append({"lo": low, "hi": high, "count": hits})
+    return {
+        "count": count,
+        "mean": mean,
+        "quantiles": {
+            "p10": _quantile(values, 0.10),
+            "p25": _quantile(values, 0.25),
+            "p50": _quantile(values, 0.50),
+            "p75": _quantile(values, 0.75),
+            "p90": _quantile(values, 0.90),
+        },
+        "histogram": histogram,
+    }
+
 
 
 def localization_metrics(
@@ -288,16 +353,20 @@ __all__ = [
     "Confusion",
     "DECIDED_STATUSES",
     "GtMatch",
+    "IOU_MATCH_FULL",
     "IOU_MATCH_RECALL",
     "IOU_MATCH_STRICT",
+    "IOU_HISTOGRAM_BINS",
     "PixelCounts",
     "Ratio",
     "SCORED_STATUSES",
     "Z_95",
     "derived_ratio",
     "image_metrics",
+    "iou_distribution",
     "localization_metrics",
     "metrics_to_dict",
     "ratio",
+    "recall_at",
     "wilson_interval",
 ]

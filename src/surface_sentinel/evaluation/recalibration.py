@@ -330,13 +330,17 @@ def write_report(
     jsonl_path: str | Path = DEFAULT_JSONL,
     seed: str = SEED,
     code_revision: str = "",
+    title: str = "T04 후보 생성 재보정 보고서",
+    candidate_dir: str | Path = RECALIBRATION_CANDIDATE_DIR,
+    good_target: int = GOOD_TARGET,
+    cap_note: str = "(상한 24)",
 ) -> Path:
     """결정 보고서를 쓴다."""
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     passed = [row for row in rows if row.passes()]
     lines: list[str] = []
-    lines.append("# T04 후보 생성 재보정 보고서")
+    lines.append(f"# {title}")
     lines.append("")
     lines.append(f"- 작성: {time.strftime('%Y-%m-%d %H:%M:%S KST')}")
     lines.append(f"- 코드 리비전: {code_revision or '기록 없음'}")
@@ -344,9 +348,9 @@ def write_report(
         f"- 표본: split=tune, defect {getattr(plan, 'defect_taken', '?')}/"
         f"{getattr(plan, 'defect_population', '?')} (전수), "
         f"good {getattr(plan, 'good_taken', '?')}/"
-        f"{getattr(plan, 'good_population', '?')} (층화 {GOOD_TARGET}), seed={seed}"
+        f"{getattr(plan, 'good_population', '?')} (층화 {good_target}), seed={seed}"
     )
-    lines.append(f"- 후보 수: {len(rows)} (상한 24)")
+    lines.append(f"- 후보 수: {len(rows)} {cap_note}")
     lines.append(
         "- 봉인 접근: 없음. `test`/`official_test`는 읽지 않았고 `--allow-sealed`도 쓰지 않았다."
     )
@@ -479,8 +483,9 @@ def write_report(
     lines.append("```text")
     lines.append(
         "uv run surface-sentinel recalibrate --split tune "
-        "--candidate-dir configs/candidates/recalib"
+        f"--candidate-dir {Path(candidate_dir).as_posix()}"
     )
+    lines.append(f"  --good-target {good_target} --seed {seed}")
     lines.append(f"  --jsonl {jsonl_path} --report {target.as_posix()}")
     lines.append("```")
     lines.append("")
@@ -488,7 +493,7 @@ def write_report(
     lines.append("")
     lines.append(f"- JSONL: `{jsonl_path}`")
     lines.append(f"- 보고서: `{target.as_posix()}`")
-    lines.append("- 후보 설정: `configs/candidates/recalib/*.toml` (전부 측정용·미채택)")
+    lines.append(f"- 후보 설정: `{Path(candidate_dir).as_posix()}/*.toml` (전부 측정용·미채택)")
     lines.append("")
     target.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return target

@@ -175,6 +175,24 @@ def test_write_report_contains_sections_and_criteria(workdir: Path) -> None:
     assert "base.toml" in text
 
 
+def test_write_report_honors_title_candidate_dir_and_cap_note(workdir: Path) -> None:
+    path = write_report(
+        [_row()],
+        workdir / "report_fullverify.md",
+        jsonl_path="docs/evidence/tune_fullverify.jsonl",
+        title="T04 전수 tune 검증 보고서",
+        candidate_dir="configs/candidates/fullverify",
+        good_target=1787,
+        cap_note="(전수 검증)",
+    )
+    text = path.read_text(encoding="utf-8")
+    assert "# T04 전수 tune 검증 보고서" in text
+    assert "(층화 1787)" in text
+    assert "후보 수: 1 (전수 검증)" in text
+    assert "--candidate-dir configs/candidates/fullverify" in text
+    assert "configs/candidates/fullverify/*.toml" in text
+
+
 # ------------------------------------------------------------------ 봉인 차단
 
 
