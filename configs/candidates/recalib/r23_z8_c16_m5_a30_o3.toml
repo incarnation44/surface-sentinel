@@ -1,0 +1,60 @@
+# 측정용 후보 · 미채택 · configs/base.toml 반영 금지
+# T04 후보 생성 재보정(2026-11-11) 실험 파일입니다. 채택안이 아닙니다.
+# 스코어링 축은 T05 파일럿 S4로 고정(ng_area_px 800, ng_contrast_gray 22,
+# ok_max 0.40, ng_min 0.50)했고, 후보 생성 축만 바꿉니다.
+# max_candidates는 안전 상한이므로 20에서 바꾸지 않습니다.
+# [roi]·[preprocess]·[quality]·[decision]·[artifacts]는 base와 같습니다.
+schema_version = "1.0"
+
+[input]
+min_width = 64
+min_height = 64
+min_std = 1.0
+
+[roi]
+mode = "auto"
+dark_floor = 8
+margin_px = 2
+min_area_ratio = 0.20
+close_kernel = 7
+fixed_margin_px = 8
+
+[preprocess]
+median_kernel = 3
+bg_kernel_ratio = 0.10
+bg_kernel_min = 21
+bg_kernel_max = 61
+use_dark_channel = true
+use_bright_channel = true
+noise_floor_gray = 2.0
+
+[candidates]
+z_threshold = 8.0
+min_contrast_gray = 16.0
+open_kernel = 3
+close_kernel = 5
+merge_kernel = 5
+min_area_px = 30
+max_candidates = 20
+
+[scoring]
+ng_area_px = 800.0
+ng_contrast_gray = 22.0
+ok_max = 0.4
+ng_min = 0.5
+multi_candidate_margin = 0.15
+
+[quality]
+blur_min_var = 20.0
+dark_mean_min = 20.0
+bright_mean_max = 235.0
+saturated_ratio_max = 0.10
+
+[decision]
+border_touch_escalates = true
+truncation_escalates = true
+multi_candidate_escalates = true
+
+[artifacts]
+save_stages = false
+overlay_scale = 2

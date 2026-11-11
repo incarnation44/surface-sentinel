@@ -299,6 +299,142 @@ def _add_eval_parser(subparsers: Any) -> None:
     )
 
 
+def _add_recalibrate_parser(subparsers: Any) -> None:
+    parser = subparsers.add_parser(
+        "recalibrate",
+        help="T04 후보 생성 재보정을 실행합니다(설정 우선, tune 전용).",
+        description=(
+            "T05가 확인한 후보 생성 병목을 설정 우선으로 재보정합니다. "
+            "configs/candidates/recalib/*.toml 후보를 T05와 같은 tune 표본에서 "
+            "측정하고 지표·분모·Wilson 95% 구간·절단 통계를 남깁니다. "
+            "T05 산출물(tune_grid.jsonl 등)은 덮어쓰지 않습니다. "
+            "test/official_test는 봉인되어 거부합니다."
+        ),
+    )
+    parser.add_argument("--split", default="tune", help="평가 분할 (tune만 허용).")
+    parser.add_argument(
+        "--candidate-dir",
+        type=Path,
+        default=Path("configs/candidates/recalib"),
+        help="후보 TOML 디렉터리 (기본 configs/candidates/recalib).",
+    )
+    parser.add_argument(
+        "--splits-dir",
+        type=Path,
+        default=Path("data/splits"),
+        help="tune.csv가 있는 디렉터리 (기본 data/splits).",
+    )
+    parser.add_argument(
+        "--raw-root",
+        type=Path,
+        default=Path("data/raw/kolektorsdd2"),
+        help="원본 데이터 루트 (기본 data/raw/kolektorsdd2).",
+    )
+    parser.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=Path("data/derived/t05_cache"),
+        help="캐시 디렉터리 (기본 data/derived/t05_cache).",
+    )
+    parser.add_argument(
+        "--good-target",
+        type=int,
+        default=500,
+        help="good 층화 표본 수 (기본 500, T05와 같은 값).",
+    )
+    parser.add_argument(
+        "--seed",
+        default="t05-2026-11-10",
+        help="표본 추출 seed (기본 t05-2026-11-10).",
+    )
+    parser.add_argument(
+        "--jsonl",
+        type=Path,
+        default=Path("docs/evidence/tune_grid2.jsonl"),
+        help="후보별 결과 JSONL (기본 docs/evidence/tune_grid2.jsonl).",
+    )
+    parser.add_argument(
+        "--report",
+        type=Path,
+        default=Path("docs/reports/T04_recalib_2026-11-11.md"),
+        help="보고서 경로 (기본 docs/reports/T04_recalib_2026-11-11.md).",
+    )
+
+
+def _cmd_recalibrate(args: argparse.Namespace) -> int:
+    from .evaluation.recalibration import (
+        RecalibrationError,
+        git_head,
+        run_recalibration,
+        write_jsonl,
+        write_report,
+    )
+    from .evaluation.runner import load_split_rows
+    from .evaluation.sampling import build_sample_plan
+
+    if args.split != "tune":
+        _print_error(f"봉인·미지원 분할입니다: {args.split} (tune만 허용)")
+        return EXIT_SEALED
+    try:
+        rows = run_recalibration(
+            args.candidate_dir,
+            split=args.split,
+            splits_dir=args.splits_dir,
+            raw_root=args.raw_root,
+            cache_dir=args.cache_dir,
+            good_target=args.good_target,
+            seed=args.seed,
+        )
+    except RecalibrationError as exc:
+        _print_error(str(exc))
+        return EXIT_INPUT
+    except FileNotFoundError as exc:
+        _print_error(f"산출물을 저장하지 못했습니다: {exc}")
+        return EXIT_STORAGE
+
+    plan = build_sample_plan(
+        load_split_rows(args.split, splits_dir=args.splits_dir),
+        split=args.split,
+        good_target=args.good_target,
+        seed=args.seed,
+    )
+    jsonl_path = write_jsonl(rows, args.jsonl)
+    report_path = write_report(
+        rows,
+        args.report,
+        plan=plan,
+        jsonl_path=args.jsonl.as_posix(),
+        seed=args.seed,
+        code_revision=git_head(),
+    )
+    passed = [row for row in rows if row.passes()]
+    print("")
+    print(f"후보 {len(rows)}건 · 통과 {len(passed)}건")
+    for row in rows:
+        print(
+            "{id}: escape {esc} / false-NG {fng} / review {rev} / recall {rec} / {result}".format(
+                id=row.candidate_id,
+                esc=_ratio_text(row.escape),
+                fng=_ratio_text(row.false_ng),
+                rev=_ratio_text(row.review),
+                rec=_ratio_text(row.recall),
+                result="통과" if row.passes() else "미통과",
+            )
+        )
+    print(f"JSONL: {jsonl_path}")
+    print(f"보고서: {report_path}")
+    _print_sealed_notice()
+    return EXIT_OK
+
+
+def _ratio_text(value: float | None) -> str:
+    return "-" if value is None else f"{value * 100:.2f}%"
+
+
+def _print_sealed_notice() -> None:
+    print("sealed test 미실행 (--allow-sealed 미사용)", file=sys.stderr)
+
+
 def _cmd_eval(args: argparse.Namespace) -> int:
     from .evaluation.runner import EvalError, SealedSplitAccess, run_evaluation
 
@@ -605,6 +741,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_inspect_parser(subparsers)
     _add_batch_parser(subparsers)
     _add_eval_parser(subparsers)
+    _add_recalibrate_parser(subparsers)
     _add_defect_map_parser(subparsers)
     return parser
 
@@ -886,6 +1023,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_batch(args)
     if args.command == "eval":
         return _cmd_eval(args)
+    if args.command == "recalibrate":
+        return _cmd_recalibrate(args)
     if args.command == "defect-map":
         return _cmd_defect_map(args)
     parser.print_help(sys.stdout)
