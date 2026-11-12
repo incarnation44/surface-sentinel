@@ -22,6 +22,10 @@ dependencies = [
 [project.scripts]
 surface-sentinel = "surface_sentinel.cli:main"
 
+[project.optional-dependencies]
+# 제품 추론용(ONNX Runtime). 학습 의존성(ultralytics/torch)은 .venv-train 에만 둔다.
+yolo = ["onnxruntime>=1.17"]
+
 [dependency-groups]
 dev = [
   "pytest>=8.3,<9",
