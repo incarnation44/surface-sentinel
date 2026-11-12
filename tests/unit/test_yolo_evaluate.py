@@ -370,6 +370,28 @@ def test_report_merges_previous_run_payload_as_measured() -> None:
     assert "50.00% (1/2)" in seg_line
 
 
+def test_report_conditions_include_previous_run_engine() -> None:
+    """이전 실행 JSON 엔진도 측정 조건에 실측으로 남아야 한다('미실행' 금지)."""
+
+    payload = dict(_report().as_dict())
+    payload["engine"] = ENGINE_SEG
+    payload["split"] = SPLIT_VAL
+    text = render_report(
+        [_report()],
+        split=SPLIT_VAL,
+        planned=(ENGINE_DET, ENGINE_SEG),
+        previous=[payload],
+    )
+    conditions = text.split("## 3. 측정 조건")[1]
+    seg_line = next(
+        line for line in conditions.splitlines() if line.startswith(f"- {ENGINE_SEG}:")
+    )
+    assert "미실행" not in seg_line
+    assert "[NOT_MEASURED]" not in seg_line
+    assert "task=" in seg_line
+    assert "config_hash=" in seg_line
+
+
 def test_report_includes_wilson_interval_and_sealed_notice() -> None:
     text = render_report([_report()], split=SPLIT_VAL, planned=(ENGINE_DET,))
     assert "0.095" in text  # Wilson 95% 하한 (1/2)

@@ -907,7 +907,20 @@ def render_report(
     for engine in order:
         report = fresh.get(engine)
         if report is None:
-            lines.append(f"- {engine}: 미실행 [NOT_MEASURED]")
+            payload = older.get(engine)
+            if payload is None:
+                lines.append(f"- {engine}: 미실행 [NOT_MEASURED]")
+                continue
+            policy = payload.get("policy", {})
+            counts = payload.get("counts", {})
+            lines.append(
+                f"- {engine}: task={payload.get('task')} / split={payload.get('split')} / "
+                f"onnx={payload.get('onnx')} / config_hash={payload.get('config_hash')} / "
+                f"combine={'예' if payload.get('combine') else '아니오'} / "
+                f"정책 ng_conf={float(policy.get('ng_conf', 0.0)):.2f}, "
+                f"review_lo={float(policy.get('review_lo', 0.0)):.2f} / "
+                f"이미지 {int(counts.get('samples', 0))}장 (이전 실행 JSON)"
+            )
             continue
         lines.append(
             f"- {engine}: task={report.task} / split={report.split} / "
