@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import replace
 from pathlib import Path
 
+import cv2
 import pytest
 
 import synthetic
@@ -18,7 +20,7 @@ from surface_sentinel.agent.worker import (
     audit_log_path,
     run_worker,
 )
-from surface_sentinel.config import load_config
+from surface_sentinel.config import AppConfig, load_config
 from surface_sentinel.records.db import connect, init_db
 from surface_sentinel.records.store import list_inspections, stats
 
@@ -266,6 +268,95 @@ def test_empty_incoming_records_no_rows(tmp_path: Path) -> None:
         connection.close()
     assert payload["total"] == 0
     assert payload["ratios"]["ng"].denominator == 0
+
+
+def test_resolve_yolo_entry_points_to_inspect_module() -> None:
+    """워커는 ``surface_sentinel.yolo.inspect`` 진입점을 지연 import로 찾는다."""
+
+    from surface_sentinel.agent.worker import _resolve_yolo_entry
+    from surface_sentinel.yolo import inspect as yolo_inspect
+
+    assert _resolve_yolo_entry("yolo-det") is yolo_inspect.inspect_with_yolo
+    assert _resolve_yolo_entry("combined") is yolo_inspect.inspect_with_yolo
+
+
+def test_worker_records_yolo_engine_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """engine="yolo-det" 경로가 stub 진입점으로 DB 기록까지 간다(모델 파일 불필요)."""
+
+    from surface_sentinel.pipeline import InspectionOutcome
+    from surface_sentinel.pipeline.evidence import sanitize_sample_id
+    from surface_sentinel.yolo import inspect as yolo_inspect
+    from surface_sentinel.yolo.adapter import to_sample_result
+    from surface_sentinel.yolo.inference import Detection
+    from surface_sentinel.yolo.overlay import save_overlay
+
+    incoming = tmp_path / "incoming"
+    incoming.mkdir()
+    _write_incoming(incoming)
+    db_path = tmp_path / "records.db"
+    calls: list[tuple[str, str, str]] = []
+
+    def stub_entry(
+        image_path: Path,
+        config: AppConfig,
+        *,
+        engine: str,
+        output_dir: Path | None = None,
+        split: str = "tune",
+        label: str = "unknown",
+        **_kwargs: object,
+    ) -> InspectionOutcome:
+        calls.append((Path(image_path).name, engine, split))
+        bgr = cv2.imread(str(image_path))
+        assert bgr is not None
+        detection = Detection(bbox_xyxy=(100.0, 40.0, 130.0, 70.0), score=0.8)
+        sample_id = Path(image_path).stem
+        result = to_sample_result(
+            [detection],
+            run_id="stub-run",
+            sample_id=sample_id,
+            image_size=(int(bgr.shape[1]), int(bgr.shape[0])),
+            split=split,
+            label=label,
+            config_hash=config.config_hash,
+        )
+        overlay_path = ""
+        if output_dir is not None:
+            saved = save_overlay(
+                bgr,
+                [detection],
+                Path(output_dir) / f"{sanitize_sample_id(sample_id)}_yolo.png",
+            )
+            overlay_path = str(saved)
+        return InspectionOutcome(result=replace(result, overlay_path=overlay_path))
+
+    monkeypatch.setattr(yolo_inspect, "inspect_with_yolo", stub_entry)
+
+    run_worker(
+        incoming=incoming,
+        db_path=db_path,
+        config=BASE_CONFIG,
+        engine="yolo-det",
+        ok_sample_rate=1,
+        once=True,
+    )
+
+    rows = _rows(db_path)
+    assert len(rows) == 2
+    assert calls == [
+        ("defect_b.png", "yolo-det", "tune"),
+        ("good_a.png", "yolo-det", "tune"),
+    ]
+    for row in rows:
+        assert row["engine"] == "yolo-det"
+        assert row["model_version"] == "yolo-det"
+        assert row["split"] == "tune"
+        assert row["status"] == "NG"
+        overlay = Path(str(row["overlay_path"]))
+        assert overlay.is_file()
+        assert overlay.name == f"{row['sample_id']}_yolo.png"
 
 
 def test_cli_worker_run_once(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

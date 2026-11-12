@@ -125,16 +125,17 @@ def _append_audit(path: Path, event: dict[str, Any]) -> None:
 def _resolve_yolo_entry(engine: str) -> Callable[..., InspectionOutcome]:
     """YOLO 엔진 진입점을 **지연 import**로 찾는다.
 
-    ``yolo/inference.py``는 다른 레인이 작성 중이다. 이 모듈은 import 시점에
-    그 파일을 건드리지 않으며, 엔진이 요청될 때만 찾는다. 진입점이 아직 없으면
-    ``WorkerError``로 멈춘다(조용히 opencv로 폴백하지 않는다).
+    ``yolo/inspect.py``(E5b 통합 계약)에서 ``inspect_with_yolo`` 를 가져온다.
+    import 는 엔진이 요청될 때만 수행하므로, opencv 경로는 ONNX Runtime extra 가
+    없어도 동작한다. 진입점이 없으면 ``WorkerError``로 멈춘다(조용히 opencv로
+    폴백하지 않는다).
     """
 
     try:
-        module = importlib.import_module("surface_sentinel.yolo.inference")
+        module = importlib.import_module("surface_sentinel.yolo.inspect")
     except ImportError as exc:  # pragma: no cover - yolo 레인 의존
         raise WorkerError(
-            f"{engine} 엔진 경로가 아직 없습니다(yolo/inference.py 미구현). "
+            f"{engine} 엔진 경로가 아직 없습니다(surface_sentinel.yolo.inspect 미구현). "
             "opencv 엔진으로 실행하세요."
         ) from exc
     entry = getattr(module, "inspect_with_yolo", None)
