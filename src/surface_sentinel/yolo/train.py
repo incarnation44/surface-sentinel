@@ -91,12 +91,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="dataset.yaml 경로 (기본 data/derived/yolo/<task>/dataset.yaml).",
     )
-    parser.add_argument("--epochs", type=int, default=30)
-    parser.add_argument("--imgsz", type=int, default=512)
+    parser.add_argument("--epochs", type=int, default=25)
+    parser.add_argument("--imgsz", type=int, default=416)
     parser.add_argument("--batch", type=int, default=16)
     parser.add_argument("--workers", type=int, default=0)
     parser.add_argument("--threads", type=int, default=8)
-    parser.add_argument("--patience", type=int, default=10)
+    parser.add_argument("--patience", type=int, default=8)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--opset", type=int, default=17)
     parser.add_argument("--project", default="data/derived/yolo/models")
