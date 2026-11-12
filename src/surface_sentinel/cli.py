@@ -1097,6 +1097,136 @@ def _add_yolo_parser(subparsers: Any) -> None:
         default=1,
         help="라벨로 남길 최소 컴포넌트 면적(px) (기본 1).",
     )
+    _add_yolo_evaluate_parser(yolo_subparsers)
+
+
+def _add_yolo_evaluate_parser(subparsers: Any) -> None:
+    evaluate = subparsers.add_parser(
+        "evaluate",
+        help="학습된 ONNX(det/seg)를 tune-val/tune에서 평가해 r20과 비교합니다.",
+        description=(
+            "학습된 ONNX 모델로 tune 내부 val(기본) 또는 전량 tune을 평가하고 "
+            "r20 기준선과 분모를 붙여 비교합니다. 상태는 decide_from_detections, "
+            "영역 IoU는 evaluation.measure의 component_iou를 그대로 씁니다. "
+            "산출물은 엔진별 지표 JSON과 이미지별 감사 JSONL, 그리고 "
+            "docs/reports/T07_yolo_eval_<date>.md입니다. "
+            "test/official_test는 봉인되어 거부합니다."
+        ),
+    )
+    evaluate.add_argument(
+        "--task",
+        choices=("det", "seg"),
+        required=True,
+        help="평가할 모델 종류 (det 또는 seg).",
+    )
+    evaluate.add_argument(
+        "--onnx",
+        type=Path,
+        required=True,
+        help="ONNX 모델 경로 (예: data/derived/yolo/models/det/weights/best.onnx).",
+    )
+    evaluate.add_argument(
+        "--split",
+        default="val",
+        help="평가 분할 (val 또는 tune만 허용, 기본 val. test/official_test는 거부).",
+    )
+    evaluate.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/candidates/adopted/t05_adopted_r20.toml"),
+        help="기준선 config TOML 경로 (기본 r20 채택본). 수정하지 않는다.",
+    )
+    evaluate.add_argument(
+        "--splits-dir",
+        type=Path,
+        default=Path("data/splits"),
+        help="tune.csv가 있는 디렉터리 (기본 data/splits).",
+    )
+    evaluate.add_argument(
+        "--raw-root",
+        type=Path,
+        default=Path("data/raw/kolektorsdd2"),
+        help="원본 데이터 루트 (기본 data/raw/kolektorsdd2).",
+    )
+    evaluate.add_argument(
+        "--out",
+        type=Path,
+        default=Path("data/derived/yolo/eval"),
+        help="평가 산출물 디렉터리 (기본 data/derived/yolo/eval).",
+    )
+    evaluate.add_argument(
+        "--report",
+        type=Path,
+        default=None,
+        help="보고서 경로 (기본 docs/reports/T07_yolo_eval_<date>.md).",
+    )
+    evaluate.add_argument(
+        "--combine",
+        action="store_true",
+        help="OpenCV 판정을 함께 돌려 결합(inspect_image + YOLO → combine)을 평가합니다.",
+    )
+    evaluate.add_argument(
+        "--note",
+        default="",
+        help="보고서 '측정 조건'에 남길 임계값 조정 메모(조정 전/후 수치 등).",
+    )
+
+
+def _cmd_yolo_evaluate(args: argparse.Namespace) -> int:
+    from .yolo.evaluate import (
+        ALLOWED_SPLITS,
+        SEALED_SPLITS,
+        YoloEvalError,
+        run_yolo_evaluation,
+    )
+
+    split = str(args.split)
+    if split in SEALED_SPLITS:
+        _print_error(f"봉인된 split은 열 수 없습니다: {split} (허용: {list(ALLOWED_SPLITS)})")
+        return EXIT_SEALED
+    if split not in ALLOWED_SPLITS:
+        _print_error(f"허용하지 않는 split입니다: {split} (허용: {list(ALLOWED_SPLITS)})")
+        return EXIT_USAGE
+
+    try:
+        run = run_yolo_evaluation(
+            task=args.task,
+            onnx=args.onnx,
+            split=split,
+            config_path=args.config,
+            splits_dir=args.splits_dir,
+            raw_root=args.raw_root,
+            out_dir=args.out,
+            combine_opencv=args.combine,
+            report_path=args.report,
+            adjustment_note=args.note,
+        )
+    except YoloEvalError as exc:
+        _print_error(str(exc))
+        return int(exc.exit_code)
+    except (ConfigError, ManifestError) as exc:
+        _print_error(str(exc))
+        return EXIT_INPUT
+    except OSError as exc:
+        _print_error(f"평가 산출물을 저장하지 못했습니다: {exc}")
+        return EXIT_STORAGE
+
+    report = run.report
+    print(f"평가: {report.engine} / split {report.split} / 이미지 {run.rows:,}장")
+    print(
+        f"escape {report.image['defect_escape_rate'].formatted()} / "
+        f"false-NG {report.image['good_false_ng_rate'].formatted()} / "
+        f"review {report.image['review_rate'].formatted()}"
+    )
+    print(
+        f"recall@0.10 {report.recall_010.formatted()} / "
+        f"recall@0.50 {report.recall_050.formatted()}"
+    )
+    print(f"지표 JSON: {run.json_path}")
+    print(f"감사 JSONL: {run.jsonl_path}")
+    print(f"보고서: {run.report_path}")
+    print("sealed test 미실행 (test/official_test 미사용)", file=sys.stderr)
+    return EXIT_OK
 
 
 def _cmd_yolo_export(args: argparse.Namespace) -> int:
@@ -1143,7 +1273,9 @@ def _cmd_yolo_export(args: argparse.Namespace) -> int:
 def _run_yolo(args: argparse.Namespace) -> int:
     if args.yolo_command == "export":
         return _cmd_yolo_export(args)
-    print("yolo 하위 명령이 필요합니다: export", file=sys.stderr)
+    if args.yolo_command == "evaluate":
+        return _cmd_yolo_evaluate(args)
+    print("yolo 하위 명령이 필요합니다: export, evaluate", file=sys.stderr)
     return EXIT_USAGE
 
 
