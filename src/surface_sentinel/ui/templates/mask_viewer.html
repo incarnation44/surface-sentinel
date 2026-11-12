@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}마스크 뷰어 — {{ sample.sample_id }} — Surface Sentinel{% endblock %}
+{% block content %}
+<h1>마스크 뷰어</h1>
+<p class="meta">{{ run.run_id }} / {{ sample.sample_id }} (원본 {{ sample.record.original_id }})</p>
+<div class="navlinks">
+  <a href="/runs/{{ run.run_id }}">run 요약</a>
+  <a href="{{ sample.url }}">샘플 상세</a>
+  <a href="/runs/{{ run.run_id }}/metrics">지표</a>
+</div>
+<p>
+  기계 판정: <span class="badge b-{{ sample.machine_status }}">{{ sample.machine_status }}</span>
+  <span class="badge-note">{{ status_labels.get(sample.machine_status, "") }}</span>
+</p>
+
+<div class="card">
+  <p class="meta">
+    표시할 레이어를 선택하세요. run에 저장되지 않은 산출물은 "산출물 없음"으로 표시됩니다
+    (단계 이미지는 <code>artifacts.save_stages=true</code>일 때 저장됩니다).
+  </p>
+  {% for layer in layers %}
+  <label style="display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-size:14px">
+    <input type="checkbox" class="mask-toggle" data-layer="{{ layer.key }}"
+           {% if layer.url %}checked{% else %}disabled{% endif %}>
+    {{ layer.label }}{% if not layer.url %} (없음){% endif %}
+  </label>
+  {% endfor %}
+</div>
+
+<div class="images">
+  {% for layer in layers %}
+  <figure data-layer-figure="{{ layer.key }}" {% if not layer.url %}style="display:none"{% endif %}>
+    {% if layer.url %}
+    <img src="{{ layer.url }}" alt="{{ layer.label }} 이미지">
+    {% else %}
+    <div class="noimg">{{ layer.label }} 산출물 없음</div>
+    {% endif %}
+    <figcaption>{{ layer.label }}</figcaption>
+  </figure>
+  {% endfor %}
+</div>
+
+<script>
+document.querySelectorAll(".mask-toggle").forEach(function (box) {
+  box.addEventListener("change", function () {
+    var figure = document.querySelector('[data-layer-figure="' + box.dataset.layer + '"]');
+    if (figure) { figure.style.display = box.checked ? "" : "none"; }
+  });
+});
+</script>
+{% endblock %}

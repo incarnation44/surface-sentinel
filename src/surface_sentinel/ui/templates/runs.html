@@ -2,6 +2,10 @@
 {% block title %}run 목록 — Surface Sentinel{% endblock %}
 {% block content %}
 <h1>run 목록</h1>
+<div class="navlinks">
+  <a href="/stats">검사 통계</a>
+  <a href="/compare">run 비교</a>
+</div>
 <p class="meta">runs 디렉터리에서 run_id 형식의 디렉터리만 최신순으로 표시합니다.</p>
 {% if runs %}
 <table>

@@ -7,6 +7,7 @@
   <a href="/runs/{{ run.run_id }}">run 요약</a>
   <a href="/runs/{{ run.run_id }}/review">검토 큐</a>
   <a href="/runs/{{ run.run_id }}/metrics">지표</a>
+  <a href="{{ sample.url }}/mask">마스크 뷰어</a>
 </div>
 {% if saved %}<div class="okbox">검토 결정을 저장했습니다. (append-only, 마지막 결정이 최종)</div>{% endif %}
 

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}run 비교 — Surface Sentinel{% endblock %}
+{% block content %}
+<h1>run 비교</h1>
+<div class="navlinks">
+  <a href="/">run 목록</a>
+  <a href="/stats">검사 통계</a>
+</div>
+<p class="meta">
+  두 run의 지표를 같은 정의로 나란히 비교합니다. 모든 비율에 분모가 함께 표시되고,
+  ERROR는 판정이 아니므로 분모에서 제외됩니다(기존 지표 페이지와 같은 정의).
+</p>
+
+<form method="get" action="/compare" class="decision">
+  <label for="base">기준 run (base)</label>
+  <select id="base" name="base">
+    <option value="">선택하세요</option>
+    {% for run in runs %}
+    <option value="{{ run.run_id }}" {% if run.run_id == base %}selected{% endif %}>{{ run.run_id }}</option>
+    {% endfor %}
+  </select>
+  <label for="target">비교 run (target)</label>
+  <select id="target" name="target">
+    <option value="">선택하세요</option>
+    {% for run in runs %}
+    <option value="{{ run.run_id }}" {% if run.run_id == target %}selected{% endif %}>{{ run.run_id }}</option>
+    {% endfor %}
+  </select>
+  <p><button type="submit">비교하기</button></p>
+</form>
+
+{% if rows %}
+<h2>지표 비교</h2>
+<table>
+  <thead>
+    <tr><th>지표</th><th>base: {{ base_view.run.run_id }}</th><th>target: {{ target_view.run.run_id }}</th><th>정의</th></tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      <td><code>{{ row.name }}</code></td>
+      <td>{{ row.base.formatted() }}</td>
+      <td>{{ row.target.formatted() }}</td>
+      <td class="meta">{{ row.definition }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>혼동행렬 (기계 판정)</h2>
+<table>
+  <thead>
+    <tr>
+      <th>run</th><th>정답</th><th>OK</th><th>NG</th><th>REVIEW</th><th>ERROR</th>
+      <th>전체</th><th>평가됨(ERROR 제외)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for view in [base_view, target_view] %}
+    {% for label in ["good", "defect"] %}
+    <tr>
+      <td class="meta">{{ view.run.run_id }}</td>
+      <th>{{ label }}</th>
+      <td>{{ view.confusion.count(label, "OK") }}</td>
+      <td>{{ view.confusion.count(label, "NG") }}</td>
+      <td>{{ view.confusion.count(label, "REVIEW") }}</td>
+      <td>{{ view.confusion.count(label, "ERROR") }}</td>
+      <td>{{ view.confusion.total(label) }}</td>
+      <td>{{ view.confusion.evaluated(label) }}</td>
+    </tr>
+    {% endfor %}
+    {% endfor %}
+  </tbody>
+</table>
+<p class="meta">
+  base 전체 {{ base_view.total }}건 · target 전체 {{ target_view.total }}건.
+  상세는 각 run의 <a href="/runs/{{ base_view.run.run_id }}/metrics">base 지표</a>,
+  <a href="/runs/{{ target_view.run.run_id }}/metrics">target 지표</a>에서 확인하세요.
+</p>
+{% else %}
+<div class="notice">두 run을 선택하면 지표를 나란히 비교합니다.</div>
+{% endif %}
+{% endblock %}

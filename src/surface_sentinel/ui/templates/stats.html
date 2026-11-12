@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}검사 통계 — Surface Sentinel{% endblock %}
+{% block content %}
+<h1>검사 통계</h1>
+<div class="navlinks">
+  <a href="/">run 목록</a>
+  <a href="/compare">run 비교</a>
+</div>
+<p class="meta">
+  검사 기록 DB(기계 판정 불변, 사람 판정 append-only)를 <b>읽기 전용</b>으로 집계합니다.
+  모든 비율에 분모를 함께 표시하고, 분모가 0이면 값을 비웁니다.
+</p>
+<p class="meta">DB: <span class="hash">{{ stats.path }}</span></p>
+
+{% if not stats.available %}
+<div class="notice">{{ stats.message }}</div>
+{% else %}
+{% set payload = stats.payload %}
+
+<h2>상태 분포 (분모 {{ payload.total }})</h2>
+<table>
+  <thead><tr><th>상태</th><th>건수</th><th>비율 [95% 구간] (분모)</th><th>막대</th></tr></thead>
+  <tbody>
+    {% for name in stats.status_order %}
+    {% set r = payload.ratios[name.lower()] %}
+    {% set color = {"OK": "ok", "NG": "ng", "REVIEW": "review", "ERROR": "error"}[name] %}
+    <tr>
+      <th><span class="badge b-{{ name }}">{{ name }}</span>
+          <span class="badge-note">{{ status_labels.get(name, "") }}</span></th>
+      <td>{{ payload.by_status[name] }}</td>
+      <td>{{ r.formatted() }}</td>
+      <td style="width:35%">
+        <div style="background:#eaeef2;border-radius:4px;height:10px">
+          <div style="background:var(--{{ color }});height:10px;border-radius:4px;
+                      width:{{ '%.1f'|format(r.value * 100) if r.value is not none else '0.0' }}%"></div>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>엔진별 비교 (분모 = 엔진별 검사 수)</h2>
+{% if stats.engines %}
+<table>
+  <thead>
+    <tr><th>엔진</th><th>검사</th><th>OK</th><th>NG</th><th>REVIEW</th><th>ERROR</th>
+        <th>OK 비율 (분모)</th></tr>
+  </thead>
+  <tbody>
+    {% for e in stats.engines %}
+    <tr>
+      <th>{{ e.engine }}</th>
+      <td>{{ e.total }}</td>
+      <td>{{ e.counts["OK"] }}</td>
+      <td>{{ e.counts["NG"] }}</td>
+      <td>{{ e.counts["REVIEW"] }}</td>
+      <td>{{ e.counts["ERROR"] }}</td>
+      <td>{{ e.ok_ratio.formatted() }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="meta">엔진별 기록이 없습니다.</p>
+{% endif %}
+
+<h2>지표 (분모 포함)</h2>
+<table>
+  <thead><tr><th>지표</th><th>값 [95% 구간] (분모)</th><th>정의</th></tr></thead>
+  <tbody>
+    {% for name, r in payload.ratios.items() %}
+    <tr><td><code>{{ name }}</code></td><td>{{ r.formatted() }}</td><td class="meta">{{ r.definition }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>리뷰</h2>
+<table>
+  <tbody>
+    <tr><th>사람 판정 건수(append)</th><td>{{ payload.reviews.decisions }}</td>
+        <th>판정이 있는 검사</th><td>{{ payload.reviews.reviewed_inspections }}</td></tr>
+    <tr><th>오버레이 보관</th><td>{{ payload.overlays }}</td>
+        <th>검사 전체</th><td>{{ payload.total }}</td></tr>
+  </tbody>
+</table>
+{% endif %}
+
+<h2>run별 요약</h2>
+{% if runs %}
+<table>
+  <thead>
+    <tr><th>run_id</th><th>상태</th><th>샘플</th><th>OK</th><th>NG</th><th>REVIEW</th>
+        <th>ERROR</th><th>지표</th></tr>
+  </thead>
+  <tbody>
+    {% for run in runs %}
+    {% set counts = run.payload.get("counts", {}) %}
+    <tr>
+      <td><a href="/runs/{{ run.run_id }}">{{ run.run_id }}</a></td>
+      <td><span class="badge b-{{ run.payload.get('status', 'ERROR') }}">{{ run.payload.get("status", "-") }}</span></td>
+      <td>{{ counts.get("samples", "-") }}</td>
+      <td>{{ counts.get("ok", "-") }}</td>
+      <td>{{ counts.get("ng", "-") }}</td>
+      <td>{{ counts.get("review", "-") }}</td>
+      <td>{{ counts.get("error", "-") }}</td>
+      <td><a href="/runs/{{ run.run_id }}/metrics">지표</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="meta">표시할 run이 없습니다.</p>
+{% endif %}
+{% endblock %}
