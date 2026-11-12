@@ -1037,6 +1037,116 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _add_yolo_parser(subparsers: Any) -> None:
+    yolo_parser = subparsers.add_parser(
+        "yolo",
+        help="YOLO 비교 트랙(ADR 0007): 라벨 export 등.",
+        description=(
+            "YOLO detection/segmentation 비교를 위한 데이터셋을 준비합니다. "
+            "학습은 격리 환경(.venv-train)에서 수행하고 추론은 ONNX로 수행합니다."
+        ),
+    )
+    yolo_subparsers = yolo_parser.add_subparsers(dest="yolo_command")
+    export = yolo_subparsers.add_parser(
+        "export",
+        help="분할 CSV를 YOLO 학습 데이터셋(det/seg)으로 export합니다.",
+        description=(
+            "tune 분할을 group_id 단위 group-aware train/val로 나누고, GT 마스크에서 "
+            "detection bbox와 segmentation 폴리곤 라벨을 만들어 ultralytics 형식으로 "
+            "저장합니다. 같은 그룹이 양쪽에 섞이지 않으며 시드로 결정론적입니다."
+        ),
+    )
+    export.add_argument(
+        "--split-csv",
+        type=Path,
+        default=Path("data/splits/tune.csv"),
+        help="분할 CSV 경로 (기본 data/splits/tune.csv).",
+    )
+    export.add_argument(
+        "--raw-root",
+        type=Path,
+        default=Path("data/raw/kolektorsdd2"),
+        help="원본 데이터 루트 (기본 data/raw/kolektorsdd2).",
+    )
+    export.add_argument(
+        "--out-dir",
+        type=Path,
+        default=Path("data/derived/yolo"),
+        help="산출물 디렉터리 (기본 data/derived/yolo).",
+    )
+    export.add_argument(
+        "--val-fraction",
+        type=float,
+        default=0.2,
+        help="val 비율 (기본 0.2).",
+    )
+    export.add_argument(
+        "--seed",
+        type=int,
+        default=20261112,
+        help="분할 시드 (기본 20261112).",
+    )
+    export.add_argument(
+        "--tasks",
+        default="det,seg",
+        help="export할 task 목록, 쉼표 구분 (기본 det,seg).",
+    )
+    export.add_argument(
+        "--min-area-px",
+        type=int,
+        default=1,
+        help="라벨로 남길 최소 컴포넌트 면적(px) (기본 1).",
+    )
+
+
+def _cmd_yolo_export(args: argparse.Namespace) -> int:
+    from .yolo.dataset import TASKS, export_yolo_dataset
+
+    tasks = tuple(task.strip() for task in args.tasks.split(",") if task.strip())
+    unknown = sorted(set(tasks) - set(TASKS))
+    if unknown:
+        _print_error(f"알 수 없는 task입니다: {unknown} (가능: {TASKS})")
+        return EXIT_USAGE
+    try:
+        report = export_yolo_dataset(
+            split_csv=args.split_csv,
+            raw_root=args.raw_root,
+            out_dir=args.out_dir,
+            val_fraction=args.val_fraction,
+            seed=args.seed,
+            tasks=tasks,
+            min_area_px=args.min_area_px,
+        )
+    except (ValueError, ManifestError) as exc:
+        _print_error(str(exc))
+        return EXIT_INPUT
+    except OSError as exc:
+        _print_error(f"산출물을 저장하지 못했습니다: {exc}")
+        return EXIT_STORAGE
+    counts = report.split.counts
+    print(f"YOLO export 완료: {report.out_dir}")
+    print(f"task: {', '.join(report.tasks)} / 시드: {report.split.seed}")
+    print(
+        f"train {counts['train']['rows']:,}장 (결함 {counts['train']['defect']:,}) "
+        f"/ val {counts['val']['rows']:,}장 (결함 {counts['val']['defect']:,})"
+    )
+    stats = report.label_stats
+    print(
+        f"컴포넌트: {stats['total_components']:,} "
+        f"(면적 최소 {stats['area_px_min']} / 중앙 {stats['area_px_median']} "
+        f"/ 최대 {stats['area_px_max']}, bbox 대체 폴리곤 {stats['bbox_fallback_polygons']})"
+    )
+    print(f"분할 기록: {report.split_json_path}")
+    return EXIT_OK
+
+
+def _run_yolo(args: argparse.Namespace) -> int:
+    if args.yolo_command == "export":
+        return _cmd_yolo_export(args)
+    print("yolo 하위 명령이 필요합니다: export", file=sys.stderr)
+    return EXIT_USAGE
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="surface-sentinel",
@@ -1054,6 +1164,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_adopted_verify_parser(subparsers)
     _add_defect_map_parser(subparsers)
     _add_serve_parser(subparsers)
+    _add_yolo_parser(subparsers)
     return parser
 
 
@@ -1344,6 +1455,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_defect_map(args)
     if args.command == "serve":
         return _cmd_serve(args)
+    if args.command == "yolo":
+        return _run_yolo(args)
     parser.print_help(sys.stdout)
     return EXIT_USAGE
 
