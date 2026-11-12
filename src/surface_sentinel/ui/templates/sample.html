@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}{{ sample.sample_id }} — Surface Sentinel{% endblock %}
+{% block content %}
+<h1>샘플 상세</h1>
+<p class="meta">{{ run.run_id }} / {{ sample.sample_id }} (원본 {{ sample.record.original_id }})</p>
+<div class="navlinks">
+  <a href="/runs/{{ run.run_id }}">run 요약</a>
+  <a href="/runs/{{ run.run_id }}/review">검토 큐</a>
+  <a href="/runs/{{ run.run_id }}/metrics">지표</a>
+</div>
+{% if saved %}<div class="okbox">검토 결정을 저장했습니다. (append-only, 마지막 결정이 최종)</div>{% endif %}
+
+<p>
+  기계 판정: <span class="badge b-{{ sample.machine_status }}">{{ sample.machine_status }}</span>
+  <span class="badge-note">{{ status_labels.get(sample.machine_status, "") }}</span>
+  {% if sample.decision %}
+  &nbsp;최종 상태: <span class="badge b-{{ sample.effective_status }}">{{ sample.effective_status }}</span>
+  <span class="badge-note">검토 반영 ({{ sample.decision.decided_at }})</span>
+  {% endif %}
+</p>
+
+<h2>이미지</h2>
+<div class="images">
+  <figure>
+    {% if has_original %}
+    <img src="{{ sample.original_url }}" alt="원본 이미지">
+    {% else %}
+    <div class="noimg">원본 없음 (raw-root 확인)</div>
+    {% endif %}
+    <figcaption>원본</figcaption>
+  </figure>
+  <figure>
+    {% if sample.record.overlay_path %}
+    <img src="{{ sample.overlay_url }}" alt="오버레이 이미지">
+    {% else %}
+    <div class="noimg">오버레이 없음</div>
+    {% endif %}
+    <figcaption>오버레이 (ROI·컴포넌트·판정 표시)</figcaption>
+  </figure>
+  {% if stages.response %}
+  <figure>
+    <img src="{{ stages.response }}" alt="response 이미지">
+    <figcaption>response (배경 보정 후 반응)</figcaption>
+  </figure>
+  {% endif %}
+  {% if stages.candidates %}
+  <figure>
+    <img src="{{ stages.candidates }}" alt="candidates 이미지">
+    <figcaption>candidates (후보 마스크)</figcaption>
+  </figure>
+  {% endif %}
+</div>
+
+<h2>판정 정보</h2>
+<table>
+  <tbody>
+    <tr><th>점수</th><td>{{ "%.6f"|format(sample.record.score) }}</td>
+        <th>정답 라벨</th><td>{{ sample.record.label }}</td>
+        <th>분할</th><td>{{ sample.record.split }}</td></tr>
+    <tr><th>사유</th><td colspan="5">{{ sample.record.reasons|join(", ") or "-" }}</td></tr>
+    {% if sample.record.error_code %}
+    <tr><th>오류</th><td colspan="5"><code>{{ sample.record.error_code }}</code>
+        (단계: {{ sample.record.error_stage or "-" }}) — ERROR는 제품 판정이 아닙니다.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+
+{% if sample.record.quality %}
+<h2>입력 품질</h2>
+<table>
+  <tbody>
+    <tr><th>blur_variance</th><td>{{ "%.4f"|format(sample.record.quality.blur_variance) }}</td>
+        <th>mean_gray</th><td>{{ "%.4f"|format(sample.record.quality.mean_gray) }}</td>
+        <th>saturated_ratio</th><td>{{ "%.4f"|format(sample.record.quality.saturated_ratio) }}</td></tr>
+    <tr><th>flags</th><td colspan="5">{{ sample.record.quality.flags|join(", ") or "-" }}</td></tr>
+  </tbody>
+</table>
+{% endif %}
+
+{% if sample.record.roi %}
+<h2>ROI</h2>
+<table>
+  <tbody>
+    <tr><th>mode</th><td>{{ sample.record.roi.mode }}</td>
+        <th>bbox</th><td>{{ sample.record.roi.bbox }}</td>
+        <th>area_px</th><td>{{ sample.record.roi.area_px }}</td></tr>
+    <tr><th>area_ratio</th><td>{{ "%.4f"|format(sample.record.roi.area_ratio) }}</td>
+        <th>uncertain</th><td colspan="3">{{ sample.record.roi.uncertain }}</td></tr>
+  </tbody>
+</table>
+{% endif %}
+
+<h2>컴포넌트 ({{ sample.record.components|length }}개)</h2>
+{% if sample.record.components %}
+<div style="overflow-x:auto">
+<table>
+  <thead>
+    <tr><th>index</th><th>area_px</th><th>bbox</th><th>evidence</th>
+        <th>mean_contrast</th><th>max_contrast</th><th>aspect</th><th>solidity</th>
+        <th>border_dist</th><th>경계 접촉</th></tr>
+  </thead>
+  <tbody>
+    {% for c in sample.record.components %}
+    <tr>
+      <td>{{ c.index }}</td><td>{{ c.area_px }}</td><td>{{ c.bbox }}</td>
+      <td>{{ "%.4f"|format(c.evidence) }}</td>
+      <td>{{ "%.2f"|format(c.mean_contrast_gray) }}</td>
+      <td>{{ "%.2f"|format(c.max_contrast_gray) }}</td>
+      <td>{{ "%.2f"|format(c.aspect_ratio) }}</td>
+      <td>{{ "%.2f"|format(c.solidity) }}</td>
+      <td>{{ "%.1f"|format(c.border_distance_px) }}</td>
+      <td>{{ "예" if c.touches_roi_border else "아니오" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="meta">컴포넌트가 없습니다.</p>
+{% endif %}
+
+<h2>단계별 시간 (ms)</h2>
+<table>
+  <tbody>
+    {% for name, value in sample.record.timing_ms.items() %}
+    <tr><th>{{ name }}</th><td>{{ "%.3f"|format(value) }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>해시·증거</h2>
+<table>
+  <tbody>
+    <tr><th>input_sha256</th><td class="hash">{{ sample.record.input_sha256 or "-" }}</td></tr>
+    <tr><th>mask_sha256</th><td class="hash">{{ sample.record.mask_sha256 or "-" }}</td></tr>
+    <tr><th>config_hash</th><td class="hash">{{ sample.record.config_hash or "-" }}</td></tr>
+    <tr><th>overlay_path</th><td class="hash">{{ sample.record.overlay_path or "-" }}</td></tr>
+  </tbody>
+</table>
+
+<h2>검토 이력 ({{ history|length }}건)</h2>
+{% if history %}
+<table>
+  <thead>
+    <tr><th>시각(UTC)</th><th>최종 상태</th><th>사유</th><th>메모</th><th>검토자</th><th>decision_id</th></tr>
+  </thead>
+  <tbody>
+    {% for d in history %}
+    <tr>
+      <td class="meta">{{ d.decided_at }}</td>
+      <td><span class="badge b-{{ d.final_status }}">{{ d.final_status }}</span></td>
+      <td>{{ reason_labels.get(d.reason_code, d.reason_code) }}<br><code>{{ d.reason_code }}</code></td>
+      <td>{{ d.note or "-" }}</td>
+      <td>{{ d.reviewer }}</td>
+      <td class="hash">{{ d.decision_id }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="meta">마지막 줄이 최종 상태입니다. 이전 결정은 삭제되지 않고 그대로 남습니다.</p>
+{% else %}
+<p class="meta">아직 검토 결정이 없습니다.</p>
+{% endif %}
+
+{% if sample.machine_status == "REVIEW" %}
+{% with return_to = "sample" %}{% include "_decision_form.html" %}{% endwith %}
+{% elif sample.machine_status == "ERROR" %}
+<div class="notice">ERROR는 판정이 아니므로 검토 대상이 아닙니다. 입력을 수정한 뒤 다시 실행하세요.</div>
+{% else %}
+<div class="notice">기계 판정 {{ sample.machine_status }}는 불변입니다. 검토로 바꿀 수 없습니다.</div>
+{% endif %}
+{% endblock %}

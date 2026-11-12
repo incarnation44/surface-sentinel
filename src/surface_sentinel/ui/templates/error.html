@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}오류 {{ code }} — Surface Sentinel{% endblock %}
+{% block content %}
+<h1>오류 {{ code }}</h1>
+<div class="notice">{{ message }}</div>
+<p><a href="/">run 목록으로 돌아가기</a></p>
+{% endblock %}

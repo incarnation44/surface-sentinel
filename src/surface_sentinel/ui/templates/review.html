@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}검토 큐 — {{ run.run_id }} — Surface Sentinel{% endblock %}
+{% block content %}
+<h1>검토 큐 (REVIEW {{ queue|length }}건)</h1>
+<div class="navlinks">
+  <a href="/runs/{{ run.run_id }}">run 요약</a>
+  <a href="/runs/{{ run.run_id }}/metrics">지표</a>
+</div>
+<p class="keyhint">
+  키보드: <kbd>J</kbd> 다음 샘플 · <kbd>K</kbd> 이전 샘플 (입력창에 포커스가 있으면 동작하지 않습니다).
+  기계 판정 REVIEW만 검토할 수 있고, 결정은 append-only로 남습니다.
+</p>
+{% if saved %}<div class="okbox">검토 결정을 저장했습니다. 마지막 결정이 최종 상태입니다.</div>{% endif %}
+
+{% if not queue %}
+<div class="notice">이 run에는 REVIEW 샘플이 없습니다. 검토할 항목이 없습니다.</div>
+{% else %}
+<div class="review-layout">
+  <aside>
+    <h2 style="margin-top:0">대기열</h2>
+    <ul class="queue">
+      {% for item in queue %}
+      <li{% if current and item.sample_id == current.sample_id %} class="current"{% endif %}>
+        <a href="{{ item.review_url }}">
+          {{ item.sample_id }}
+          <span class="badge b-{{ item.effective_status }}">{{ item.effective_status }}</span>
+          {% if item.decision %}<span class="badge-note">결정 완료</span>{% else %}<span class="badge-note">미결정</span>{% endif %}
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </aside>
+  <section>
+    {% if current %}
+    <h2 style="margin-top:0">{{ current.sample_id }}
+      <span class="badge b-{{ current.machine_status }}">{{ current.machine_status }}</span>
+      {% if current.decision %}
+      → 최종 <span class="badge b-{{ current.effective_status }}">{{ current.effective_status }}</span>
+      {% endif %}
+    </h2>
+    <p class="meta">
+      점수 {{ "%.4f"|format(current.record.score) }} · 정답 {{ current.record.label }} ·
+      사유 {{ current.record.reasons|join(", ") or "-" }} ·
+      <a href="{{ current.url }}">상세 보기</a>
+    </p>
+    <div class="navlinks">
+      {% if prev_url %}<a href="{{ prev_url }}">← 이전 (K)</a>{% else %}<span class="meta">이전 없음</span>{% endif %}
+      {% if next_url %}<a href="{{ next_url }}">다음 (J) →</a>{% else %}<span class="meta">다음 없음</span>{% endif %}
+    </div>
+    <div class="images">
+      <figure>
+        {% if has_original %}
+        <img src="{{ current.original_url }}" alt="원본 이미지">
+        {% else %}
+        <div class="noimg">원본 없음 (raw-root 확인)</div>
+        {% endif %}
+        <figcaption>원본</figcaption>
+      </figure>
+      <figure>
+        {% if current.record.overlay_path %}
+        <img src="{{ current.overlay_url }}" alt="오버레이 이미지">
+        {% else %}
+        <div class="noimg">오버레이 없음</div>
+        {% endif %}
+        <figcaption>오버레이</figcaption>
+      </figure>
+      {% if stages.response %}
+      <figure>
+        <img src="{{ stages.response }}" alt="response 이미지">
+        <figcaption>response</figcaption>
+      </figure>
+      {% endif %}
+    </div>
+
+    {% if history %}
+    <h2>검토 이력 ({{ history|length }}건)</h2>
+    <table>
+      <thead>
+        <tr><th>시각(UTC)</th><th>최종 상태</th><th>사유</th><th>메모</th><th>검토자</th></tr>
+      </thead>
+      <tbody>
+        {% for d in history %}
+        <tr>
+          <td class="meta">{{ d.decided_at }}</td>
+          <td><span class="badge b-{{ d.final_status }}">{{ d.final_status }}</span></td>
+          <td>{{ reason_labels.get(d.reason_code, d.reason_code) }}</td>
+          <td>{{ d.note or "-" }}</td>
+          <td>{{ d.reviewer }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {% with sample = current, return_to = "review" %}{% include "_decision_form.html" %}{% endwith %}
+    {% endif %}
+  </section>
+</div>
+<script>
+document.addEventListener("keydown", function (event) {
+  if (event.target.closest("input, textarea, select")) { return; }
+  var key = event.key.toLowerCase();
+  {% if next_url %}
+  if (key === "j") { window.location.href = "{{ next_url }}"; }
+  {% endif %}
+  {% if prev_url %}
+  if (key === "k") { window.location.href = "{{ prev_url }}"; }
+  {% endif %}
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>{% block title %}Surface Sentinel{% endblock %}</title>
+<style>
+:root {
+  --ok: #1a7f37; --ng: #c62828; --review: #9a6700; --error: #57606a;
+  --line: #d0d7de; --bg: #f6f8fa; --text: #1f2328; --link: #0969da;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+       color: var(--text); background: var(--bg); line-height: 1.5; }
+header { background: #24292f; color: #fff; padding: 10px 20px;
+         display: flex; align-items: baseline; gap: 12px; }
+header .brand { color: #fff; font-weight: 700; text-decoration: none; font-size: 18px; }
+header .sub { color: #9ea7b3; font-size: 13px; }
+main { max-width: 1200px; margin: 0 auto; padding: 20px; }
+footer { max-width: 1200px; margin: 0 auto; padding: 12px 20px; color: #57606a;
+         font-size: 12px; border-top: 1px solid var(--line); }
+h1 { font-size: 22px; margin: 0 0 12px; }
+h2 { font-size: 17px; margin: 24px 0 8px; }
+a { color: var(--link); }
+table { border-collapse: collapse; width: 100%; background: #fff; }
+th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left;
+         font-size: 14px; }
+th { background: #eaeef2; }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 10px;
+         font-size: 12px; font-weight: 700; color: #fff; }
+.b-OK { background: var(--ok); }
+.b-NG { background: var(--ng); }
+.b-REVIEW { background: var(--review); }
+.b-ERROR { background: var(--error); }
+.badge-note { font-size: 12px; color: #57606a; margin-left: 4px; }
+.card { background: #fff; border: 1px solid var(--line); border-radius: 8px;
+        padding: 12px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 12px; }
+.grid .card img { width: 100%; height: auto; display: block; border: 1px solid var(--line); }
+.grid .noimg { width: 100%; aspect-ratio: 4 / 3; display: flex; align-items: center;
+               justify-content: center; background: #eaeef2; color: #57606a;
+               font-size: 13px; border: 1px solid var(--line); }
+.meta { font-size: 13px; color: #57606a; word-break: break-all; }
+.notice { background: #fff8c5; border: 1px solid #d4a72c; border-radius: 8px;
+          padding: 10px 12px; margin: 12px 0; font-size: 14px; }
+.okbox { background: #dafbe1; border: 1px solid #1a7f37; border-radius: 8px;
+         padding: 10px 12px; margin: 12px 0; font-size: 14px; }
+.images { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 12px; }
+.images figure { margin: 0; }
+.images img { width: 100%; height: auto; border: 1px solid var(--line); background: #fff; }
+.images figcaption { font-size: 13px; color: #57606a; margin-top: 4px; }
+.hash { font-family: Consolas, monospace; font-size: 12px; word-break: break-all; }
+form.decision { background: #fff; border: 1px solid var(--line); border-radius: 8px;
+                padding: 14px; margin-top: 16px; }
+form.decision label { display: block; font-size: 14px; font-weight: 700; margin: 10px 0 4px; }
+form.decision select, form.decision input[type="text"], form.decision textarea {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px;
+  font-size: 14px; font-family: inherit; }
+form.decision .radios { display: flex; gap: 16px; font-weight: 400; }
+form.decision .radios label { display: flex; align-items: center; gap: 6px;
+                              font-weight: 400; margin: 4px 0; }
+button { background: #1f6feb; color: #fff; border: 0; border-radius: 6px;
+         padding: 8px 18px; font-size: 14px; font-weight: 700; cursor: pointer; }
+button:hover { background: #1a5fd7; }
+.review-layout { display: grid; grid-template-columns: 240px 1fr; gap: 16px; }
+.queue { list-style: none; margin: 0; padding: 0; }
+.queue li { border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px;
+            background: #fff; }
+.queue li a { display: block; padding: 6px 10px; text-decoration: none; color: var(--text);
+              font-size: 13px; }
+.queue li.current { outline: 2px solid #1f6feb; }
+.keyhint { font-size: 13px; color: #57606a; }
+kbd { background: #eaeef2; border: 1px solid var(--line); border-radius: 4px;
+      padding: 0 6px; font-family: Consolas, monospace; font-size: 12px; }
+.navlinks { display: flex; gap: 12px; margin: 10px 0; font-size: 14px; }
+@media (max-width: 800px) { .review-layout { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="/">Surface Sentinel</a>
+  <span class="sub">로컬 검토 UI · 127.0.0.1 전용 · 외부 요청 없음</span>
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+<footer>Surface Sentinel {{ version }} · 읽기 전용 + REVIEW 검토 결정(append-only) · OK/NG 기계 판정은 불변</footer>
+</body>
+</html>

@@ -8,6 +8,7 @@ T04의 ``inspect`` 서브커맨드를 제공한다. 사람이 읽는 도움말�
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import platform
 import sys
@@ -983,6 +984,59 @@ def _cmd_defect_map(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _add_serve_parser(subparsers: Any) -> None:
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="로컬 검토 UI를 127.0.0.1에서 실행합니다 (T07).",
+        description=(
+            "runs/ 디렉터리의 run을 읽는 로컬 UI를 띄웁니다. run 목록, run 요약, "
+            "샘플 상세, REVIEW 검토 큐(키보드 J/K), 지표, /healthz를 제공합니다. "
+            "127.0.0.1 전용이고 업로드·설정 편집·삭제는 없습니다. 쓰기는 REVIEW "
+            "샘플의 검토 결정 append(review_decisions.jsonl) 하나뿐이며 OK/NG "
+            "기계 판정은 불변입니다. 외부 CDN·외부 요청을 사용하지 않습니다."
+        ),
+    )
+    serve_parser.add_argument(
+        "--runs-dir",
+        type=Path,
+        default=Path("runs"),
+        help="run 디렉터리가 있는 상위 경로 (기본 runs).",
+    )
+    serve_parser.add_argument(
+        "--raw-root",
+        type=Path,
+        default=Path("data/raw/kolektorsdd2"),
+        help="원본 이미지 루트 (기본 data/raw/kolektorsdd2). 없으면 원본 없이 표시.",
+    )
+    serve_parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="포트 (기본 8000). 호스트는 127.0.0.1로 고정입니다.",
+    )
+
+
+def _cmd_serve(args: argparse.Namespace) -> int:
+    if not 1 <= args.port <= 65535:
+        _print_error(f"포트 범위가 아닙니다: {args.port} (1–65535)")
+        return EXIT_USAGE
+    if not args.runs_dir.is_dir():
+        _print_error(f"runs 디렉터리가 없습니다: {args.runs_dir}")
+        return EXIT_INPUT
+
+    # 서버 의존성은 serve에서만 불러온다 (다른 명령의 시작 비용을 늘리지 않는다).
+    import uvicorn
+
+    from .ui import create_app
+
+    app = create_app(runs_dir=args.runs_dir, raw_root=args.raw_root)
+    print(f"UI: http://127.0.0.1:{args.port} (종료: Ctrl+C)")
+    print(f"runs: {args.runs_dir} / 원본: {args.raw_root}")
+    with contextlib.suppress(KeyboardInterrupt):
+        uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="info")
+    return EXIT_OK
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="surface-sentinel",
@@ -999,6 +1053,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_fullverify_details_parser(subparsers)
     _add_adopted_verify_parser(subparsers)
     _add_defect_map_parser(subparsers)
+    _add_serve_parser(subparsers)
     return parser
 
 
@@ -1287,6 +1342,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_adopted_verify(args)
     if args.command == "defect-map":
         return _cmd_defect_map(args)
+    if args.command == "serve":
+        return _cmd_serve(args)
     parser.print_help(sys.stdout)
     return EXIT_USAGE
 

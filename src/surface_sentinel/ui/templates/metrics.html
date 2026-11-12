@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}지표 — {{ run.run_id }} — Surface Sentinel{% endblock %}
+{% block content %}
+<h1>지표·혼동행렬</h1>
+<p class="meta">{{ run.run_id }}</p>
+<div class="navlinks">
+  <a href="/runs/{{ run.run_id }}">run 요약</a>
+  <a href="/runs/{{ run.run_id }}/review">검토 큐</a>
+</div>
+<p class="meta">
+  아래 지표는 <b>기계 판정 기준</b>입니다(평가 CLI와 같은 정의, 설계 §4.2).
+  모든 비율에 분모가 함께 표시됩니다. ERROR는 판정이 아니라 분모에서 제외됩니다.
+  검토로 바뀐 최종 상태는 run 요약 그리드와 샘플 상세에서 확인하세요.
+</p>
+
+<h2>혼동행렬 (기계 판정)</h2>
+<table>
+  <thead>
+    <tr><th>정답 \ 판정</th><th>OK</th><th>NG</th><th>REVIEW</th><th>ERROR</th><th>전체</th><th>평가됨(ERROR 제외)</th></tr>
+  </thead>
+  <tbody>
+    {% for label in ["good", "defect"] %}
+    <tr>
+      <th>{{ label }}</th>
+      <td>{{ confusion.count(label, "OK") }}</td>
+      <td>{{ confusion.count(label, "NG") }}</td>
+      <td>{{ confusion.count(label, "REVIEW") }}</td>
+      <td>{{ confusion.count(label, "ERROR") }}</td>
+      <td>{{ confusion.total(label) }}</td>
+      <td>{{ confusion.evaluated(label) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>이미지 지표 (Wilson 95% 구간, 분모 명시)</h2>
+<table>
+  <thead><tr><th>지표</th><th>값 [95% 구간] (분모)</th></tr></thead>
+  <tbody>
+    {% for name, ratio in ratios.items() %}
+    <tr><td><code>{{ name }}</code></td><td>{{ ratio.formatted() }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>검토 현황</h2>
+<table>
+  <tbody>
+    <tr><th>REVIEW 샘플</th><td>{{ review_total }}</td>
+        <th>결정 완료</th><td>{{ review_done }}</td>
+        <th>미결정</th><td>{{ review_total - review_done }}</td></tr>
+  </tbody>
+</table>
+
+<h2>실패 링크</h2>
+<p class="meta">escape = 정답 defect인데 기계가 OK로 놓친 샘플. 오탐 = 정답 good인데 기계가 NG로 잡은 샘플.</p>
+<h3 style="font-size:15px">escape ({{ escapes|length }}건)</h3>
+{% if escapes %}
+<ul>
+  {% for r in escapes %}
+  <li><a href="/runs/{{ run.run_id }}/samples/{{ r.sample_id }}">{{ r.sample_id }}</a>
+      <span class="meta">점수 {{ "%.4f"|format(r.score) }}</span></li>
+  {% endfor %}
+</ul>
+{% else %}<p class="meta">없음.</p>{% endif %}
+<h3 style="font-size:15px">오탐 ({{ false_ng|length }}건)</h3>
+{% if false_ng %}
+<ul>
+  {% for r in false_ng %}
+  <li><a href="/runs/{{ run.run_id }}/samples/{{ r.sample_id }}">{{ r.sample_id }}</a>
+      <span class="meta">점수 {{ "%.4f"|format(r.score) }}</span></li>
+  {% endfor %}
+</ul>
+{% else %}<p class="meta">없음.</p>{% endif %}
+{% endblock %}
