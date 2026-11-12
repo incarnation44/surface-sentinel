@@ -1147,6 +1147,298 @@ def _run_yolo(args: argparse.Namespace) -> int:
     return EXIT_USAGE
 
 
+def _add_records_parser(subparsers: Any) -> None:
+    records_parser = subparsers.add_parser(
+        "records",
+        help="검사 기록 DB(SQLite)를 초기화하고 조회합니다 (E5).",
+        description=(
+            "검사 기록 DB를 다룹니다. 기계 판정(inspections.status)은 불변이고 "
+            "사람 판정은 review_decisions에 append-only로만 쌓입니다. 같은 "
+            "이미지(sha256)는 한 행만 갖습니다. 모든 비율은 분모를 함께 출력합니다."
+        ),
+    )
+    records_subparsers = records_parser.add_subparsers(dest="records_command")
+
+    init = records_subparsers.add_parser(
+        "init",
+        help="DB 파일과 스키마를 만듭니다(여러 번 실행해도 안전).",
+        description="schema.sql을 실행해 inspections/review_decisions와 인덱스를 만듭니다.",
+    )
+    init.add_argument(
+        "--db",
+        type=Path,
+        default=Path("data/derived/records.db"),
+        help="DB 파일 경로 (기본 data/derived/records.db).",
+    )
+
+    listing = records_subparsers.add_parser(
+        "list",
+        help="검사 기록을 id 오름차순으로 조회합니다.",
+        description="상태로 거를 수 있고 limit/offset으로 페이지를 넘깁니다.",
+    )
+    listing.add_argument(
+        "--db",
+        type=Path,
+        default=Path("data/derived/records.db"),
+        help="DB 파일 경로 (기본 data/derived/records.db).",
+    )
+    listing.add_argument(
+        "--status",
+        choices=("OK", "NG", "REVIEW", "ERROR"),
+        default=None,
+        help="기계 판정 필터 (기본 전체).",
+    )
+    listing.add_argument("--limit", type=int, default=20, help="최대 행 수 (기본 20).")
+    listing.add_argument("--offset", type=int, default=0, help="건너뛸 행 수 (기본 0).")
+    listing.add_argument(
+        "--json",
+        dest="as_json",
+        action="store_true",
+        help="행 전체를 JSON으로 출력합니다.",
+    )
+
+    stats_parser = records_subparsers.add_parser(
+        "stats",
+        help="상태 분포·리뷰·오버레이 통계를 분모와 함께 출력합니다.",
+        description=(
+            "상태별 건수와 비율, 사람 판정 수, 기계 판정 일치율, 오버레이 보관율을 "
+            "JSON으로 출력합니다. 비율은 분모(n)를 함께 담고 분모가 0이면 값이 null입니다."
+        ),
+    )
+    stats_parser.add_argument(
+        "--db",
+        type=Path,
+        default=Path("data/derived/records.db"),
+        help="DB 파일 경로 (기본 data/derived/records.db).",
+    )
+
+
+def _require_db_file(db_path: Path) -> bool:
+    if not db_path.is_file():
+        _print_error(f"기록 DB가 없습니다: {db_path} (먼저 records init)")
+        return False
+    return True
+
+
+def _cmd_records_init(args: argparse.Namespace) -> int:
+    from .records.db import DatabaseError, connect, init_db
+
+    connection = None
+    try:
+        connection = connect(args.db)
+        init_db(connection)
+    except DatabaseError as exc:
+        _print_error(f"기록 DB를 만들지 못했습니다: {exc}")
+        return EXIT_STORAGE
+    except OSError as exc:
+        _print_error(f"기록 DB를 저장하지 못했습니다: {exc}")
+        return EXIT_STORAGE
+    finally:
+        if connection is not None:
+            connection.close()
+    print(f"기록 DB 준비 완료: {args.db}")
+    print("테이블: inspections, review_decisions")
+    return EXIT_OK
+
+
+def _cmd_records_list(args: argparse.Namespace) -> int:
+    from .records.db import DatabaseError, connect
+    from .records.store import RecordsError, list_inspections
+
+    if not _require_db_file(args.db):
+        return EXIT_INPUT
+    connection = None
+    try:
+        connection = connect(args.db)
+        rows = list_inspections(
+            connection,
+            status=args.status,
+            limit=args.limit,
+            offset=args.offset,
+        )
+    except RecordsError as exc:
+        _print_error(str(exc))
+        return EXIT_USAGE
+    except DatabaseError as exc:
+        _print_error(f"기록 DB 오류: {exc}")
+        return EXIT_STORAGE
+    finally:
+        if connection is not None:
+            connection.close()
+
+    if args.as_json:
+        print(json.dumps(rows, ensure_ascii=False, indent=2, sort_keys=True))
+        return EXIT_OK
+    print(f"검사 기록 {len(rows)}건 (limit {args.limit} / offset {args.offset})")
+    for row in rows:
+        print(
+            f"{row['id']:>4} {row['sample_id']:<24} {row['status']:<7} "
+            f"score {float(row['score']):.4f} {row['engine']:<9} "
+            f"{row['overlay_path'] or '-'}"
+        )
+    return EXIT_OK
+
+
+def _cmd_records_stats(args: argparse.Namespace) -> int:
+    from .records.db import DatabaseError, connect
+    from .records.store import stats_payload
+
+    if not _require_db_file(args.db):
+        return EXIT_INPUT
+    connection = None
+    try:
+        connection = connect(args.db)
+        payload = stats_payload(connection)
+    except DatabaseError as exc:
+        _print_error(f"기록 DB 오류: {exc}")
+        return EXIT_STORAGE
+    finally:
+        if connection is not None:
+            connection.close()
+    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+    return EXIT_OK
+
+
+def _run_records(args: argparse.Namespace) -> int:
+    if args.records_command == "init":
+        return _cmd_records_init(args)
+    if args.records_command == "list":
+        return _cmd_records_list(args)
+    if args.records_command == "stats":
+        return _cmd_records_stats(args)
+    print(
+        "records 하위 명령이 필요합니다: init, list, stats",
+        file=sys.stderr,
+    )
+    return EXIT_USAGE
+
+
+def _add_worker_parser(subparsers: Any) -> None:
+    worker_parser = subparsers.add_parser(
+        "worker",
+        help="incoming 디렉터리를 감시해 검사하고 기록합니다 (E5, ADR D6).",
+        description=(
+            "incoming의 이미지를 이름 정렬 순으로 검사하고 DB에 기록합니다. 같은 "
+            "sha256은 한 번만 검사하고, 실패는 재시도 후 ERROR로 기록하며, 처리/스킵/"
+            "에러를 .work/worker_audit.jsonl에 append-only로 남깁니다. 네트워크·"
+            "셸을 쓰지 않고 판정을 바꾸지 않습니다. 봉인 분할은 열지 않습니다."
+        ),
+    )
+    worker_subparsers = worker_parser.add_subparsers(dest="worker_command")
+    run = worker_subparsers.add_parser(
+        "run",
+        help="워커를 실행합니다(--once면 한 바퀴만).",
+        description="incoming을 감시해 검사·기록합니다.",
+    )
+    run.add_argument(
+        "--incoming",
+        type=Path,
+        default=Path("data/incoming"),
+        help="감시할 디렉터리 (기본 data/incoming, 없으면 만든다).",
+    )
+    run.add_argument(
+        "--db",
+        type=Path,
+        default=Path("data/derived/records.db"),
+        help="기록 DB 경로 (기본 data/derived/records.db).",
+    )
+    run.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/base.toml"),
+        help="설정 TOML 경로 (기본 configs/base.toml).",
+    )
+    run.add_argument(
+        "--engine",
+        default="opencv",
+        help="엔진 (opencv/yolo-det/yolo-seg/combined, 기본 opencv).",
+    )
+    run.add_argument(
+        "--once",
+        action="store_true",
+        help="현재 파일을 한 바퀴 처리하고 종료합니다.",
+    )
+    run.add_argument(
+        "--max-retries",
+        type=int,
+        default=3,
+        help="검사 ERROR 시 재시도 횟수 (기본 3, 최소 1회는 시도).",
+    )
+    run.add_argument(
+        "--ok-sample-rate",
+        type=int,
+        default=1,
+        help="OK 오버레이 보관 비율 1/N (기본 1=전량, 0=보관 안 함).",
+    )
+    run.add_argument(
+        "--poll-seconds",
+        type=float,
+        default=2.0,
+        help="감시 주기 초 (기본 2.0, --once면 무시).",
+    )
+
+
+def _cmd_worker_run(args: argparse.Namespace) -> int:
+    from .agent.worker import WorkerError, audit_log_path, run_worker
+    from .config import ConfigError, load_config
+    from .records.db import DatabaseError, connect
+    from .records.store import stats_payload
+
+    try:
+        config = load_config(args.config)
+    except ConfigError as exc:
+        _print_error(f"설정을 불러오지 못했습니다: {exc}")
+        return EXIT_USAGE
+
+    before = 0
+    connection = None
+    try:
+        if args.db.is_file():
+            connection = connect(args.db)
+            before = int(stats_payload(connection)["total"])
+            connection.close()
+            connection = None
+        run_worker(
+            incoming=args.incoming,
+            db_path=args.db,
+            config=config,
+            engine=args.engine,
+            max_retries=args.max_retries,
+            ok_sample_rate=args.ok_sample_rate,
+            poll_seconds=args.poll_seconds,
+            once=args.once,
+        )
+        connection = connect(args.db)
+        payload = stats_payload(connection)
+    except WorkerError as exc:
+        _print_error(str(exc))
+        return EXIT_USAGE
+    except DatabaseError as exc:
+        _print_error(f"기록 DB 오류: {exc}")
+        return EXIT_STORAGE
+    except OSError as exc:
+        _print_error(f"기록을 저장하지 못했습니다: {exc}")
+        return EXIT_STORAGE
+    finally:
+        if connection is not None:
+            connection.close()
+
+    print(
+        "처리: 신규 {}건 / 총 {}건".format(payload["total"] - before, payload["total"])
+    )
+    print("상태: " + ", ".join(f"{name} {count}" for name, count in payload["by_status"].items()))
+    print(f"감사 로그: {audit_log_path(args.db)}")
+    print(f"기록: {args.db}")
+    return EXIT_OK
+
+
+def _run_worker_command(args: argparse.Namespace) -> int:
+    if args.worker_command == "run":
+        return _cmd_worker_run(args)
+    print("worker 하위 명령이 필요합니다: run", file=sys.stderr)
+    return EXIT_USAGE
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="surface-sentinel",
@@ -1165,6 +1457,8 @@ def build_parser() -> argparse.ArgumentParser:
     _add_defect_map_parser(subparsers)
     _add_serve_parser(subparsers)
     _add_yolo_parser(subparsers)
+    _add_records_parser(subparsers)
+    _add_worker_parser(subparsers)
     return parser
 
 
@@ -1457,6 +1751,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_serve(args)
     if args.command == "yolo":
         return _run_yolo(args)
+    if args.command == "records":
+        return _run_records(args)
+    if args.command == "worker":
+        return _run_worker_command(args)
     parser.print_help(sys.stdout)
     return EXIT_USAGE
 
