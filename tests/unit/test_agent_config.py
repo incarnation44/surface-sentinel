@@ -42,12 +42,12 @@ def test_repo_agent_toml_matches_defaults() -> None:
 
 
 def test_unknown_top_level_key_rejected() -> None:
-    with pytest.raises(ConfigError, match="unknown keys"):
+    with pytest.raises(ConfigError, match="알 수 없는 키"):
         parse_agent_config({"gateway": {}})
 
 
 def test_unknown_section_key_rejected() -> None:
-    with pytest.raises(ConfigError, match="unknown keys"):
+    with pytest.raises(ConfigError, match="알 수 없는 키"):
         parse_agent_config({"budget": {"max_action": 3}})
 
 

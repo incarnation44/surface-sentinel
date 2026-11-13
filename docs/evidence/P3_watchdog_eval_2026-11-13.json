@@ -1,0 +1,568 @@
+{
+  "schema_version": "phase3-watchdog-eval-v1",
+  "generated": "2026-11-13",
+  "config_hash": "a762ba63944133ddfbc2f962342001e09d0dffd0f0ea14fd79095274865d8098",
+  "sealed_splits_accessed": false,
+  "baseline_candidate": "t05_adopted_r20",
+  "baseline_samples": 2001,
+  "repository_gates": {
+    "schema_version": "agent-audit-v1",
+    "target": "C:\\surface-sentinel",
+    "verdict": "PASS",
+    "checks": [
+      {
+        "name": "G_CONFIG_FROZEN",
+        "passed": true,
+        "severity": "REJECT",
+        "detail": "configs/base.toml 해시 일치(a762ba639441)"
+      },
+      {
+        "name": "G_AGENT_CONFIG",
+        "passed": true,
+        "severity": "REJECT",
+        "detail": "configs/agent.toml 로드 및 기본 설계 계약 일치"
+      },
+      {
+        "name": "G_DATA_LEAKAGE",
+        "passed": true,
+        "severity": "REJECT",
+        "detail": "T03_audit.json 분할 누출·무결성 위반 0건 확인"
+      },
+      {
+        "name": "G_SEAL_LOCK",
+        "passed": true,
+        "severity": "REJECT",
+        "detail": "봉인 잠금 불변 확인(test(access=2), official_test(access=1))"
+      },
+      {
+        "name": "G_EVIDENCE_DENOMINATORS",
+        "passed": true,
+        "severity": "REJECT",
+        "detail": "주요 증거 JSON 비율 객체 106건 분모 포함 확인"
+      }
+    ],
+    "summary": "C:\\surface-sentinel: PASS (통과 5/5, REJECT 0건, REVISE 0건)",
+    "audit_hash": "ba0f0b26e3825aa4feea49fadb34762608962149adf3580b4b3790637ac0d87f"
+  },
+  "drift_evaluation": {
+    "normal_holdout_400": {
+      "schema_version": "agent-drift-v1",
+      "status": "NORMAL",
+      "baseline_total": 1601,
+      "target_total": 400,
+      "features": [
+        {
+          "feature": "score",
+          "psi": 0.023845,
+          "baseline_count": 1601,
+          "target_count": 400,
+          "baseline_mean": 0.250898,
+          "target_mean": 0.244558,
+          "delta_mean": -0.00634,
+          "status": "NORMAL",
+          "bin_edges": [
+            0.0,
+            0.05,
+            0.2,
+            0.4,
+            0.5,
+            0.8,
+            1.2,
+            "inf"
+          ],
+          "baseline_ratios": [
+            0.48782,
+            0.0,
+            0.292317,
+            0.09619,
+            0.064959,
+            0.022486,
+            0.036227
+          ],
+          "target_ratios": [
+            0.48,
+            0.0,
+            0.265,
+            0.1275,
+            0.085,
+            0.02,
+            0.0225
+          ]
+        },
+        {
+          "feature": "mean_gray",
+          "psi": 0.0,
+          "baseline_count": 1601,
+          "target_count": 400,
+          "baseline_mean": 44.199055,
+          "target_mean": 44.16505,
+          "delta_mean": -0.034005,
+          "status": "NORMAL",
+          "bin_edges": [
+            0.0,
+            60.0,
+            90.0,
+            120.0,
+            150.0,
+            180.0,
+            210.0,
+            256.0
+          ],
+          "baseline_ratios": [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target_ratios": [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "feature": "blur_variance",
+          "psi": 0.012162,
+          "baseline_count": 1601,
+          "target_count": 400,
+          "baseline_mean": 286.118394,
+          "target_mean": 283.172516,
+          "delta_mean": -2.945878,
+          "status": "NORMAL",
+          "bin_edges": [
+            0.0,
+            20.0,
+            50.0,
+            100.0,
+            200.0,
+            400.0,
+            800.0,
+            "inf"
+          ],
+          "baseline_ratios": [
+            0.0,
+            0.0,
+            0.0,
+            0.016864,
+            0.969394,
+            0.013741,
+            0.0
+          ],
+          "target_ratios": [
+            0.0,
+            0.0,
+            0.0025,
+            0.025,
+            0.9625,
+            0.01,
+            0.0
+          ]
+        }
+      ],
+      "status_rates_baseline": {
+        "OK": {
+          "definition": "기준선 OK 비율",
+          "numerator": 781,
+          "denominator": 1601,
+          "value": 0.48782011242973145,
+          "ci95_low": 0.4633939417936759,
+          "ci95_high": 0.5123045922978731
+        },
+        "NG": {
+          "definition": "기준선 NG 비율",
+          "numerator": 198,
+          "denominator": 1601,
+          "value": 0.12367270455965022,
+          "ci95_low": 0.10844180209615227,
+          "ci95_high": 0.1407052127837566
+        },
+        "REVIEW": {
+          "definition": "기준선 REVIEW 비율",
+          "numerator": 622,
+          "denominator": 1601,
+          "value": 0.3885071830106184,
+          "ci95_low": 0.3649259246833183,
+          "ci95_high": 0.4126221950777833
+        },
+        "ERROR": {
+          "definition": "기준선 ERROR 비율",
+          "numerator": 0,
+          "denominator": 1601,
+          "value": 0.0,
+          "ci95_low": 0.0,
+          "ci95_high": 0.00239366873255941
+        }
+      },
+      "status_rates_target": {
+        "OK": {
+          "definition": "대상 OK 비율",
+          "numerator": 192,
+          "denominator": 400,
+          "value": 0.48,
+          "ci95_low": 0.43146340667729527,
+          "ci95_high": 0.5289170850960765
+        },
+        "NG": {
+          "definition": "대상 NG 비율",
+          "numerator": 51,
+          "denominator": 400,
+          "value": 0.1275,
+          "ci95_low": 0.0983211891565858,
+          "ci95_high": 0.1637654701224651
+        },
+        "REVIEW": {
+          "definition": "대상 REVIEW 비율",
+          "numerator": 157,
+          "denominator": 400,
+          "value": 0.3925,
+          "ci95_low": 0.34588652662317476,
+          "ci95_high": 0.44115861665869904
+        },
+        "ERROR": {
+          "definition": "대상 ERROR 비율",
+          "numerator": 0,
+          "denominator": 400,
+          "value": 0.0,
+          "ci95_low": 8.673617379884035e-19,
+          "ci95_high": 0.009512294334296508
+        }
+      },
+      "warnings": [],
+      "policy_version": "drift-v1",
+      "drift_hash": "94ae13458b518445d708e8a0a12629f3b8fdbf246b9355af492fe58c54f6d167"
+    },
+    "synthetic_drift_score_and_brightness": {
+      "schema_version": "agent-drift-v1",
+      "status": "DRIFT_ALERT",
+      "baseline_total": 2001,
+      "target_total": 400,
+      "features": [
+        {
+          "feature": "score",
+          "psi": 5.602643,
+          "baseline_count": 2001,
+          "target_count": 400,
+          "baseline_mean": 0.24963,
+          "target_mean": 0.588075,
+          "delta_mean": 0.338445,
+          "status": "DRIFT_ALERT",
+          "bin_edges": [
+            0.0,
+            0.05,
+            0.2,
+            0.4,
+            0.5,
+            0.8,
+            1.2,
+            "inf"
+          ],
+          "baseline_ratios": [
+            0.486257,
+            0.0,
+            0.286857,
+            0.102449,
+            0.068966,
+            0.021989,
+            0.033483
+          ],
+          "target_ratios": [
+            0.0,
+            0.0,
+            0.48,
+            0.0,
+            0.3325,
+            0.1525,
+            0.035
+          ]
+        },
+        {
+          "feature": "mean_gray",
+          "psi": 14.422466,
+          "baseline_count": 2001,
+          "target_count": 400,
+          "baseline_mean": 44.192257,
+          "target_mean": 79.16505,
+          "delta_mean": 34.972793,
+          "status": "DRIFT_ALERT",
+          "bin_edges": [
+            0.0,
+            60.0,
+            90.0,
+            120.0,
+            150.0,
+            180.0,
+            210.0,
+            256.0
+          ],
+          "baseline_ratios": [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "target_ratios": [
+            0.005,
+            0.995,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "feature": "blur_variance",
+          "psi": 0.005997,
+          "baseline_count": 2001,
+          "target_count": 400,
+          "baseline_mean": 285.529513,
+          "target_mean": 283.172516,
+          "delta_mean": -2.356997,
+          "status": "NORMAL",
+          "bin_edges": [
+            0.0,
+            20.0,
+            50.0,
+            100.0,
+            200.0,
+            400.0,
+            800.0,
+            "inf"
+          ],
+          "baseline_ratios": [
+            0.0,
+            0.0,
+            0.0005,
+            0.018491,
+            0.968016,
+            0.012994,
+            0.0
+          ],
+          "target_ratios": [
+            0.0,
+            0.0,
+            0.0025,
+            0.025,
+            0.9625,
+            0.01,
+            0.0
+          ]
+        }
+      ],
+      "status_rates_baseline": {
+        "OK": {
+          "definition": "기준선 OK 비율",
+          "numerator": 973,
+          "denominator": 2001,
+          "value": 0.4862568715642179,
+          "ci95_low": 0.46440486918909596,
+          "ci95_high": 0.5081615401107432
+        },
+        "NG": {
+          "definition": "기준선 NG 비율",
+          "numerator": 249,
+          "denominator": 2001,
+          "value": 0.12443778110944528,
+          "ci95_low": 0.11069081901763814,
+          "ci95_high": 0.13962396603069768
+        },
+        "REVIEW": {
+          "definition": "기준선 REVIEW 비율",
+          "numerator": 779,
+          "denominator": 2001,
+          "value": 0.3893053473263368,
+          "ci95_low": 0.36817291031484467,
+          "ci95_high": 0.41086198640931537
+        },
+        "ERROR": {
+          "definition": "기준선 ERROR 비율",
+          "numerator": 0,
+          "denominator": 2001,
+          "value": 0.0,
+          "ci95_low": 1.0842021724855044e-19,
+          "ci95_high": 0.0019160910723353569
+        }
+      },
+      "status_rates_target": {
+        "OK": {
+          "definition": "대상 OK 비율",
+          "numerator": 0,
+          "denominator": 400,
+          "value": 0.0,
+          "ci95_low": 8.673617379884035e-19,
+          "ci95_high": 0.009512294334296508
+        },
+        "NG": {
+          "definition": "대상 NG 비율",
+          "numerator": 208,
+          "denominator": 400,
+          "value": 0.52,
+          "ci95_low": 0.47108291490392346,
+          "ci95_high": 0.5685365933227047
+        },
+        "REVIEW": {
+          "definition": "대상 REVIEW 비율",
+          "numerator": 192,
+          "denominator": 400,
+          "value": 0.48,
+          "ci95_low": 0.43146340667729527,
+          "ci95_high": 0.5289170850960765
+        },
+        "ERROR": {
+          "definition": "대상 ERROR 비율",
+          "numerator": 0,
+          "denominator": 400,
+          "value": 0.0,
+          "ci95_low": 8.673617379884035e-19,
+          "ci95_high": 0.009512294334296508
+        }
+      },
+      "warnings": [
+        "[경보] score PSI=5.6026 (>= 0.25), 평균 변화 +0.3384",
+        "[경보] mean_gray PSI=14.4225 (>= 0.25), 평균 변화 +34.9728"
+      ],
+      "policy_version": "drift-v1",
+      "drift_hash": "5d542f6ef7299cee15c5096a37062801bea30372bbebce50fb46c37c9906d7c6"
+    },
+    "insufficient_sample_10": {
+      "schema_version": "agent-drift-v1",
+      "status": "INSUFFICIENT_SAMPLE",
+      "baseline_total": 2001,
+      "target_total": 10,
+      "features": [
+        {
+          "feature": "score",
+          "psi": 9.531905,
+          "baseline_count": 2001,
+          "target_count": 10,
+          "baseline_mean": 0.24963,
+          "target_mean": 1.160174,
+          "delta_mean": 0.910544,
+          "status": "INSUFFICIENT_SAMPLE",
+          "bin_edges": [
+            0.0,
+            0.05,
+            0.2,
+            0.4,
+            0.5,
+            0.8,
+            1.2,
+            "inf"
+          ],
+          "baseline_ratios": [
+            0.486257,
+            0.0,
+            0.286857,
+            0.102449,
+            0.068966,
+            0.021989,
+            0.033483
+          ],
+          "target_ratios": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.1,
+            0.5,
+            0.4
+          ]
+        }
+      ],
+      "status_rates_baseline": {
+        "OK": {
+          "definition": "기준선 OK 비율",
+          "numerator": 973,
+          "denominator": 2001,
+          "value": 0.4862568715642179,
+          "ci95_low": 0.46440486918909596,
+          "ci95_high": 0.5081615401107432
+        },
+        "NG": {
+          "definition": "기준선 NG 비율",
+          "numerator": 249,
+          "denominator": 2001,
+          "value": 0.12443778110944528,
+          "ci95_low": 0.11069081901763814,
+          "ci95_high": 0.13962396603069768
+        },
+        "REVIEW": {
+          "definition": "기준선 REVIEW 비율",
+          "numerator": 779,
+          "denominator": 2001,
+          "value": 0.3893053473263368,
+          "ci95_low": 0.36817291031484467,
+          "ci95_high": 0.41086198640931537
+        },
+        "ERROR": {
+          "definition": "기준선 ERROR 비율",
+          "numerator": 0,
+          "denominator": 2001,
+          "value": 0.0,
+          "ci95_low": 1.0842021724855044e-19,
+          "ci95_high": 0.0019160910723353569
+        }
+      },
+      "status_rates_target": {
+        "OK": {
+          "definition": "대상 OK 비율",
+          "numerator": 0,
+          "denominator": 10,
+          "value": 0.0,
+          "ci95_low": 0.0,
+          "ci95_high": 0.2775327998628892
+        },
+        "NG": {
+          "definition": "대상 NG 비율",
+          "numerator": 10,
+          "denominator": 10,
+          "value": 1.0,
+          "ci95_low": 0.7224672001371107,
+          "ci95_high": 0.9999999999999999
+        },
+        "REVIEW": {
+          "definition": "대상 REVIEW 비율",
+          "numerator": 0,
+          "denominator": 10,
+          "value": 0.0,
+          "ci95_low": 0.0,
+          "ci95_high": 0.2775327998628892
+        },
+        "ERROR": {
+          "definition": "대상 ERROR 비율",
+          "numerator": 0,
+          "denominator": 10,
+          "value": 0.0,
+          "ci95_low": 0.0,
+          "ci95_high": 0.2775327998628892
+        }
+      },
+      "warnings": [
+        "대상 표본 수(10건)가 최소 기준(20건) 미만이어서 INSUFFICIENT_SAMPLE 로 처리합니다(억지 경보 금지)."
+      ],
+      "policy_version": "drift-v1",
+      "drift_hash": "5be554628d2898fb35d097429a7db9abe50fb84d553cdf59898accc585060119"
+    }
+  },
+  "repro_and_audit_smoke": {
+    "trace_events": 9,
+    "trace_audit_errors": 0,
+    "replay_deterministic": true,
+    "replay_terminal_state": "DONE",
+    "replay_final_status": "OK",
+    "cli_repro_trace_exit_code": 0,
+    "cli_repro_runs_exit_code": 0,
+    "smoke_run_audit_verdict": "PASS",
+    "smoke_db_audit_verdict": "PASS"
+  }
+}

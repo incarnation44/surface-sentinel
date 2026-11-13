@@ -2,35 +2,79 @@
 {% block title %}{{ run.run_id }} — Surface Sentinel{% endblock %}
 {% block content %}
 <h1>run 요약</h1>
-<p class="meta">{{ run.run_id }}</p>
+<p class="meta num">{{ run.run_id }}</p>
 <div class="navlinks">
-  <a href="/runs/{{ run.run_id }}/review">검토 큐(REVIEW)</a>
-  <a href="/runs/{{ run.run_id }}/metrics">지표·혼동행렬</a>
+  <a class="btn" href="/runs/{{ run.run_id }}/triage">에이전트 트리아지</a>
+  <a class="btn btn-ghost" href="/runs/{{ run.run_id }}/review">검토 큐(REVIEW)</a>
+  <a class="btn btn-ghost" href="/runs/{{ run.run_id }}/metrics">지표·혼동행렬</a>
   <a href="/">run 목록</a>
 </div>
 {% set counts = run.payload.get("counts", {}) %}
 {% set timing = run.payload.get("timing", {}) %}
+{% set s_total = counts.get("samples", 0)|int %}
+<div class="table-wrap">
 <table>
   <tbody>
     <tr><th>상태</th><td><span class="badge b-{{ run.payload.get('status', 'ERROR') }}">{{ run.payload.get("status", "-") }}</span></td>
         <th>분할</th><td>{{ run.payload.get("split", "-") }}</td>
         <th>모드</th><td>{{ run.payload.get("mode", "-") }}</td></tr>
-    <tr><th>샘플</th><td>{{ counts.get("samples", "-") }}</td>
-        <th>OK / NG</th><td>{{ counts.get("ok", "-") }} / {{ counts.get("ng", "-") }}</td>
-        <th>REVIEW / ERROR</th><td>{{ counts.get("review", "-") }} / {{ counts.get("error", "-") }}</td></tr>
+    <tr><th>샘플</th><td class="num">{{ counts.get("samples", "-") }}</td>
+        <th>OK / NG</th><td class="num">{{ counts.get("ok", "-") }} / {{ counts.get("ng", "-") }}</td>
+        <th>REVIEW / ERROR</th><td class="num">{{ counts.get("review", "-") }} / {{ counts.get("error", "-") }}</td></tr>
     <tr><th>시작(UTC)</th><td class="meta">{{ run.payload.get("started_at", "-") }}</td>
         <th>종료(UTC)</th><td class="meta">{{ run.payload.get("finished_at", "-") }}</td>
-        <th>오버레이</th><td>{{ counts.get("overlays", "-") }}</td></tr>
-    <tr><th>p50 / p95 (ms)</th><td>{{ timing.get("p50_ms", "-") }} / {{ timing.get("p95_ms", "-") }}</td>
+        <th>오버레이</th><td class="num">{{ counts.get("overlays", "-") }}</td></tr>
+    <tr><th>p50 / p95 (ms)</th><td class="num">{{ timing.get("p50_ms", "-") }} / {{ timing.get("p95_ms", "-") }}</td>
         <th>config_hash</th><td colspan="3" class="hash">{{ run.payload.get("config_hash", "-") }}</td></tr>
   </tbody>
 </table>
+</div>
+
+<div class="kpi-strip" style="margin-top:14px">
+  <div class="kpi">
+    <div class="kpi-label">판정 분포 비율 (전체 {{ s_total }}건)</div>
+    {% if s_total > 0 %}
+    <div class="stack-bar" style="margin:8px 0 6px;height:12px">
+      <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('ok', 0)|int / s_total) * 100) }}%;background:var(--ok)"></div>
+      <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('ng', 0)|int / s_total) * 100) }}%;background:var(--ng)"></div>
+      <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('review', 0)|int / s_total) * 100) }}%;background:var(--review)"></div>
+      <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('error', 0)|int / s_total) * 100) }}%;background:var(--error)"></div>
+    </div>
+    {% endif %}
+    <div class="kpi-sub num">OK {{ counts.get('ok', 0) }} · NG {{ counts.get('ng', 0) }} · REVIEW {{ counts.get('review', 0) }} · ERROR {{ counts.get('error', 0) }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">REVIEW 검토 진행률</div>
+    <div class="kpi-val num">{{ review_done }} / {{ review_total }}</div>
+    <div class="bar-track" style="margin:6px 0">
+      <div class="bar-fill" style="width:{{ '%.1f'|format((review_done / review_total * 100) if review_total > 0 else 0) }}%;background:var(--ok)"></div>
+    </div>
+    <div class="kpi-sub">미결정 {{ review_total - review_done }}건</div>
+  </div>
+</div>
 
 <h2>샘플 그리드 ({{ samples|length }}장)</h2>
 <p class="meta">배지는 기계 판정입니다. 검토로 바뀐 경우 최종 상태를 함께 표시합니다. 카드를 누르면 상세로 갑니다.</p>
-<div class="grid">
+
+<div class="toolbar">
+  <button type="button" class="btn-ghost filter-btn active" data-filter="ALL">전체</button>
+  <button type="button" class="btn-ghost filter-btn" data-filter="REVIEW">REVIEW</button>
+  <button type="button" class="btn-ghost filter-btn" data-filter="NG">NG</button>
+  <button type="button" class="btn-ghost filter-btn" data-filter="OK">OK</button>
+  <button type="button" class="btn-ghost filter-btn" data-filter="ERROR">ERROR</button>
+  <button type="button" class="btn-ghost filter-btn" data-filter="UNDECIDED">미검토</button>
+  <div style="min-width:200px;flex:1;max-width:280px">
+    <input type="search" id="sample-search" placeholder="샘플 ID 검색..." aria-label="샘플 ID 검색">
+  </div>
+  <span class="meta num" id="filter-count">표시 {{ samples|length }} / {{ samples|length }}장</span>
+</div>
+
+<div class="grid" id="sample-grid">
   {% for sample in samples %}
-  <div class="card">
+  <div class="card sample-card"
+       data-status="{{ sample.machine_status }}"
+       data-decided="{{ '1' if sample.decision else '0' }}"
+       data-sample-id="{{ sample.sample_id|lower }}">
     <a href="{{ sample.url }}">
       {% if sample.record.overlay_path %}
       <img src="{{ sample.overlay_url }}" alt="{{ sample.sample_id }} 오버레이" loading="lazy">
@@ -38,8 +82,12 @@
       <div class="noimg">오버레이 없음</div>
       {% endif %}
     </a>
-    <p>
-      <a href="{{ sample.url }}">{{ sample.sample_id }}</a><br>
+    <p style="margin:8px 0 4px">
+      <a class="num" href="{{ sample.url }}">{{ sample.sample_id }}</a>
+      {% if sample.machine_status == "REVIEW" %}
+      <span class="prio p-{{ sample.priority }}" title="우선순위 점수 {{ '%.3f'|format(sample.priority_score) }}">{{ sample.priority }}</span>
+      {% endif %}
+      <br>
       <span class="badge b-{{ sample.machine_status }}">{{ sample.machine_status }}</span>
       <span class="badge-note">{{ status_labels.get(sample.machine_status, "") }}</span>
       {% if sample.decision %}
@@ -47,8 +95,42 @@
       <span class="badge-note">검토 반영</span>
       {% endif %}
     </p>
-    <p class="meta">점수 {{ "%.4f"|format(sample.record.score) }} · 정답 {{ sample.record.label }}</p>
+    <p class="meta num" style="margin:0">점수 {{ "%.4f"|format(sample.record.score) }} · 정답 {{ sample.record.label }}</p>
   </div>
   {% endfor %}
 </div>
+<script>
+(function () {
+  var activeFilter = "ALL";
+  var searchEl = document.getElementById("sample-search");
+  var countEl = document.getElementById("filter-count");
+  var cards = Array.prototype.slice.call(document.querySelectorAll(".sample-card"));
+  var total = cards.length;
+  function applyFilters() {
+    var q = (searchEl && searchEl.value ? searchEl.value : "").trim().toLowerCase();
+    var visible = 0;
+    cards.forEach(function (card) {
+      var st = card.dataset.status || "";
+      var dec = card.dataset.decided || "0";
+      var sid = card.dataset.sampleId || "";
+      var okFilter = activeFilter === "ALL" ||
+        (activeFilter === "UNDECIDED" ? (st === "REVIEW" && dec === "0") : st === activeFilter);
+      var okQuery = !q || sid.indexOf(q) !== -1;
+      var show = okFilter && okQuery;
+      card.style.display = show ? "" : "none";
+      if (show) { visible += 1; }
+    });
+    if (countEl) { countEl.textContent = "표시 " + visible + " / " + total + "장"; }
+  }
+  document.querySelectorAll(".filter-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      activeFilter = btn.dataset.filter || "ALL";
+      document.querySelectorAll(".filter-btn").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      applyFilters();
+    });
+  });
+  if (searchEl) { searchEl.addEventListener("input", applyFilters); }
+})();
+</script>
 {% endblock %}

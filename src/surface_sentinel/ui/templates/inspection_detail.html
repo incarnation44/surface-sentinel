@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}검사 #{{ inspection.id }} ({{ inspection.sample_id }}) — Surface Sentinel{% endblock %}
+{% block content %}
+<h1>검사 상세 #{{ inspection.id }}</h1>
+<p class="meta num">{{ inspection.run_id }} / {{ inspection.sample_id }} · 엔진 <code>{{ inspection.engine }}</code></p>
+<div class="navlinks">
+  <a href="/inspections">← 교차증거 DB 목록</a>
+  <a href="/watchdog">Watchdog 관제</a>
+</div>
+
+<p>
+  기계 판정: <span class="badge b-{{ inspection.status }}">{{ inspection.status }}</span>
+  <span class="badge-note">{{ status_labels.get(inspection.status, "") }}</span>
+  &nbsp;<span class="meta num">점수 <strong>{{ "%.6f"|format(inspection.score) }}</strong> · 라벨 {{ inspection.label }} · 분할 {{ inspection.split }}</span>
+</p>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start">
+  <div class="card">
+    <h2 style="margin-top:0">오버레이</h2>
+    {% if inspection.has_overlay %}
+    <img src="/inspections/{{ inspection.id }}/overlay.png" alt="검사 #{{ inspection.id }} 오버레이" style="width:100%;height:auto;border:1px solid var(--line-soft);border-radius:4px">
+    {% else %}
+    <div class="noimg" style="height:180px;display:flex;align-items:center;justify-content:center;background:#eef2f6;color:var(--muted);border-radius:4px">오버레이 없음</div>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h2 style="margin-top:0">신원 · Provenance</h2>
+    <table>
+      <tbody>
+        <tr><th>엔진 / task</th><td><code>{{ inspection.engine }}</code>{% if inspection.task %} ({{ inspection.task }}){% endif %}</td></tr>
+        <tr><th>모델 버전</th><td>{{ inspection.model_version or "-" }}</td></tr>
+        <tr><th>신원 완전성</th><td>{% if inspection.provenance_complete %}<span class="badge b-PASS">완전</span>{% else %}<span class="badge b-REVISE">부분</span>{% endif %}</td></tr>
+        <tr><th>사유</th><td>{{ inspection.reasons_list|join(", ") or "-" }}</td></tr>
+        <tr><th>지문</th><td class="hash">{{ inspection.inspection_fingerprint or "-" }}</td></tr>
+        <tr><th>image_sha256</th><td class="hash">{{ inspection.image_sha256 }}</td></tr>
+        <tr><th>config_hash</th><td class="hash">{{ inspection.config_hash }}</td></tr>
+        <tr><th>model_sha256</th><td class="hash">{{ inspection.model_sha256 or "-" }}</td></tr>
+        <tr><th>기록 시각</th><td class="meta num">{{ inspection.created_at }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<h2>엔진별 원본 관찰 비교 (Engine Observations · {{ observations|length }}건)</h2>
+{% if observations %}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
+  {% for obs in observations %}
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <strong><code>{{ obs.engine }}</code>{% if obs.task %} ({{ obs.task }}){% endif %}</strong>
+      <span class="badge b-{{ obs.status }}">{{ obs.status }}</span>
+    </div>
+    <table>
+      <tbody>
+        <tr><th>점수</th><td class="num">{{ "%.6f"|format(obs.score) }}</td></tr>
+        <tr><th>사유</th><td>{{ obs.reasons|join(", ") or "-" }}</td></tr>
+        <tr><th>컴포넌트 수</th><td class="num">{{ obs.components|length }}개</td></tr>
+        <tr><th>오류 코드</th><td>{{ obs.error_code or "-" }}</td></tr>
+        <tr><th>model_sha256</th><td class="hash">{{ obs.model_sha256[:16] ~ "..." if obs.model_sha256 else "-" }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="meta">단일 엔진 검사 또는 별도 엔진 관찰 기록이 없습니다.</p>
+{% endif %}
+
+<h2>교차 증거 · 패치 중재 · 에이전트 논증 ({{ assessments|length }}건)</h2>
+{% if assessments %}
+{% for a in assessments %}
+{% set diag = a.diagnostics %}
+{% set arb = diag.get("arbitration") %}
+{% set triage = diag.get("triage") %}
+<div class="card" style="margin-bottom:14px">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--line-soft);margin-bottom:10px">
+    <div>
+      <strong>평가 #{{ a.id }}</strong>
+      {% if a.review_priority %}<span class="prio p-{{ a.review_priority }}" style="margin-left:6px">{{ a.review_priority }}</span>{% endif %}
+      <span class="flag-pill" style="margin-left:6px">권장: {{ a.recommended_action }}</span>
+    </div>
+    <span class="meta hash">hash {{ a.assessment_hash[:16] }}... · {{ a.created_at }}</span>
+  </div>
+
+  <div style="margin-bottom:10px">
+    <strong style="font-size:12px">교차 증거 플래그:</strong>
+    {% if a.flags %}
+      {% for f in a.flags %}<span class="flag-pill">{{ f }}</span>{% endfor %}
+    {% else %}<span class="meta">-</span>{% endif %}
+    {% if diag.get("score_gap") is not none %}
+    <span class="meta num" style="margin-left:10px">점수 차이: {{ "%.4f"|format(diag.get("score_gap")) }}</span>
+    {% endif %}
+  </div>
+
+  {% if diag.get("matches") %}
+  <h3>컴포넌트 매칭 (IoU)</h3>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Engine A idx</th><th>Engine B idx</th><th>IoU</th><th>Containment</th><th>정규화 중심거리</th><th>면적비</th></tr></thead>
+    <tbody>
+      {% for m in diag.get("matches", []) %}
+      <tr>
+        <td class="num">A{{ m.index_a }}</td><td class="num">B{{ m.index_b }}</td>
+        <td class="num">{{ "%.4f"|format(m.iou) }}</td><td class="num">{{ "%.4f"|format(m.containment) }}</td>
+        <td class="num">{{ "%.4f"|format(m.center_distance_norm) }}</td><td class="num">{{ "%.2f"|format(m.area_ratio) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+
+  {% if arb %}
+  <h3>능동 패치 중재 결론</h3>
+  <p style="margin:4px 0 8px">
+    <span class="flag-pill"><strong>{{ arb.get("verdict") }}</strong></span>
+    <span>{{ arb.get("summary") }}</span>
+  </p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>엔진</th><th>패치 bbox</th><th>국소 대비</th><th>경계 선명도</th><th>현저성 지수</th><th>가장자리 접촉</th></tr></thead>
+    <tbody>
+      {% for pkey in ["patch_a", "patch_b"] %}
+      {% set p = arb.get(pkey) %}
+      {% if p %}
+      <tr>
+        <td><code>{{ p.get("engine") }}</code></td>
+        <td class="num">{{ p.get("bbox") }}</td>
+        <td class="num">{{ "%.2f"|format(p.get("local_contrast", 0.0)) }}</td>
+        <td class="num">{{ "%.2f"|format(p.get("edge_sharpness", 0.0)) }}</td>
+        <td class="num">{{ "%.3f"|format(p.get("salience_index", 0.0)) }}</td>
+        <td>{{ "예" if p.get("touches_border") else "아니오" }}</td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+
+  {% if triage and triage.get("argumentation") %}
+  {% set arg = triage.get("argumentation") %}
+  <div class="arg-card" style="margin-bottom:0">
+    <div class="arg-head">
+      <strong style="font-size:13px">에이전트 4단 논증 영수증 ({{ triage.get("priority") }} · {{ "%.3f"|format(triage.get("priority_score", 0.0)) }})</strong>
+      <span class="meta">패턴 <code>{{ triage.get("weak_pattern") }}</code></span>
+    </div>
+    <div class="arg-steps">
+      <div class="arg-step"><div class="arg-step-title">1. 가설</div><div class="arg-step-body">{{ arg.get("hypothesis") }}</div></div>
+      <div class="arg-step"><div class="arg-step-title">2. 검증</div><div class="arg-step-body">{{ arg.get("experiment") }}</div></div>
+      <div class="arg-step"><div class="arg-step-title">3. 결론</div><div class="arg-step-body">{{ arg.get("verdict") }}</div></div>
+      <div class="arg-step"><div class="arg-step-title">4. 작업자 지침</div><div class="arg-step-body">{{ arg.get("operator_guidance") }}</div></div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+{% else %}
+<p class="meta">기록된 교차 증거 평가가 없습니다.</p>
+{% endif %}
+
+<h2>사람 검토 이력 ({{ reviews|length }}건)</h2>
+{% if reviews %}
+<div class="table-wrap">
+<table>
+  <thead><tr><th>ID</th><th>결정</th><th>사유</th><th>검토자</th><th>시각(UTC)</th></tr></thead>
+  <tbody>
+    {% for r in reviews %}
+    <tr>
+      <td class="num">#{{ r.id }}</td>
+      <td><span class="badge b-{{ r.decision }}">{{ r.decision }}</span></td>
+      <td>{{ r.reason or "-" }}</td>
+      <td>{{ r.reviewer or "-" }}</td>
+      <td class="meta num">{{ r.created_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="meta">아직 사람 검토 이력이 없습니다.</p>
+{% endif %}
+{% endblock %}

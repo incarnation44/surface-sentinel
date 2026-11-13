@@ -36,6 +36,12 @@ DECISIONS: tuple[str, ...] = ("OK", "NG")
 #: 교차 증거 권장 행동(Phase 1, observe-only). 자동 채택 값은 존재하지 않는다.
 RECOMMENDED_ACTIONS: tuple[str, ...] = ("NONE", "INSPECT_EVIDENCE", "HUMAN_REVIEW")
 
+#: 리뷰 우선순위 등급(Phase 2, observe-only).
+REVIEW_PRIORITIES: tuple[str, ...] = ("P0", "P1", "P2", "P3")
+
+#: 섭동 안정성 등급(Phase 2, observe-only).
+STABILITY_LEVELS: tuple[str, ...] = ("STABLE", "SENSITIVE", "UNSTABLE")
+
 STATUS_ORDER: tuple[str, ...] = ("OK", "NG", "REVIEW", "ERROR")
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -353,13 +359,15 @@ def append_agent_assessment(
     recommended_action: str,
     diagnostics: Mapping[str, Any],
     trace_path: str = "",
+    review_priority: str | None = None,
+    stability: str | None = None,
 ) -> int:
-    """교차 증거 평가를 append-only로 남기고 행 ``id``를 돌려준다(Phase 1).
+    """교차 증거·트리아지 평가를 append-only로 남기고 행 ``id``를 돌려준다(Phase 1/2).
 
     ``(inspection_id, assessment_hash)`` 쌍으로 중복제거 — 같은 평가는 기존
     id 를 돌려주고 새 행을 만들지 않는다. 다른 해시는 새 행으로 쌓는다.
     기계 판정(``inspections.status``)은 절대 바꾸지 않는다.
-    ``review_priority``·``stability`` 는 Phase 2 예약 컬럼이라 기록하지 않는다.
+    ``review_priority``·``stability`` 는 선택 인자(미지정 시 NULL)다.
     """
 
     assessment_sha = normalize_sha256(assessment_hash)
@@ -369,6 +377,20 @@ def append_agent_assessment(
         raise RecordsError(
             f"권장 행동은 {RECOMMENDED_ACTIONS}만 허용합니다: {recommended_action!r}"
         )
+    priority_val: str | None = None
+    if review_priority is not None:
+        priority_val = str(review_priority).strip()
+        if priority_val not in REVIEW_PRIORITIES:
+            raise RecordsError(
+                f"리뷰 우선순위는 {REVIEW_PRIORITIES}만 허용합니다: {review_priority!r}"
+            )
+    stability_val: str | None = None
+    if stability is not None:
+        stability_val = str(stability).strip()
+        if stability_val not in STABILITY_LEVELS:
+            raise RecordsError(
+                f"안정성 등급은 {STABILITY_LEVELS}만 허용합니다: {stability!r}"
+            )
     row = connection.execute(
         "SELECT id FROM inspections WHERE id = ?",
         (int(inspection_id),),
@@ -390,6 +412,8 @@ def append_agent_assessment(
         assessment_sha,
         policy_sha,
         flags_json,
+        priority_val,
+        stability_val,
         action,
         diagnostics_json,
         str(trace_path),
@@ -400,8 +424,9 @@ def append_agent_assessment(
             cursor = connection.execute(
                 "INSERT INTO agent_assessments ("
                 "inspection_id, assessment_hash, policy_hash, flags_json,"
+                " review_priority, stability,"
                 " recommended_action, diagnostics_json, trace_path, created_at"
-                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 params,
             )
     except sqlite3.IntegrityError:
@@ -504,7 +529,9 @@ __all__ = [
     "DECISIONS",
     "ENGINES",
     "RECOMMENDED_ACTIONS",
+    "REVIEW_PRIORITIES",
     "RecordsError",
+    "STABILITY_LEVELS",
     "STATUS_ORDER",
     "append_agent_assessment",
     "append_review",

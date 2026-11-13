@@ -209,3 +209,168 @@ def test_assessment_matches_pure_function() -> None:
     expected = assess_cross_evidence(obs_a, obs_b)
     assert engine.assessment.assessment_hash == expected.assessment_hash
     assert EvidenceFlag.STATUS_MISMATCH in engine.assessment.flags
+
+
+def test_phase2_tools_registered_in_work_tools() -> None:
+    assert {"inspect_geometry", "arbitrate_patches"}.issubset(WORK_TOOLS)
+
+
+def test_choose_evidence_action_arbitration_branch() -> None:
+    policy = default_agent_config().policy
+    assert (
+        choose_evidence_action(
+            [],
+            policy,
+            cross_evidence_done=True,
+            assessment_flags=("LOCALIZATION_MISMATCH",),
+            arbitration_available=True,
+            arbitration_done=False,
+            budget_remaining_actions=2,
+        ).tool
+        == "arbitrate_patches"
+    )
+    assert (
+        choose_evidence_action(
+            [],
+            policy,
+            cross_evidence_done=True,
+            assessment_flags=("NG_SINGLE_ENGINE",),
+            arbitration_available=True,
+            arbitration_done=False,
+            budget_remaining_actions=1,
+        ).tool
+        == "run_profile"
+    )
+    assert (
+        choose_evidence_action(
+            [],
+            policy,
+            cross_evidence_done=True,
+            assessment_flags=("EVIDENCE_ALIGNED",),
+            arbitration_available=True,
+            arbitration_done=False,
+            budget_remaining_actions=2,
+        ).tool
+        == "run_profile"
+    )
+
+
+@pytest.mark.parametrize("status", [Status.OK, Status.NG, Status.REVIEW])
+def test_active_arbitration_within_max_actions_3_and_replay(status: Status) -> None:
+    import numpy as np
+
+    img = np.full((120, 120, 3), 120, dtype=np.uint8)
+    img[30:50, 30:50, :] = 20
+    obs_a = make_observation(
+        "opencv",
+        Status.NG,
+        components=[make_component(0, (28, 28, 24, 24), evidence=0.9)],
+        score=0.9,
+        reasons=["DEFECT_EVIDENCE_STRONG"],
+    )
+    obs_b = make_observation("yolo-seg", Status.OK, task="seg")
+    combined = make_result(status, reasons=["EVIDENCE_IN_REVIEW_BAND"], score=0.9)
+    writer = TraceWriter(None)
+    engine = AgentEngine(
+        agent_config=default_agent_config(),  # max_actions=3
+        profiles={"base": default_config()},
+        inspector=lambda profile_id, config: combined,
+        clock=lambda: 0.0,
+        trace=writer,
+        observations=(obs_a, obs_b),
+        image_bgr=img,
+    )
+    episode = engine.run()
+    tools = [event["tool"] for event in episode.events if event.get("event") == "act"]
+    assert tools[:3] == ["cross_evidence", "arbitrate_patches", "run_profile"]
+    assert episode.actions_used == 3
+    assert episode.profiles_used == 1
+    assert episode.final_status is status
+    assert engine.arbitration is not None
+    assert audit_trace(list(episode.events)) == []
+
+    report = replay_trace(writer.events)
+    assert report.audit_valid is True
+    assert report.deterministic is True
+    assert report.mismatches == ()
+    assert report.final_status == status.value
+
+
+def test_aligned_episode_with_image_skips_arbitration_and_replays() -> None:
+    import numpy as np
+
+    img = np.full((120, 120, 3), 120, dtype=np.uint8)
+    obs_a = make_observation("opencv", Status.OK)
+    obs_b = make_observation("yolo-seg", Status.OK, task="seg")
+    writer = TraceWriter(None)
+    engine = AgentEngine(
+        agent_config=default_agent_config(),
+        profiles={"base": default_config()},
+        inspector=lambda profile_id, config: make_result(Status.OK),
+        clock=lambda: 0.0,
+        trace=writer,
+        observations=(obs_a, obs_b),
+        image_bgr=img,
+    )
+    episode = engine.run()
+    tools = [event["tool"] for event in episode.events if event.get("event") == "act"]
+    assert tools == ["cross_evidence", "run_profile", "stop"]
+    assert episode.actions_used == 2
+    assert engine.arbitration is None
+    report = replay_trace(writer.events)
+    assert report.deterministic is True
+
+
+def test_replay_detects_tampered_arbitration_hash() -> None:
+    import numpy as np
+
+    img = np.full((120, 120, 3), 120, dtype=np.uint8)
+    img[30:50, 30:50, :] = 20
+    obs_a = make_observation(
+        "opencv", Status.NG, components=[make_component(0, (28, 28, 24, 24))], score=0.9
+    )
+    obs_b = make_observation("yolo-seg", Status.OK, task="seg")
+    writer = TraceWriter(None)
+    engine = AgentEngine(
+        agent_config=default_agent_config(),
+        profiles={"base": default_config()},
+        inspector=lambda profile_id, config: make_result(Status.NG, score=0.9),
+        clock=lambda: 0.0,
+        trace=writer,
+        observations=(obs_a, obs_b),
+        image_bgr=img,
+    )
+    engine.run()
+    events = [dict(event) for event in writer.events]
+    for event in events:
+        if event.get("event") == "act" and event.get("tool") == "arbitrate_patches":
+            res = dict(event["result"])
+            res["verdict"] = "ALIGNED"
+            event["result"] = res
+    report = replay_trace(events)
+    assert report.deterministic is False
+
+
+def test_inspect_geometry_tool_execution() -> None:
+    obs_a = make_observation(
+        "opencv",
+        Status.REVIEW,
+        components=[
+            make_component(0, (10, 20, 10, 5), evidence=0.35),
+            make_component(1, (30, 22, 10, 5), evidence=0.34),
+            make_component(2, (50, 24, 10, 5), evidence=0.33),
+        ],
+        score=0.35,
+    )
+    obs_b = make_observation("yolo-seg", Status.OK, task="seg")
+    engine = AgentEngine(
+        agent_config=default_agent_config(),
+        profiles={"base": default_config()},
+        inspector=lambda profile_id, config: make_result(Status.REVIEW),
+        clock=lambda: 0.0,
+        observations=(obs_a, obs_b),
+    )
+    engine._state = AgentState.ACT
+    out = engine.attempt("inspect_geometry", {"engine": "opencv"})
+    assert out["pattern"] == "COLLINEAR_SCRATCH_SUSPECT"
+    assert engine.geometry is not None

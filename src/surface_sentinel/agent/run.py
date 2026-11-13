@@ -30,6 +30,7 @@ from ..pipeline.stages import SEALED_SPLITS
 from .config import AgentConfig
 from .engine import AgentEngine, AgentEpisode
 from .evidence import CrossEvidenceAssessment, save_dual_overlay
+from .stability import PatchArbitration
 from .trace import TraceWriter
 
 AGENT_RUN_SCHEMA_VERSION = "agent-run-v1"
@@ -59,7 +60,7 @@ class AgentRunOutcome:
 
 @dataclass(frozen=True)
 class EvidenceRunOutcome:
-    """교차 증거 에피소드 산출물(Phase 1). 판정은 결합 결과 그대로다."""
+    """교차 증거·능동 중재 에피소드 산출물(Phase 1/2). 판정은 결합 결과 그대로다."""
 
     episode: AgentEpisode
     assessment: CrossEvidenceAssessment
@@ -68,6 +69,7 @@ class EvidenceRunOutcome:
     trace_path: Path
     result_path: Path
     overlay_path: Path
+    arbitration: PatchArbitration | None = None
 
 
 def load_profiles(
@@ -107,14 +109,16 @@ def run_agent_episode(
 
     if split in SEALED_SPLITS:
         raise AgentRunError(
-            "E_SEALED_DENIED", f"sealed split {split!r} is never opened by the agent"
+            "E_SEALED_DENIED", f"봉인 분할({split!r})은 에이전트가 열 수 없습니다"
         )
     image = Path(image_path)
     if not image.is_file():
-        raise AgentRunError("E_INPUT_MISSING", f"image not found: {image}")
+        raise AgentRunError("E_INPUT_MISSING", f"이미지 파일을 찾을 수 없습니다: {image}")
     base_config = profiles.get("base")
     if base_config is None:
-        raise AgentRunError("E_CONFIG_INVALID", "profile registry must contain 'base'")
+        raise AgentRunError(
+            "E_CONFIG_INVALID", "프로파일 레지스트리에 'base' 프로파일이 필요합니다"
+        )
 
     base_run_id = run_id or new_run_id(base_config.config_hash[:8], split)
     candidate = base_run_id
@@ -190,6 +194,7 @@ def run_evidence_episode(
     split: str = "tune",
     clock: Callable[[], float] = time.perf_counter,
     run_id: str | None = None,
+    enable_arbitration: bool = False,
 ) -> EvidenceRunOutcome:
     """교차 증거 에피소드를 실행하고 run 디렉터리를 남긴다(Phase 1, observe-only).
 
@@ -201,18 +206,20 @@ def run_evidence_episode(
 
     if split in SEALED_SPLITS:
         raise AgentRunError(
-            "E_SEALED_DENIED", f"sealed split {split!r} is never opened by the agent"
+            "E_SEALED_DENIED", f"봉인 분할({split!r})은 에이전트가 열 수 없습니다"
         )
     image = Path(image_path)
     if not image.is_file():
-        raise AgentRunError("E_INPUT_MISSING", f"image not found: {image}")
+        raise AgentRunError("E_INPUT_MISSING", f"이미지 파일을 찾을 수 없습니다: {image}")
     if len(observations) < 2:
         raise AgentRunError(
-            "E_EVIDENCE_INPUT", "cross evidence requires two engine observations"
+            "E_EVIDENCE_INPUT", "교차 증거는 두 개의 엔진 관찰(EngineObservation)이 필요합니다"
         )
     base_config = profiles.get("base")
     if base_config is None:
-        raise AgentRunError("E_CONFIG_INVALID", "profile registry must contain 'base'")
+        raise AgentRunError(
+            "E_CONFIG_INVALID", "프로파일 레지스트리에 'base' 프로파일이 필요합니다"
+        )
 
     base_run_id = run_id or new_run_id(base_config.config_hash[:8], split)
     candidate = base_run_id
@@ -229,6 +236,13 @@ def run_evidence_episode(
         # 재검사 없음: 이미 계산된 결합 판정을 확인만 한다(판정 소유권 불변).
         return combined_result
 
+    bgr: Any = None
+    if enable_arbitration:
+        bgr = cv2.imread(str(image), cv2.IMREAD_COLOR)
+        if bgr is None:
+            trace.close()
+            raise AgentRunError("E_INPUT_MISSING", f"이미지 파일을 디코드할 수 없습니다: {image}")
+
     engine = AgentEngine(
         agent_config=agent_config,
         profiles=profiles,
@@ -236,6 +250,7 @@ def run_evidence_episode(
         clock=clock,
         trace=trace,
         observations=tuple(observations),
+        image_bgr=bgr,
     )
     try:
         episode = engine.run(image_path=str(image), label=label, split=split)
@@ -243,15 +258,17 @@ def run_evidence_episode(
         trace.close()
     assessment = engine.assessment
     assert assessment is not None  # 관찰 2개 주입 시 cross_evidence 가 반드시 돈다
+    arbitration = engine.arbitration
 
-    bgr = cv2.imread(str(image), cv2.IMREAD_COLOR)
     if bgr is None:
-        raise AgentRunError("E_INPUT_MISSING", f"image not readable: {image}")
+        bgr = cv2.imread(str(image), cv2.IMREAD_COLOR)
+        if bgr is None:
+            raise AgentRunError("E_INPUT_MISSING", f"이미지 파일을 디코드할 수 없습니다: {image}")
     overlay_path = save_dual_overlay(
         bgr, observations[0], observations[1], assessment, run_dir / DUAL_OVERLAY_FILENAME
     )
 
-    payload = {
+    payload: dict[str, Any] = {
         "schema_version": AGENT_EVIDENCE_RUN_SCHEMA_VERSION,
         "run_id": candidate,
         "image_path": str(image),
@@ -265,6 +282,8 @@ def run_evidence_episode(
         "trace_path": str(trace_path),
         "overlay_path": str(overlay_path),
     }
+    if arbitration is not None:
+        payload["arbitration"] = arbitration.to_dict()
     result_path = run_dir / EVIDENCE_RESULT_FILENAME
     tmp_path = result_path.with_suffix(".tmp")
     tmp_path.write_text(
@@ -279,6 +298,7 @@ def run_evidence_episode(
         trace_path=trace_path,
         result_path=result_path,
         overlay_path=overlay_path,
+        arbitration=arbitration,
     )
 
 

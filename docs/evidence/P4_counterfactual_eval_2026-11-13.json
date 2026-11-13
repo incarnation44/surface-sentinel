@@ -1,0 +1,1125 @@
+{
+  "schema_version": "phase4-counterfactual-eval-v1",
+  "generated": "2026-11-14",
+  "config_hash": "a762ba63944133ddfbc2f962342001e09d0dffd0f0ea14fd79095274865d8098",
+  "sealed_splits_accessed": false,
+  "tune_samples": 2001,
+  "review_bottleneck_breakdown": {
+    "total_review": 779,
+    "with_components": 779,
+    "without_components": 0,
+    "pivotal_samples": 218,
+    "pivotal_ratio": {
+      "definition": "REVIEW 중 결정적 후보 보유 비율",
+      "numerator": 218,
+      "denominator": 779,
+      "value": 0.2798459563543004,
+      "ci95_low": 0.24946041462389318,
+      "ci95_high": 0.31239212124370136
+    },
+    "area_bottleneck_count": 741,
+    "area_bottleneck_defects": 42,
+    "area_bottleneck_ratio_all_review": {
+      "definition": "전체 REVIEW 779장 중 면적 병목(대비 상승만으로 NG 불가) 비율",
+      "numerator": 741,
+      "denominator": 779,
+      "value": 0.9512195121951219,
+      "ci95_low": 0.9337542702196907,
+      "ci95_high": 0.9642564215735482
+    },
+    "area_bottleneck_ratio_with_components": {
+      "definition": "후보 보유 REVIEW 중 면적 병목 비율",
+      "numerator": 741,
+      "denominator": 779,
+      "value": 0.9512195121951219,
+      "ci95_low": 0.9337542702196907,
+      "ci95_high": 0.9642564215735482
+    },
+    "boundary_reachable_count": 38,
+    "boundary_reachable_defects": 2,
+    "boundary_reachable_ratio_all_review": {
+      "definition": "전체 REVIEW 779장 중 경계 전환 가능(면적 또는 대비 상승 시 NG) 비율",
+      "numerator": 38,
+      "denominator": 779,
+      "value": 0.04878048780487805,
+      "ci95_low": 0.03574357842645172,
+      "ci95_high": 0.06624572978030922
+    },
+    "boundary_reachable_ratio_with_components": {
+      "definition": "후보 보유 REVIEW 중 경계 전환 가능 비율",
+      "numerator": 38,
+      "denominator": 779,
+      "value": 0.04878048780487805,
+      "ci95_low": 0.03574357842645172,
+      "ci95_high": 0.06624572978030922
+    },
+    "contrast_or_invalid_bottleneck_count": 0,
+    "no_component_defects": 0,
+    "representative_examples": {
+      "area_bottleneck_sample": {
+        "schema_version": "counterfactual-v1",
+        "sample_id": "10045",
+        "machine_status": "REVIEW",
+        "score": 0.314064,
+        "margin_to_ng": 0.185936,
+        "margin_to_review_band": 0.085936,
+        "pivotal_component_indices": [],
+        "components": [
+          {
+            "index": 0,
+            "area_px": 66,
+            "mean_contrast_gray": 26.30303,
+            "evidence": 0.314064,
+            "is_valid": true,
+            "score_without": 0.290474,
+            "delta_score": 0.023591,
+            "status_without": "REVIEW",
+            "is_pivotal": false,
+            "min_area_delta_to_valid": 0,
+            "min_contrast_delta_to_valid": 0.0,
+            "target_area_for_ng": 168,
+            "delta_area_for_ng": 102,
+            "target_contrast_for_ng": null,
+            "delta_contrast_for_ng": null,
+            "explanation_ko": "#0 (66px, 대비 26.3): 단독 제거 시 판정은 REVIEW로 유지됩니다. 현재 대비 유지 시 면적이 +102px(총 168px) 커지면 NG가 됩니다, 현재 면적(66px)만으로는 대비 포화 상한(33.0)에서도 최대 증거가 0.3518에 그쳐 단독 대비 상승만으로는 NG에 도달할 수 없습니다."
+          },
+          {
+            "index": 1,
+            "area_px": 45,
+            "mean_contrast_gray": 36.688889,
+            "evidence": 0.290474,
+            "is_valid": true,
+            "score_without": 0.314064,
+            "delta_score": 0.0,
+            "status_without": "REVIEW",
+            "is_pivotal": false,
+            "min_area_delta_to_valid": 0,
+            "min_contrast_delta_to_valid": 0.0,
+            "target_area_for_ng": 134,
+            "delta_area_for_ng": 89,
+            "target_contrast_for_ng": null,
+            "delta_contrast_for_ng": null,
+            "explanation_ko": "#1 (45px, 대비 36.7): 단독 제거 시 판정은 REVIEW로 유지됩니다. 현재 대비 유지 시 면적이 +89px(총 134px) 커지면 NG가 됩니다, 현재 면적(45px)만으로는 대비 포화 상한(33.0)에서도 최대 증거가 0.2905에 그쳐 단독 대비 상승만으로는 NG에 도달할 수 없습니다."
+          },
+          {
+            "index": 2,
+            "area_px": 41,
+            "mean_contrast_gray": 27.439024,
+            "evidence": 0.252825,
+            "is_valid": true,
+            "score_without": 0.314064,
+            "delta_score": 0.0,
+            "status_without": "REVIEW",
+            "is_pivotal": false,
+            "min_area_delta_to_valid": 0,
+            "min_contrast_delta_to_valid": 0.0,
+            "target_area_for_ng": 161,
+            "delta_area_for_ng": 120,
+            "target_contrast_for_ng": null,
+            "delta_contrast_for_ng": null,
+            "explanation_ko": "#2 (41px, 대비 27.4): 단독 제거 시 판정은 REVIEW로 유지됩니다. 현재 대비 유지 시 면적이 +120px(총 161px) 커지면 NG가 됩니다, 현재 면적(41px)만으로는 대비 포화 상한(33.0)에서도 최대 증거가 0.2773에 그쳐 단독 대비 상승만으로는 NG에 도달할 수 없습니다."
+          },
+          {
+            "index": 3,
+            "area_px": 40,
+            "mean_contrast_gray": 26.125,
+            "evidence": 0.24367,
+            "is_valid": true,
+            "score_without": 0.314064,
+            "delta_score": 0.0,
+            "status_without": "REVIEW",
+            "is_pivotal": false,
+            "min_area_delta_to_valid": 0,
+            "min_contrast_delta_to_valid": 0.0,
+            "target_area_for_ng": 169,
+            "delta_area_for_ng": 129,
+            "target_contrast_for_ng": null,
+            "delta_contrast_for_ng": null,
+            "explanation_ko": "#3 (40px, 대비 26.1): 단독 제거 시 판정은 REVIEW로 유지됩니다. 현재 대비 유지 시 면적이 +129px(총 169px) 커지면 NG가 됩니다, 현재 면적(40px)만으로는 대비 포화 상한(33.0)에서도 최대 증거가 0.2739에 그쳐 단독 대비 상승만으로는 NG에 도달할 수 없습니다."
+          }
+        ],
+        "headline_ko": "REVIEW(점수 0.3141, NG까지 +0.1859) · 단일 제거로 판정이 바뀌는 결정적 후보 없음 · 대표 후보 #0(66px)은 면적 병목으로 대비 단독 상승만으로는 NG 도달 불가(대비 고정 시 면적 +102px 필요).",
+        "phase_diagram_svg_data": {
+          "view_box": "0 0 600 280",
+          "plot": {
+            "x0": 54.0,
+            "x1": 576.0,
+            "y0": 18.0,
+            "y1": 236.0,
+            "x_max": 900.0,
+            "y_max": 36.0
+          },
+          "min_area_px": 40,
+          "min_area_x": 77.2,
+          "min_contrast_gray": 16.0,
+          "min_contrast_y": 139.11,
+          "sat_area_for_ng": 133.33,
+          "sat_area_x": 131.33,
+          "sat_contrast_gray": 33.0,
+          "sat_contrast_y": 36.17,
+          "ng_polyline": "131.33,18.0 131.33,36.17 134.27,43.47 137.2,50.26 140.14,56.59 143.07,62.5 146.01,68.04 148.94,73.23 151.88,78.11 154.81,82.7 157.74,87.04 160.68,91.14 163.61,95.02 166.55,98.69 169.48,102.18 172.42,105.5 175.35,108.65 178.29,111.66 181.22,114.53 184.15,117.27 187.09,119.88 190.02,122.39 192.96,124.79 195.89,127.09 198.83,129.3 201.76,131.41 204.7,133.45 207.63,135.41 210.57,137.3 213.5,139.11 576.0,139.11",
+          "ng_polygon": "131.33,18.0 131.33,36.17 134.27,43.47 137.2,50.26 140.14,56.59 143.07,62.5 146.01,68.04 148.94,73.23 151.88,78.11 154.81,82.7 157.74,87.04 160.68,91.14 163.61,95.02 166.55,98.69 169.48,102.18 172.42,105.5 175.35,108.65 178.29,111.66 181.22,114.53 184.15,117.27 187.09,119.88 190.02,122.39 192.96,124.79 195.89,127.09 198.83,129.3 201.76,131.41 204.7,133.45 207.63,135.41 210.57,137.3 213.5,139.11 576.0,139.11 576.0,18.0 131.33,18.0",
+          "review_polyline": "103.49,18.0 103.49,36.17 105.37,43.47 107.25,50.26 109.13,56.59 111.01,62.5 112.88,68.04 114.76,73.23 116.64,78.11 118.52,82.7 120.4,87.04 122.27,91.14 124.15,95.02 126.03,98.69 127.91,102.18 129.79,105.5 131.66,108.65 133.54,111.66 135.42,114.53 137.3,117.27 139.18,119.88 141.06,122.39 142.93,124.79 144.81,127.09 146.69,129.3 148.57,131.41 150.45,133.45 152.32,135.41 154.2,137.3 156.08,139.11 576.0,139.11",
+          "x_ticks": [
+            {
+              "value": 0,
+              "x": 54.0
+            },
+            {
+              "value": 40,
+              "x": 77.2
+            },
+            {
+              "value": 133,
+              "x": 131.14
+            },
+            {
+              "value": 275,
+              "x": 213.5
+            },
+            {
+              "value": 450,
+              "x": 315.0
+            },
+            {
+              "value": 700,
+              "x": 460.0
+            },
+            {
+              "value": 900,
+              "x": 576.0
+            }
+          ],
+          "y_ticks": [
+            {
+              "value": 0,
+              "y": 236.0
+            },
+            {
+              "value": 16,
+              "y": 139.11
+            },
+            {
+              "value": 22,
+              "y": 102.78
+            },
+            {
+              "value": 33,
+              "y": 36.17
+            },
+            {
+              "value": 36,
+              "y": 18.0
+            }
+          ],
+          "points": [
+            {
+              "index": 0,
+              "area_px": 66,
+              "mean_contrast_gray": 26.3,
+              "evidence": 0.3141,
+              "x": 92.28,
+              "y": 76.72,
+              "clamped": false,
+              "is_pivotal": false,
+              "is_valid": true,
+              "is_ng": false
+            },
+            {
+              "index": 1,
+              "area_px": 45,
+              "mean_contrast_gray": 36.69,
+              "evidence": 0.2905,
+              "x": 80.1,
+              "y": 18.0,
+              "clamped": true,
+              "is_pivotal": false,
+              "is_valid": true,
+              "is_ng": false
+            },
+            {
+              "index": 2,
+              "area_px": 41,
+              "mean_contrast_gray": 27.44,
+              "evidence": 0.2528,
+              "x": 77.78,
+              "y": 69.84,
+              "clamped": false,
+              "is_pivotal": false,
+              "is_valid": true,
+              "is_ng": false
+            },
+            {
+              "index": 3,
+              "area_px": 40,
+              "mean_contrast_gray": 26.12,
+              "evidence": 0.2437,
+              "x": 77.2,
+              "y": 77.8,
+              "clamped": false,
+              "is_pivotal": false,
+              "is_valid": true,
+              "is_ng": false
+            }
+          ]
+        },
+        "counterfactual_hash": "833c19399be845a1d00b8ec1707ef274f294dc126fc6960c25765f868e96a71d"
+      },
+      "boundary_reachable_sample": {
+        "schema_version": "counterfactual-v1",
+        "sample_id": "11957",
+        "machine_status": "REVIEW",
+        "score": 0.471398,
+        "margin_to_ng": 0.028602,
+        "margin_to_review_band": -0.071398,
+        "pivotal_component_indices": [],
+        "components": [
+          {
+            "index": 0,
+            "area_px": 141,
+            "mean_contrast_gray": 27.737589,
+            "evidence": 0.471398,
+            "is_valid": true,
+            "score_without": 0.419957,
+            "delta_score": 0.051441,
+            "status_without": "REVIEW",
+            "is_pivotal": false,
+            "min_area_delta_to_valid": 0,
+            "min_contrast_delta_to_valid": 0.0,
+            "target_area_for_ng": 159,
+            "delta_area_for_ng": 18,
+            "target_contrast_for_ng": 31.205674,
+            "delta_contrast_for_ng": 3.468085,
+            "explanation_ko": "#0 (141px, 대비 27.7): 단독 제거 시 판정은 REVIEW로 유지됩니다. 현재 대비 유지 시 면적이 +18px(총 159px) 커지면 NG가 됩니다, 현재 면적 유지 시 대비가 +3.47(총 31.21)에 도달하면 NG가 됩니다."
+          },
+          {
+            "index": 1,
+            "area_px": 102,
+            "mean_contrast_gray": 30.431372,
+            "evidence": 0.419957,
+            "is_valid": true,
+            "score_without": 0.471398,
+            "delta_score": 0.0,
+            "status_without": "REVIEW",
+            "is_pivotal": false,
+            "min_area_delta_to_valid": 0,
+            "min_contrast_delta_to_valid": 0.0,
+            "target_area_for_ng": 145,
+            "delta_area_for_ng": 43,
+            "target_contrast_for_ng": null,
+            "delta_contrast_for_ng": null,
+            "explanation_ko": "#1 (102px, 대비 30.4): 단독 제거 시 판정은 REVIEW로 유지됩니다. 현재 대비 유지 시 면적이 +43px(총 145px) 커지면 NG가 됩니다, 현재 면적(102px)만으로는 대비 포화 상한(33.0)에서도 최대 증거가 0.4373에 그쳐 단독 대비 상승만으로는 NG에 도달할 수 없습니다."
+          },
+          {
+            "index": 2,
+            "area_px": 99,
+            "mean_contrast_gray": 27.989899,
+            "evidence": 0.396791,
+            "is_valid": true,
+            "score_without": 0.471398,
+            "delta_score": 0.0,
+            "status_without": "REVIEW",
+            "is_pivotal": false,
+            "min_area_delta_to_valid": 0,
+            "min_contrast_delta_to_valid": 0.0,
+            "target_area_for_ng": 158,
+            "delta_area_for_ng": 59,
+            "target_contrast_for_ng": null,
+            "delta_contrast_for_ng": null,
+            "explanation_ko": "#2 (99px, 대비 28.0): 단독 제거 시 판정은 REVIEW로 유지됩니다. 현재 대비 유지 시 면적이 +59px(총 158px) 커지면 NG가 됩니다, 현재 면적(99px)만으로는 대비 포화 상한(33.0)에서도 최대 증거가 0.4308에 그쳐 단독 대비 상승만으로는 NG에 도달할 수 없습니다."
+          },
+          {
+            "index": 3,
+            "area_px": 40,
+            "mean_contrast_gray": 26.924999,
+            "evidence": 0.247373,
+            "is_valid": true,
+            "score_without": 0.471398,
+            "delta_score": 0.0,
+            "status_without": "REVIEW",
+            "is_pivotal": false,
+            "min_area_delta_to_valid": 0,
+            "min_contrast_delta_to_valid": 0.0,
+            "target_area_for_ng": 164,
+            "delta_area_for_ng": 124,
+            "target_contrast_for_ng": null,
+            "delta_contrast_for_ng": null,
+            "explanation_ko": "#3 (40px, 대비 26.9): 단독 제거 시 판정은 REVIEW로 유지됩니다. 현재 대비 유지 시 면적이 +124px(총 164px) 커지면 NG가 됩니다, 현재 면적(40px)만으로는 대비 포화 상한(33.0)에서도 최대 증거가 0.2739에 그쳐 단독 대비 상승만으로는 NG에 도달할 수 없습니다."
+          },
+          {
+            "index": 4,
+            "area_px": 40,
+            "mean_contrast_gray": 26.424999,
+            "evidence": 0.245065,
+            "is_valid": true,
+            "score_without": 0.471398,
+            "delta_score": 0.0,
+            "status_without": "REVIEW",
+            "is_pivotal": false,
+            "min_area_delta_to_valid": 0,
+            "min_contrast_delta_to_valid": 0.0,
+            "target_area_for_ng": 167,
+            "delta_area_for_ng": 127,
+            "target_contrast_for_ng": null,
+            "delta_contrast_for_ng": null,
+            "explanation_ko": "#4 (40px, 대비 26.4): 단독 제거 시 판정은 REVIEW로 유지됩니다. 현재 대비 유지 시 면적이 +127px(총 167px) 커지면 NG가 됩니다, 현재 면적(40px)만으로는 대비 포화 상한(33.0)에서도 최대 증거가 0.2739에 그쳐 단독 대비 상승만으로는 NG에 도달할 수 없습니다."
+          },
+          {
+            "index": 5,
+            "area_px": 40,
+            "mean_contrast_gray": 25.875,
+            "evidence": 0.242501,
+            "is_valid": true,
+            "score_without": 0.471398,
+            "delta_score": 0.0,
+            "status_without": "REVIEW",
+            "is_pivotal": false,
+            "min_area_delta_to_valid": 0,
+            "min_contrast_delta_to_valid": 0.0,
+            "target_area_for_ng": 171,
+            "delta_area_for_ng": 131,
+            "target_contrast_for_ng": null,
+            "delta_contrast_for_ng": null,
+            "explanation_ko": "#5 (40px, 대비 25.9): 단독 제거 시 판정은 REVIEW로 유지됩니다. 현재 대비 유지 시 면적이 +131px(총 171px) 커지면 NG가 됩니다, 현재 면적(40px)만으로는 대비 포화 상한(33.0)에서도 최대 증거가 0.2739에 그쳐 단독 대비 상승만으로는 NG에 도달할 수 없습니다."
+          }
+        ],
+        "headline_ko": "REVIEW(점수 0.4714, NG까지 +0.0286) · 단일 제거로 판정이 바뀌는 결정적 후보 없음 · 대표 후보 #0은 경계 전환 가능(면적 +18px 또는 대비 +3.47 시 NG).",
+        "phase_diagram_svg_data": {
+          "view_box": "0 0 600 280",
+          "plot": {
+            "x0": 54.0,
+            "x1": 576.0,
+            "y0": 18.0,
+            "y1": 236.0,
+            "x_max": 900.0,
+            "y_max": 36.0
+          },
+          "min_area_px": 40,
+          "min_area_x": 77.2,
+          "min_contrast_gray": 16.0,
+          "min_contrast_y": 139.11,
+          "sat_area_for_ng": 133.33,
+          "sat_area_x": 131.33,
+          "sat_contrast_gray": 33.0,
+          "sat_contrast_y": 36.17,
+          "ng_polyline": "131.33,18.0 131.33,36.17 134.27,43.47 137.2,50.26 140.14,56.59 143.07,62.5 146.01,68.04 148.94,73.23 151.88,78.11 154.81,82.7 157.74,87.04 160.68,91.14 163.61,95.02 166.55,98.69 169.48,102.18 172.42,105.5 175.35,108.65 178.29,111.66 181.22,114.53 184.15,117.27 187.09,119.88 190.02,122.39 192.96,124.79 195.89,127.09 198.83,129.3 201.76,131.41 204.7,133.45 207.63,135.41 210.57,137.3 213.5,139.11 576.0,139.11",
+          "ng_polygon": "131.33,18.0 131.33,36.17 134.27,43.47 137.2,50.26 140.14,56.59 143.07,62.5 146.01,68.04 148.94,73.23 151.88,78.11 154.81,82.7 157.74,87.04 160.68,91.14 163.61,95.02 166.55,98.69 169.48,102.18 172.42,105.5 175.35,108.65 178.29,111.66 181.22,114.53 184.15,117.27 187.09,119.88 190.02,122.39 192.96,124.79 195.89,127.09 198.83,129.3 201.76,131.41 204.7,133.45 207.63,135.41 210.57,137.3 213.5,139.11 576.0,139.11 576.0,18.0 131.33,18.0",
+          "review_polyline": "103.49,18.0 103.49,36.17 105.37,43.47 107.25,50.26 109.13,56.59 111.01,62.5 112.88,68.04 114.76,73.23 116.64,78.11 118.52,82.7 120.4,87.04 122.27,91.14 124.15,95.02 126.03,98.69 127.91,102.18 129.79,105.5 131.66,108.65 133.54,111.66 135.42,114.53 137.3,117.27 139.18,119.88 141.06,122.39 142.93,124.79 144.81,127.09 146.69,129.3 148.57,131.41 150.45,133.45 152.32,135.41 154.2,137.3 156.08,139.11 576.0,139.11",
+          "x_ticks": [
+            {
+              "value": 0,
+              "x": 54.0
+            },
+            {
+              "value": 40,
+              "x": 77.2
+            },
+            {
+              "value": 133,
+              "x": 131.14
+            },
+            {
+              "value": 275,
+              "x": 213.5
+            },
+            {
+              "value": 450,
+              "x": 315.0
+            },
+            {
+              "value": 700,
+              "x": 460.0
+            },
+            {
+              "value": 900,
+              "x": 576.0
+            }
+          ],
+          "y_ticks": [
+            {
+              "value": 0,
+              "y": 236.0
+            },
+            {
+              "value": 16,
+              "y": 139.11
+            },
+            {
+              "value": 22,
+              "y": 102.78
+            },
+            {
+              "value": 33,
+              "y": 36.17
+            },
+            {
+              "value": 36,
+              "y": 18.0
+            }
+          ],
+          "points": [
+            {
+              "index": 0,
+              "area_px": 141,
+              "mean_contrast_gray": 27.74,
+              "evidence": 0.4714,
+              "x": 135.78,
+              "y": 68.03,
+              "clamped": false,
+              "is_pivotal": false,
+              "is_valid": true,
+              "is_ng": false
+            },
+            {
+              "index": 1,
+              "area_px": 102,
+              "mean_contrast_gray": 30.43,
+              "evidence": 0.42,
+              "x": 113.16,
+              "y": 51.72,
+              "clamped": false,
+              "is_pivotal": false,
+              "is_valid": true,
+              "is_ng": false
+            },
+            {
+              "index": 2,
+              "area_px": 99,
+              "mean_contrast_gray": 27.99,
+              "evidence": 0.3968,
+              "x": 111.42,
+              "y": 66.51,
+              "clamped": false,
+              "is_pivotal": false,
+              "is_valid": true,
+              "is_ng": false
+            },
+            {
+              "index": 3,
+              "area_px": 40,
+              "mean_contrast_gray": 26.92,
+              "evidence": 0.2474,
+              "x": 77.2,
+              "y": 72.95,
+              "clamped": false,
+              "is_pivotal": false,
+              "is_valid": true,
+              "is_ng": false
+            },
+            {
+              "index": 4,
+              "area_px": 40,
+              "mean_contrast_gray": 26.42,
+              "evidence": 0.2451,
+              "x": 77.2,
+              "y": 75.98,
+              "clamped": false,
+              "is_pivotal": false,
+              "is_valid": true,
+              "is_ng": false
+            },
+            {
+              "index": 5,
+              "area_px": 40,
+              "mean_contrast_gray": 25.88,
+              "evidence": 0.2425,
+              "x": 77.2,
+              "y": 79.31,
+              "clamped": false,
+              "is_pivotal": false,
+              "is_valid": true,
+              "is_ng": false
+            }
+          ]
+        },
+        "counterfactual_hash": "6d82beb043de7336c0ccd3a56554f9ab985c99a855abd30047d1d058a4fbcefd"
+      }
+    }
+  },
+  "representative_samples": {
+    "escape_10090": {
+      "schema_version": "counterfactual-v1",
+      "sample_id": "10090",
+      "machine_status": "OK",
+      "score": 0.0,
+      "margin_to_ng": 0.5,
+      "margin_to_review_band": 0.4,
+      "pivotal_component_indices": [],
+      "components": [],
+      "headline_ko": "유효 후보 컴포넌트가 0개여서 점수 0.0000로 OK 판정되었습니다(NG 임계값 0.50까지 여유 +0.5000).",
+      "phase_diagram_svg_data": {
+        "view_box": "0 0 600 280",
+        "plot": {
+          "x0": 54.0,
+          "x1": 576.0,
+          "y0": 18.0,
+          "y1": 236.0,
+          "x_max": 900.0,
+          "y_max": 36.0
+        },
+        "min_area_px": 40,
+        "min_area_x": 77.2,
+        "min_contrast_gray": 16.0,
+        "min_contrast_y": 139.11,
+        "sat_area_for_ng": 133.33,
+        "sat_area_x": 131.33,
+        "sat_contrast_gray": 33.0,
+        "sat_contrast_y": 36.17,
+        "ng_polyline": "131.33,18.0 131.33,36.17 134.27,43.47 137.2,50.26 140.14,56.59 143.07,62.5 146.01,68.04 148.94,73.23 151.88,78.11 154.81,82.7 157.74,87.04 160.68,91.14 163.61,95.02 166.55,98.69 169.48,102.18 172.42,105.5 175.35,108.65 178.29,111.66 181.22,114.53 184.15,117.27 187.09,119.88 190.02,122.39 192.96,124.79 195.89,127.09 198.83,129.3 201.76,131.41 204.7,133.45 207.63,135.41 210.57,137.3 213.5,139.11 576.0,139.11",
+        "ng_polygon": "131.33,18.0 131.33,36.17 134.27,43.47 137.2,50.26 140.14,56.59 143.07,62.5 146.01,68.04 148.94,73.23 151.88,78.11 154.81,82.7 157.74,87.04 160.68,91.14 163.61,95.02 166.55,98.69 169.48,102.18 172.42,105.5 175.35,108.65 178.29,111.66 181.22,114.53 184.15,117.27 187.09,119.88 190.02,122.39 192.96,124.79 195.89,127.09 198.83,129.3 201.76,131.41 204.7,133.45 207.63,135.41 210.57,137.3 213.5,139.11 576.0,139.11 576.0,18.0 131.33,18.0",
+        "review_polyline": "103.49,18.0 103.49,36.17 105.37,43.47 107.25,50.26 109.13,56.59 111.01,62.5 112.88,68.04 114.76,73.23 116.64,78.11 118.52,82.7 120.4,87.04 122.27,91.14 124.15,95.02 126.03,98.69 127.91,102.18 129.79,105.5 131.66,108.65 133.54,111.66 135.42,114.53 137.3,117.27 139.18,119.88 141.06,122.39 142.93,124.79 144.81,127.09 146.69,129.3 148.57,131.41 150.45,133.45 152.32,135.41 154.2,137.3 156.08,139.11 576.0,139.11",
+        "x_ticks": [
+          {
+            "value": 0,
+            "x": 54.0
+          },
+          {
+            "value": 40,
+            "x": 77.2
+          },
+          {
+            "value": 133,
+            "x": 131.14
+          },
+          {
+            "value": 275,
+            "x": 213.5
+          },
+          {
+            "value": 450,
+            "x": 315.0
+          },
+          {
+            "value": 700,
+            "x": 460.0
+          },
+          {
+            "value": 900,
+            "x": 576.0
+          }
+        ],
+        "y_ticks": [
+          {
+            "value": 0,
+            "y": 236.0
+          },
+          {
+            "value": 16,
+            "y": 139.11
+          },
+          {
+            "value": 22,
+            "y": 102.78
+          },
+          {
+            "value": 33,
+            "y": 36.17
+          },
+          {
+            "value": 36,
+            "y": 18.0
+          }
+        ],
+        "points": []
+      },
+      "counterfactual_hash": "060963616fd99d4448302757f732de36eed35a1874d9c26b5f59eecc7ab7099d"
+    },
+    "ng_representative": {
+      "schema_version": "counterfactual-v1",
+      "sample_id": "10021",
+      "machine_status": "NG",
+      "score": 0.883176,
+      "margin_to_ng": -0.383176,
+      "margin_to_review_band": -0.483176,
+      "pivotal_component_indices": [
+        0
+      ],
+      "components": [
+        {
+          "index": 0,
+          "area_px": 416,
+          "mean_contrast_gray": 47.35096,
+          "evidence": 0.883176,
+          "is_valid": true,
+          "score_without": 0.0,
+          "delta_score": 0.883176,
+          "status_without": "OK",
+          "is_pivotal": true,
+          "min_area_delta_to_valid": 0,
+          "min_contrast_delta_to_valid": 0.0,
+          "target_area_for_ng": 134,
+          "delta_area_for_ng": -282,
+          "target_contrast_for_ng": 16.0,
+          "delta_contrast_for_ng": -31.35096,
+          "explanation_ko": "#0 (416px, 대비 47.4): NG 임계값(0.50)을 +0.3832 초과했습니다. 이 후보 하나만 제거하면 판정이 OK로 낮아집니다."
+        }
+      ],
+      "headline_ko": "NG 확정(점수 0.8832, 임계값 초과 +0.3832) · 주원인 #0(416px, 대비 47.4) · 결정적(Pivotal) 후보: #0.",
+      "phase_diagram_svg_data": {
+        "view_box": "0 0 600 280",
+        "plot": {
+          "x0": 54.0,
+          "x1": 576.0,
+          "y0": 18.0,
+          "y1": 236.0,
+          "x_max": 900.0,
+          "y_max": 36.0
+        },
+        "min_area_px": 40,
+        "min_area_x": 77.2,
+        "min_contrast_gray": 16.0,
+        "min_contrast_y": 139.11,
+        "sat_area_for_ng": 133.33,
+        "sat_area_x": 131.33,
+        "sat_contrast_gray": 33.0,
+        "sat_contrast_y": 36.17,
+        "ng_polyline": "131.33,18.0 131.33,36.17 134.27,43.47 137.2,50.26 140.14,56.59 143.07,62.5 146.01,68.04 148.94,73.23 151.88,78.11 154.81,82.7 157.74,87.04 160.68,91.14 163.61,95.02 166.55,98.69 169.48,102.18 172.42,105.5 175.35,108.65 178.29,111.66 181.22,114.53 184.15,117.27 187.09,119.88 190.02,122.39 192.96,124.79 195.89,127.09 198.83,129.3 201.76,131.41 204.7,133.45 207.63,135.41 210.57,137.3 213.5,139.11 576.0,139.11",
+        "ng_polygon": "131.33,18.0 131.33,36.17 134.27,43.47 137.2,50.26 140.14,56.59 143.07,62.5 146.01,68.04 148.94,73.23 151.88,78.11 154.81,82.7 157.74,87.04 160.68,91.14 163.61,95.02 166.55,98.69 169.48,102.18 172.42,105.5 175.35,108.65 178.29,111.66 181.22,114.53 184.15,117.27 187.09,119.88 190.02,122.39 192.96,124.79 195.89,127.09 198.83,129.3 201.76,131.41 204.7,133.45 207.63,135.41 210.57,137.3 213.5,139.11 576.0,139.11 576.0,18.0 131.33,18.0",
+        "review_polyline": "103.49,18.0 103.49,36.17 105.37,43.47 107.25,50.26 109.13,56.59 111.01,62.5 112.88,68.04 114.76,73.23 116.64,78.11 118.52,82.7 120.4,87.04 122.27,91.14 124.15,95.02 126.03,98.69 127.91,102.18 129.79,105.5 131.66,108.65 133.54,111.66 135.42,114.53 137.3,117.27 139.18,119.88 141.06,122.39 142.93,124.79 144.81,127.09 146.69,129.3 148.57,131.41 150.45,133.45 152.32,135.41 154.2,137.3 156.08,139.11 576.0,139.11",
+        "x_ticks": [
+          {
+            "value": 0,
+            "x": 54.0
+          },
+          {
+            "value": 40,
+            "x": 77.2
+          },
+          {
+            "value": 133,
+            "x": 131.14
+          },
+          {
+            "value": 275,
+            "x": 213.5
+          },
+          {
+            "value": 450,
+            "x": 315.0
+          },
+          {
+            "value": 700,
+            "x": 460.0
+          },
+          {
+            "value": 900,
+            "x": 576.0
+          }
+        ],
+        "y_ticks": [
+          {
+            "value": 0,
+            "y": 236.0
+          },
+          {
+            "value": 16,
+            "y": 139.11
+          },
+          {
+            "value": 22,
+            "y": 102.78
+          },
+          {
+            "value": 33,
+            "y": 36.17
+          },
+          {
+            "value": 36,
+            "y": 18.0
+          }
+        ],
+        "points": [
+          {
+            "index": 0,
+            "area_px": 416,
+            "mean_contrast_gray": 47.35,
+            "evidence": 0.8832,
+            "x": 295.28,
+            "y": 18.0,
+            "clamped": true,
+            "is_pivotal": true,
+            "is_valid": true,
+            "is_ng": true
+          }
+        ]
+      },
+      "counterfactual_hash": "2e22637c29c63eaf86a60feda48ae6f8137cebefb703e5aae4e524527026e004"
+    }
+  },
+  "spatial_hotspot_tune": {
+    "grid_shape": [
+      14,
+      6
+    ],
+    "ng_candidate_hits": 1342,
+    "review_candidate_hits": 3125,
+    "ng_edge_15pct_ratio": {
+      "definition": "NG 후보 중 좌·우 가장자리(15%) 집중 비율",
+      "numerator": 586,
+      "denominator": 1342,
+      "value": 0.4366616989567809,
+      "ci95_low": 0.41034416064862267,
+      "ci95_high": 0.46334081250641435
+    },
+    "review_edge_15pct_ratio": {
+      "definition": "REVIEW 후보 중 좌·우 가장자리(15%) 집중 비율",
+      "numerator": 1433,
+      "denominator": 3125,
+      "value": 0.45856,
+      "ci95_low": 0.44115139408480397,
+      "ci95_high": 0.4760703624635062
+    },
+    "ng_grid": [
+      [
+        48,
+        40,
+        26,
+        23,
+        32,
+        20
+      ],
+      [
+        30,
+        13,
+        11,
+        8,
+        8,
+        11
+      ],
+      [
+        18,
+        12,
+        17,
+        10,
+        5,
+        13
+      ],
+      [
+        17,
+        13,
+        14,
+        10,
+        10,
+        12
+      ],
+      [
+        10,
+        11,
+        4,
+        3,
+        5,
+        14
+      ],
+      [
+        18,
+        10,
+        4,
+        8,
+        7,
+        17
+      ],
+      [
+        21,
+        8,
+        12,
+        16,
+        19,
+        24
+      ],
+      [
+        27,
+        12,
+        12,
+        8,
+        12,
+        29
+      ],
+      [
+        17,
+        14,
+        7,
+        8,
+        8,
+        22
+      ],
+      [
+        32,
+        10,
+        14,
+        5,
+        5,
+        17
+      ],
+      [
+        23,
+        10,
+        5,
+        5,
+        12,
+        14
+      ],
+      [
+        19,
+        9,
+        10,
+        10,
+        17,
+        14
+      ],
+      [
+        20,
+        11,
+        6,
+        6,
+        18,
+        14
+      ],
+      [
+        61,
+        39,
+        44,
+        20,
+        29,
+        35
+      ]
+    ],
+    "review_grid": [
+      [
+        102,
+        79,
+        70,
+        67,
+        60,
+        60
+      ],
+      [
+        48,
+        24,
+        23,
+        21,
+        21,
+        32
+      ],
+      [
+        55,
+        33,
+        17,
+        18,
+        12,
+        29
+      ],
+      [
+        43,
+        23,
+        30,
+        22,
+        17,
+        33
+      ],
+      [
+        55,
+        30,
+        21,
+        21,
+        16,
+        43
+      ],
+      [
+        48,
+        16,
+        15,
+        25,
+        14,
+        46
+      ],
+      [
+        48,
+        18,
+        17,
+        25,
+        36,
+        75
+      ],
+      [
+        42,
+        29,
+        28,
+        22,
+        23,
+        50
+      ],
+      [
+        37,
+        22,
+        27,
+        24,
+        24,
+        56
+      ],
+      [
+        41,
+        26,
+        15,
+        20,
+        22,
+        41
+      ],
+      [
+        42,
+        12,
+        21,
+        22,
+        20,
+        37
+      ],
+      [
+        63,
+        14,
+        23,
+        25,
+        19,
+        34
+      ],
+      [
+        63,
+        24,
+        13,
+        15,
+        19,
+        30
+      ],
+      [
+        168,
+        86,
+        98,
+        80,
+        76,
+        64
+      ]
+    ]
+  },
+  "calibration_simulation": {
+    "schema_version": "agent-calibration-v1",
+    "total_review_samples": 779,
+    "decided_count": 120,
+    "undecided_count": 659,
+    "confirmed_ng_ratio": {
+      "definition": "검토 결정 중 사람 확정 NG 비율",
+      "numerator": 8,
+      "denominator": 120,
+      "value": 0.06666666666666667,
+      "ci95_low": 0.03416530686090633,
+      "ci95_high": 0.12605130403530337
+    },
+    "false_alarm_ok_ratio": {
+      "definition": "검토 결정 중 사람 기각 OK(오탐) 비율",
+      "numerator": 112,
+      "denominator": 120,
+      "value": 0.9333333333333333,
+      "ci95_low": 0.8739486959646967,
+      "ci95_high": 0.9658346931390938
+    },
+    "by_priority": {
+      "P0": {
+        "review_count": 26,
+        "decided_count": 4,
+        "confirmed_ng_count": 2,
+        "false_alarm_ok_count": 2,
+        "hold_count": 0,
+        "confirmed_ng_ratio": {
+          "definition": "P0 결정 중 사람 확정 NG 비율",
+          "numerator": 2,
+          "denominator": 4,
+          "value": 0.5,
+          "ci95_low": 0.15003898915214947,
+          "ci95_high": 0.8499610108478506
+        }
+      },
+      "P1": {
+        "review_count": 263,
+        "decided_count": 47,
+        "confirmed_ng_count": 5,
+        "false_alarm_ok_count": 42,
+        "hold_count": 0,
+        "confirmed_ng_ratio": {
+          "definition": "P1 결정 중 사람 확정 NG 비율",
+          "numerator": 5,
+          "denominator": 47,
+          "value": 0.10638297872340426,
+          "ci95_low": 0.04630478218108157,
+          "ci95_high": 0.22594269343738355
+        }
+      },
+      "P2": {
+        "review_count": 438,
+        "decided_count": 60,
+        "confirmed_ng_count": 1,
+        "false_alarm_ok_count": 59,
+        "hold_count": 0,
+        "confirmed_ng_ratio": {
+          "definition": "P2 결정 중 사람 확정 NG 비율",
+          "numerator": 1,
+          "denominator": 60,
+          "value": 0.016666666666666666,
+          "ci95_low": 0.0029481597947862495,
+          "ci95_high": 0.08855129727590061
+        }
+      },
+      "P3": {
+        "review_count": 52,
+        "decided_count": 9,
+        "confirmed_ng_count": 0,
+        "false_alarm_ok_count": 9,
+        "hold_count": 0,
+        "confirmed_ng_ratio": {
+          "definition": "P3 결정 중 사람 확정 NG 비율",
+          "numerator": 0,
+          "denominator": 9,
+          "value": 0.0,
+          "ci95_low": 0.0,
+          "ci95_high": 0.2991450484195441
+        }
+      }
+    },
+    "by_reason_code": {
+      "CONFIRMED_DEFECT": 8,
+      "FALSE_ALARM": 112
+    },
+    "hard_examples": [
+      {
+        "sample_id": "20193",
+        "kind": "BLINDSPOT_DEFECT",
+        "priority": "P2",
+        "score": 0.321131,
+        "human_status": "NG",
+        "reason_code": "CONFIRMED_DEFECT",
+        "note": "작업자 결함 확정"
+      },
+      {
+        "sample_id": "20472",
+        "kind": "HIGH_PRIO_FALSE_ALARM",
+        "priority": "P0",
+        "score": 0.482183,
+        "human_status": "OK",
+        "reason_code": "FALSE_ALARM",
+        "note": "표면 반사/미세 텍스처 오경보 기각"
+      },
+      {
+        "sample_id": "10058",
+        "kind": "HIGH_PRIO_FALSE_ALARM",
+        "priority": "P0",
+        "score": 0.464354,
+        "human_status": "OK",
+        "reason_code": "FALSE_ALARM",
+        "note": "표면 반사/미세 텍스처 오경보 기각"
+      }
+    ],
+    "recommendations_ko": [
+      "[우선순위 사각지대] P2/P3 저위험으로 분류됐으나 사람 확정 NG가 1건 발생했습니다(20193). 저대비·미세 면적 후보의 가중치 점검을 권장합니다.",
+      "[고위험 오경보] P0 최우선으로 분류됐으나 사람 기각(OK)이 2건 발생했습니다(20472, 10058). 표면 반사광·결 노이즈 패턴 분리를 권장합니다.",
+      "[정합성 양호] P0 사람 확정 NG 비율(50.0%)이 P2/P3(1.7%) 이상으로 에이전트 우선순위 정렬이 작업자 판단과 정합적입니다.",
+      "모든 권고는 엔지니어 참고용(observe-only)이며 기계 판정 임계값과 설정을 자동 변경하지 않습니다."
+    ],
+    "calibration_hash": "267c1914d648c33509c48aae69013a0be4ad057c0634d7f26206a7743d437795"
+  }
+}

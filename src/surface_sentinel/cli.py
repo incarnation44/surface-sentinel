@@ -1,8 +1,11 @@
 """Surface Sentinel CLI.
 
-T03의 ``data`` 서브커맨드(``build-manifest``, ``make-splits``, ``verify``)와
-T04의 ``inspect`` 서브커맨드를 제공한다. 사람이 읽는 도움말과 오류 메시지는
-한국어다.
+제공 서브커맨드: ``doctor``, ``data``(``build-manifest``, ``make-splits``, ``verify``),
+``inspect``, ``batch``, ``eval``, ``recalibrate``, ``fullverify-details``,
+``adopted-verify``, ``defect-map``, ``serve``, ``yolo``(``export``, ``evaluate``),
+``records``(``init``, ``list``, ``stats``), ``worker``(``run``),
+``agent``(``run``, ``replay``, ``audit``, ``drift``, ``triage``, ``explain``, ``calibrate``),
+``gate``, ``repro``(``check``). 사람이 읽는 도움말과 오류 메시지는 한국어다.
 """
 
 from __future__ import annotations
@@ -1091,6 +1094,12 @@ def _add_serve_parser(subparsers: Any) -> None:
         default=8000,
         help="포트 (기본 8000). 호스트는 127.0.0.1로 고정입니다.",
     )
+    serve_parser.add_argument(
+        "--with-api",
+        action="store_true",
+        default=False,
+        help="로컬 검사 API(/api/*)와 실시간 검사 워크벤치를 함께 활성화합니다.",
+    )
 
 
 def _cmd_serve(args: argparse.Namespace) -> int:
@@ -1106,9 +1115,11 @@ def _cmd_serve(args: argparse.Namespace) -> int:
 
     from .ui import create_app
 
-    app = create_app(runs_dir=args.runs_dir, raw_root=args.raw_root)
+    app = create_app(runs_dir=args.runs_dir, raw_root=args.raw_root, enable_api=args.with_api)
     print(f"UI: http://127.0.0.1:{args.port} (종료: Ctrl+C)")
     print(f"runs: {args.runs_dir} / 원본: {args.raw_root}")
+    if args.with_api:
+        print("API: /api/* 및 실시간 검사 워크벤치 활성화")
     with contextlib.suppress(KeyboardInterrupt):
         uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="info")
     return EXIT_OK
@@ -1699,6 +1710,93 @@ def _add_agent_parser(subparsers: Any) -> None:
         description="기록된 결과만으로 정책을 재실행해 동일 행동/판정을 검증합니다.",
     )
     replay.add_argument("--trace", type=Path, required=True, help="agent_trace.jsonl 경로.")
+    audit_cmd = agent_subparsers.add_parser(
+        "audit",
+        help="run 디렉터리·기록 DB·저장소 하드 게이트를 감사합니다.",
+        description="Phase 3 Watchdog 감사기로 산출물·DB·하드 게이트 무결성을 점검합니다.",
+    )
+    audit_cmd.add_argument("--run-dir", type=Path, default=None, help="감사할 run 디렉터리.")
+    audit_cmd.add_argument("--db", type=Path, default=None, help="감사할 검사 기록 DB.")
+    audit_cmd.add_argument(
+        "--gates", action="store_true", help="저장소 하드 게이트도 점검합니다."
+    )
+    audit_cmd.add_argument(
+        "--repo-root", type=Path, default=Path("."), help="저장소 루트 (기본 .)."
+    )
+    audit_cmd.add_argument(
+        "--json", dest="json_out", type=Path, default=None, help="결과 JSON 경로."
+    )
+
+    drift_cmd = agent_subparsers.add_parser(
+        "drift",
+        help="기준선 대비 대상 배치의 PSI 분포 이동을 감지합니다.",
+        description=(
+            "점수·화질·상태 분포의 PSI를 계산해 "
+            "NORMAL/WATCH/DRIFT_ALERT/INSUFFICIENT_SAMPLE을 보고합니다."
+        ),
+    )
+    drift_cmd.add_argument("--baseline", type=Path, required=True, help="기준선 JSONL.")
+    drift_cmd.add_argument("--target", type=Path, required=True, help="대상 JSONL.")
+    drift_cmd.add_argument(
+        "--min-samples", type=int, default=20, help="최소 표본 수 (기본 20)."
+    )
+    drift_cmd.add_argument(
+        "--json", dest="json_out", type=Path, default=None, help="결과 JSON 경로."
+    )
+
+    triage_cmd = agent_subparsers.add_parser(
+        "triage",
+        help="results.jsonl의 REVIEW 샘플을 기하+점수 기반으로 우선순위 정렬합니다.",
+        description=(
+            "기존 results.jsonl에서 약후보 기하·물리 신호를 종합해 "
+            "P0~P3 검토 큐를 생성합니다."
+        ),
+    )
+    triage_cmd.add_argument("--results", type=Path, required=True, help="results.jsonl 경로.")
+    triage_cmd.add_argument("--top-k", type=int, default=20, help="상위 출력 건수 (기본 20).")
+    triage_cmd.add_argument(
+        "--all",
+        dest="include_all",
+        action="store_true",
+        help="REVIEW 외 전체 상태를 포함해 정렬합니다.",
+    )
+    triage_cmd.add_argument(
+        "--json", dest="json_out", type=Path, default=None, help="결과 JSON 경로."
+    )
+
+    explain_cmd = agent_subparsers.add_parser(
+        "explain",
+        help="특정 샘플의 닫힌 형태 반사실적 경계와 Leave-One-Out 귀속도를 계산합니다.",
+        description=(
+            "results.jsonl 에서 sample_id 를 찾아 stages.py 점수 공식을 역산한 "
+            "닫힌 형태 반사실 경계(필요 면적/대비, 도달 불능 증명)와 Leave-One-Out "
+            "귀속도를 출력합니다. 기계 판정과 설정은 변경하지 않습니다."
+        ),
+    )
+    explain_cmd.add_argument("--results", type=Path, required=True, help="results.jsonl 경로.")
+    explain_cmd.add_argument("--sample-id", required=True, help="분석할 sample_id.")
+    explain_cmd.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="설정 TOML 경로 (생략 시 기본 설정 사용).",
+    )
+    explain_cmd.add_argument(
+        "--json", dest="json_out", type=Path, default=None, help="결과 JSON 경로."
+    )
+
+    calibrate_cmd = agent_subparsers.add_parser(
+        "calibrate",
+        help="run 디렉터리의 사람 검토 이력과 에이전트 우선순위를 캘리브레이션합니다.",
+        description=(
+            "Phase 4 observe-only 분석으로 review_decisions.jsonl 과 에이전트 P0~P3 "
+            "우선순위를 대조해 정합성·하드 샘플 큐·엔지니어링 권고를 출력합니다."
+        ),
+    )
+    calibrate_cmd.add_argument("--run-dir", type=Path, required=True, help="분석할 run 디렉터리.")
+    calibrate_cmd.add_argument(
+        "--json", dest="json_out", type=Path, default=None, help="결과 JSON 경로."
+    )
 
 
 def _cmd_agent_run(args: argparse.Namespace) -> int:
@@ -1769,12 +1867,667 @@ def _cmd_agent_replay(args: argparse.Namespace) -> int:
     return EXIT_OK if report.deterministic else EXIT_GATE
 
 
+def _add_gate_parser(subparsers: Any) -> None:
+    parser = subparsers.add_parser(
+        "gate",
+        help="설계 계약 하드 게이트와 run/DB 무결성을 감사하고 종료 코드로 판정합니다.",
+        description=(
+            "동결 설정·에이전트 설정·데이터 누출(T03)·봉인 잠금·증거 분모를 "
+            "점검하는 Watchdog 게이트입니다. 모든 감사가 PASS이면 0, REVISE/REJECT가 "
+            "하나라도 있으면 종료 코드 7을 반환합니다."
+        ),
+    )
+    parser.add_argument(
+        "--repo-root",
+        type=Path,
+        default=Path("."),
+        help="저장소 루트 경로 (기본 .).",
+    )
+    parser.add_argument(
+        "--run-dir",
+        type=Path,
+        default=None,
+        help="함께 감사할 배치 run 디렉터리 경로 (선택).",
+    )
+    parser.add_argument(
+        "--db",
+        type=Path,
+        default=None,
+        help="함께 감사할 검사 기록 DB 경로 (선택).",
+    )
+    parser.add_argument(
+        "--json",
+        dest="json_out",
+        type=Path,
+        default=None,
+        help="감사 결과 JSON을 저장할 경로 (선택).",
+    )
+
+
+def _print_audit_report(report: Any) -> None:
+    print(f"[{report.verdict.value}] {report.summary}")
+    for check in report.checks:
+        tag = "PASS" if check.passed else f"FAIL/{check.severity}"
+        print(f"  - [{tag}] {check.name}: {check.detail}")
+
+
+def _write_json_file(path: Path, payload: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _cmd_gate(args: argparse.Namespace) -> int:
+    from .agent.audit import (
+        AuditVerdict,
+        audit_records_db,
+        audit_repository_gates,
+        audit_run_dir,
+    )
+
+    reports = [audit_repository_gates(args.repo_root)]
+    if args.run_dir is not None:
+        reports.append(audit_run_dir(args.run_dir))
+    if args.db is not None:
+        reports.append(audit_records_db(args.db))
+
+    for report in reports:
+        _print_audit_report(report)
+
+    verdicts = {report.verdict for report in reports}
+    if AuditVerdict.REJECT in verdicts:
+        overall = AuditVerdict.REJECT
+    elif AuditVerdict.REVISE in verdicts:
+        overall = AuditVerdict.REVISE
+    else:
+        overall = AuditVerdict.PASS
+
+    if args.json_out is not None:
+        try:
+            _write_json_file(
+                args.json_out,
+                {
+                    "overall_verdict": overall.value,
+                    "reports": [report.to_dict() for report in reports],
+                },
+            )
+        except OSError as exc:
+            _print_error(f"감사 결과 JSON을 저장하지 못했습니다: {exc}")
+            return EXIT_STORAGE
+        print(f"감사 JSON: {args.json_out}")
+
+    return EXIT_OK if overall is AuditVerdict.PASS else EXIT_GATE
+
+
+def _add_repro_parser(subparsers: Any) -> None:
+    repro_parser = subparsers.add_parser(
+        "repro",
+        help="에이전트 트레이스와 배치 실행의 결정론적 재현성을 검증합니다.",
+        description=(
+            "agent_trace.jsonl 의 감사·리플레이 결정론성 또는 두 run 디렉터리의 "
+            "판정·점수·설정 해시 동일성을 검증합니다."
+        ),
+    )
+    repro_subparsers = repro_parser.add_subparsers(dest="repro_command")
+    check = repro_subparsers.add_parser(
+        "check",
+        help="트레이스 리플레이 또는 두 run 결과를 대조 검증합니다.",
+        description=(
+            "--trace 또는 --run-a/--run-b 중 최소 하나를 지정해야 합니다. "
+            "일치하면 0, 불일치·오류가 있으면 상세 원인을 출력하고 7을 반환합니다."
+        ),
+    )
+    check.add_argument(
+        "--trace",
+        type=Path,
+        default=None,
+        help="검증할 agent_trace.jsonl 경로 (선택).",
+    )
+    check.add_argument(
+        "--run-a",
+        type=Path,
+        default=None,
+        help="비교할 첫 번째 run 디렉터리 경로 (선택, --run-b 와 함께 사용).",
+    )
+    check.add_argument(
+        "--run-b",
+        type=Path,
+        default=None,
+        help="비교할 두 번째 run 디렉터리 경로 (선택, --run-a 와 함께 사용).",
+    )
+
+
+def _load_jsonl_dicts(path: Path) -> list[dict[str, Any]]:
+    if not path.is_file():
+        raise ValueError(f"JSONL 파일을 찾을 수 없습니다: {path}")
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise ValueError(f"JSONL 파일을 읽지 못했습니다({path}): {exc}") from exc
+    items: list[dict[str, Any]] = []
+    for line_no, line in enumerate(lines, start=1):
+        if not line.strip():
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{path.name} {line_no}번째 줄 JSON 파싱 오류: {exc}") from exc
+        if not isinstance(obj, dict):
+            raise ValueError(f"{path.name} {line_no}번째 줄이 JSON 객체가 아닙니다")
+        items.append(obj)
+    return items
+
+
+def _compare_run_dirs(run_a: Path, run_b: Path) -> tuple[bool, list[str], int]:
+    from .io.artifacts import RESULTS_JSONL, RUN_JSON
+
+    errors: list[str] = []
+    try:
+        rec_a = _load_jsonl_dicts(run_a / RESULTS_JSONL)
+        rec_b = _load_jsonl_dicts(run_b / RESULTS_JSONL)
+    except ValueError as exc:
+        return False, [str(exc)], 0
+
+    run_json_a = run_a / RUN_JSON
+    run_json_b = run_b / RUN_JSON
+    if run_json_a.is_file() and run_json_b.is_file():
+        try:
+            meta_a = json.loads(run_json_a.read_text(encoding="utf-8"))
+            meta_b = json.loads(run_json_b.read_text(encoding="utf-8"))
+            if (
+                isinstance(meta_a, dict)
+                and isinstance(meta_b, dict)
+                and meta_a.get("config_hash") != meta_b.get("config_hash")
+            ):
+                ha = meta_a.get("config_hash")
+                hb = meta_b.get("config_hash")
+                errors.append(f"run.json config_hash 불일치: run_a={ha!r} != run_b={hb!r}")
+        except (OSError, json.JSONDecodeError) as exc:
+            errors.append(f"run.json 읽기 오류: {exc}")
+
+    map_a: dict[str, dict[str, Any]] = {}
+    map_b: dict[str, dict[str, Any]] = {}
+    for label_run, recs, target in (("run-a", rec_a, map_a), ("run-b", rec_b, map_b)):
+        for idx, rec in enumerate(recs, start=1):
+            sid = rec.get("sample_id")
+            if not isinstance(sid, str) or not sid:
+                errors.append(f"{label_run} {idx}번째 행에 sample_id가 없습니다")
+                continue
+            if sid in target:
+                errors.append(f"{label_run}에 중복 sample_id가 있습니다: {sid}")
+                continue
+            target[sid] = rec
+
+    missing_in_b = sorted(set(map_a) - set(map_b))
+    extra_in_b = sorted(set(map_b) - set(map_a))
+    if missing_in_b:
+        errors.append(
+            f"run-b에 누락된 샘플 {len(missing_in_b)}건: {', '.join(missing_in_b[:5])}"
+        )
+    if extra_in_b:
+        errors.append(
+            f"run-b에 추가된 샘플 {len(extra_in_b)}건: {', '.join(extra_in_b[:5])}"
+        )
+
+    for sid in sorted(set(map_a) & set(map_b)):
+        a = map_a[sid]
+        b = map_b[sid]
+        if str(a.get("status")) != str(b.get("status")):
+            errors.append(
+                f"{sid}: status 불일치 (run-a={a.get('status')!r} != run-b={b.get('status')!r})"
+            )
+        try:
+            score_a = round(float(a.get("score", 0.0)), 6)
+            score_b = round(float(b.get("score", 0.0)), 6)
+            if score_a != score_b:
+                errors.append(f"{sid}: score 불일치 (run-a={score_a:.6f} != run-b={score_b:.6f})")
+        except (TypeError, ValueError):
+            errors.append(f"{sid}: score 숫자 변환 실패")
+        if str(a.get("config_hash", "")) != str(b.get("config_hash", "")):
+            errors.append(
+                f"{sid}: config_hash 불일치 "
+                f"(run-a={a.get('config_hash')!r} != run-b={b.get('config_hash')!r})"
+            )
+
+    return not errors, errors, len(map_a)
+
+
+def _cmd_repro_check(args: argparse.Namespace) -> int:
+    from .agent.trace import TraceError, load_trace, replay_trace
+
+    if (args.run_a is None) != (args.run_b is None):
+        _print_error("--run-a 와 --run-b 는 함께 지정해야 합니다.")
+        return EXIT_USAGE
+    if args.trace is None and args.run_a is None:
+        _print_error("--trace 또는 --run-a/--run-b 중 최소 하나를 지정해야 합니다.")
+        return EXIT_USAGE
+
+    all_ok = True
+    if args.trace is not None:
+        try:
+            events = load_trace(args.trace)
+        except TraceError as exc:
+            _print_error(f"트레이스 검증 실패({args.trace}): {exc}")
+            return EXIT_GATE
+        report = replay_trace(events)
+        end_event = events[-1] if events else {}
+        end_match = (
+            report.terminal_state == str(end_event.get("terminal_state", ""))
+            and report.final_status == str(end_event.get("final_status", ""))
+        )
+        if report.audit_valid and report.deterministic and end_match:
+            print(
+                f"트레이스 재현성 확인 완료: {args.trace} "
+                f"(이벤트 {report.events_compared}건, "
+                f"종료 {report.terminal_state}/{report.final_status})"
+            )
+        else:
+            all_ok = False
+            _print_error(f"트레이스 재현성 검증 실패: {args.trace}")
+            for err in report.audit_errors:
+                print(f"  - [감사 오류] {err}", file=sys.stderr)
+            for mm in report.mismatches:
+                print(f"  - [불일치] {mm}", file=sys.stderr)
+            if not end_match:
+                print(
+                    f"  - [종료 상태 불일치] 기록={end_event.get('terminal_state')}/"
+                    f"{end_event.get('final_status')} != "
+                    f"재생={report.terminal_state}/{report.final_status}",
+                    file=sys.stderr,
+                )
+
+    if args.run_a is not None and args.run_b is not None:
+        matched, errors, compared = _compare_run_dirs(args.run_a, args.run_b)
+        if matched:
+            print(
+                f"배치 재현성 확인 완료: {args.run_a} == {args.run_b} (샘플 {compared}건 일치)"
+            )
+        else:
+            all_ok = False
+            _print_error(f"배치 재현성 검증 실패: {args.run_a} vs {args.run_b}")
+            for err in errors[:20]:
+                print(f"  - {err}", file=sys.stderr)
+
+    return EXIT_OK if all_ok else EXIT_GATE
+
+
+def _run_repro(args: argparse.Namespace) -> int:
+    if args.repro_command == "check":
+        return _cmd_repro_check(args)
+    print("repro 하위 명령이 필요합니다: check", file=sys.stderr)
+    return EXIT_USAGE
+
+
+def _sample_result_from_record(rec: dict[str, Any]) -> Any:
+    from .contracts import (
+        ComponentFeature,
+        ErrorCode,
+        QualityInfo,
+        ReasonCode,
+        RoiInfo,
+        SampleResult,
+        Stage,
+    )
+
+    raw_comps = rec.get("components") or []
+    components = tuple(
+        ComponentFeature(
+            index=int(c.get("index", idx)),
+            area_px=int(c.get("area_px", 0)),
+            bbox=tuple(int(x) for x in c.get("bbox", (0, 0, 0, 0))),
+            area_ratio=float(c.get("area_ratio", 0.0)),
+            aspect_ratio=float(c.get("aspect_ratio", 1.0)),
+            elongation=float(c.get("elongation", 1.0)),
+            solidity=float(c.get("solidity", 1.0)),
+            mean_contrast_gray=float(c.get("mean_contrast_gray", 0.0)),
+            max_contrast_gray=float(c.get("max_contrast_gray", 0.0)),
+            integrated_contrast=float(c.get("integrated_contrast", 0.0)),
+            border_distance_px=float(c.get("border_distance_px", 100.0)),
+            touches_roi_border=bool(c.get("touches_roi_border", False)),
+            evidence=float(c.get("evidence", 0.0)),
+        )
+        for idx, c in enumerate(raw_comps)
+    )
+    q = rec.get("quality")
+    quality = (
+        QualityInfo(
+            blur_variance=float(q.get("blur_variance", 0.0)),
+            mean_gray=float(q.get("mean_gray", 0.0)),
+            saturated_ratio=float(q.get("saturated_ratio", 0.0)),
+            flags=tuple(ReasonCode(val) for val in q.get("flags", [])),
+        )
+        if isinstance(q, dict)
+        else None
+    )
+    r = rec.get("roi")
+    roi = (
+        RoiInfo(
+            mode=str(r.get("mode", "auto")),
+            bbox=tuple(int(x) for x in r.get("bbox", (0, 0, 0, 0))),
+            area_px=int(r.get("area_px", 0)),
+            area_ratio=float(r.get("area_ratio", 0.0)),
+            uncertain=bool(r.get("uncertain", False)),
+        )
+        if isinstance(r, dict)
+        else None
+    )
+    return SampleResult(
+        run_id=str(rec.get("run_id", "")),
+        sample_id=str(rec.get("sample_id", "")),
+        original_id=str(rec.get("original_id", rec.get("sample_id", ""))),
+        split=str(rec.get("split", "tune")),
+        label=str(rec.get("label", "unknown")),
+        status=Status(str(rec.get("status", "REVIEW"))),
+        score=float(rec.get("score", 0.0)),
+        reasons=tuple(ReasonCode(val) for val in rec.get("reasons", [])),
+        components=components,
+        quality=quality,
+        roi=roi,
+        timing_ms={str(k): float(v) for k, v in (rec.get("timing_ms") or {}).items()},
+        error_code=ErrorCode(rec["error_code"]) if rec.get("error_code") else None,
+        error_stage=Stage(rec["error_stage"]) if rec.get("error_stage") else None,
+        input_sha256=str(rec.get("input_sha256", "")),
+        mask_sha256=str(rec.get("mask_sha256", "")),
+        overlay_path=str(rec.get("overlay_path", "")),
+        config_hash=str(rec.get("config_hash", "")),
+    )
+
+
+def _cmd_agent_audit(args: argparse.Namespace) -> int:
+    from .agent.audit import (
+        AuditVerdict,
+        audit_records_db,
+        audit_repository_gates,
+        audit_run_dir,
+    )
+
+    if args.run_dir is None and args.db is None and not args.gates:
+        _print_error("--run-dir, --db, --gates 중 최소 하나를 지정해야 합니다.")
+        return EXIT_USAGE
+
+    reports = []
+    if args.gates:
+        reports.append(audit_repository_gates(args.repo_root))
+    if args.run_dir is not None:
+        reports.append(audit_run_dir(args.run_dir))
+    if args.db is not None:
+        reports.append(audit_records_db(args.db))
+
+    for report in reports:
+        _print_audit_report(report)
+
+    verdicts = {report.verdict for report in reports}
+    if AuditVerdict.REJECT in verdicts:
+        overall = AuditVerdict.REJECT
+    elif AuditVerdict.REVISE in verdicts:
+        overall = AuditVerdict.REVISE
+    else:
+        overall = AuditVerdict.PASS
+
+    if args.json_out is not None:
+        try:
+            _write_json_file(
+                args.json_out,
+                {
+                    "overall_verdict": overall.value,
+                    "reports": [report.to_dict() for report in reports],
+                },
+            )
+        except OSError as exc:
+            _print_error(f"감사 결과 JSON을 저장하지 못했습니다: {exc}")
+            return EXIT_STORAGE
+        print(f"감사 JSON: {args.json_out}")
+
+    return EXIT_OK if overall is AuditVerdict.PASS else EXIT_GATE
+
+
+def _cmd_agent_drift(args: argparse.Namespace) -> int:
+    from .agent.drift import DriftPolicy, assess_drift
+
+    if args.min_samples < 1:
+        _print_error(f"--min-samples 는 1 이상이어야 합니다: {args.min_samples}")
+        return EXIT_USAGE
+    try:
+        base_records = _load_jsonl_dicts(args.baseline)
+        target_records = _load_jsonl_dicts(args.target)
+    except ValueError as exc:
+        _print_error(str(exc))
+        return EXIT_INPUT
+
+    report = assess_drift(
+        base_records,
+        target_records,
+        policy=DriftPolicy(min_samples=args.min_samples),
+    )
+    print(
+        f"드리프트 상태: {report.status.value} "
+        f"(기준선 {report.baseline_total}건 / 대상 {report.target_total}건)"
+    )
+    for feat in report.features:
+        print(
+            f"  - {feat.feature}: PSI={feat.psi:.4f} [{feat.status.value}] "
+            f"(평균 {feat.baseline_mean:.4f} -> {feat.target_mean:.4f}, "
+            f"변화 {feat.delta_mean:+.4f})"
+        )
+    for warning in report.warnings:
+        print(f"  * {warning}")
+
+    if args.json_out is not None:
+        try:
+            _write_json_file(args.json_out, report.to_dict())
+        except OSError as exc:
+            _print_error(f"드리프트 JSON을 저장하지 못했습니다: {exc}")
+            return EXIT_STORAGE
+        print(f"드리프트 JSON: {args.json_out}")
+
+    return EXIT_OK
+
+
+def _cmd_agent_triage(args: argparse.Namespace) -> int:
+    from .agent.review import assess_review_triage, rank_review_queue
+    from .agent.stability import analyze_weak_geometry
+    from .config import default_config
+
+    if args.top_k < 1:
+        _print_error(f"--top-k 는 1 이상이어야 합니다: {args.top_k}")
+        return EXIT_USAGE
+    try:
+        records = _load_jsonl_dicts(args.results)
+    except ValueError as exc:
+        _print_error(str(exc))
+        return EXIT_INPUT
+
+    ng_min = default_config().scoring.ng_min
+    assessments = []
+    for rec in records:
+        if not args.include_all and str(rec.get("status", "")) != Status.REVIEW.value:
+            continue
+        try:
+            res = _sample_result_from_record(rec)
+        except (KeyError, TypeError, ValueError) as exc:
+            _print_error(f"결과 레코드 해석 실패({rec.get('sample_id', '?')}): {exc}")
+            return EXIT_INPUT
+        geom = analyze_weak_geometry(res.components, res.roi)
+        assessments.append(assess_review_triage(res, geometry=geom, ng_min=ng_min))
+
+    ranked = rank_review_queue(assessments)
+    priority_counts = {
+        band: sum(1 for item in ranked if item.priority.value == band)
+        for band in ("P0", "P1", "P2", "P3")
+    }
+    shown = ranked[: args.top_k]
+
+    print(
+        f"트리아지 요약: 전체 {len(records)}건 중 대상 {len(ranked)}건 "
+        f"(P0={priority_counts['P0']}, P1={priority_counts['P1']}, "
+        f"P2={priority_counts['P2']}, P3={priority_counts['P3']})"
+    )
+    for idx, item in enumerate(shown, start=1):
+        print(
+            f"  {idx:>2}. {item.sample_id:<16} {item.priority.value} "
+            f"score={item.priority_score:.3f} pattern={item.weak_pattern.value} "
+            f"| {item.argumentation.operator_guidance}"
+        )
+
+    if args.json_out is not None:
+        try:
+            _write_json_file(
+                args.json_out,
+                {
+                    "total_records": len(records),
+                    "triaged_count": len(ranked),
+                    "top_k": args.top_k,
+                    "priority_counts": priority_counts,
+                    "items": [item.to_dict() for item in shown],
+                },
+            )
+        except OSError as exc:
+            _print_error(f"트리아지 JSON을 저장하지 못했습니다: {exc}")
+            return EXIT_STORAGE
+        print(f"트리아지 JSON: {args.json_out}")
+
+    return EXIT_OK
+
+
+def _cmd_agent_explain(args: argparse.Namespace) -> int:
+    from .agent.counterfactual import explain_counterfactual
+    from .config import default_config
+
+    if args.config is not None:
+        try:
+            cfg = load_config(args.config)
+        except ConfigError as exc:
+            _print_error(f"설정을 불러오지 못했습니다: {exc}")
+            return EXIT_USAGE
+    else:
+        cfg = default_config()
+
+    try:
+        records = _load_jsonl_dicts(args.results)
+    except ValueError as exc:
+        _print_error(str(exc))
+        return EXIT_INPUT
+
+    target_rec = next((r for r in records if str(r.get("sample_id", "")) == args.sample_id), None)
+    if target_rec is None:
+        _print_error(f"샘플을 찾을 수 없습니다: {args.sample_id}")
+        return EXIT_INPUT
+
+    try:
+        res = _sample_result_from_record(target_rec)
+    except (KeyError, TypeError, ValueError) as exc:
+        _print_error(f"결과 레코드 해석 실패({args.sample_id}): {exc}")
+        return EXIT_INPUT
+
+    report = explain_counterfactual(res, cfg)
+    print(
+        f"반사실적 경계 해석: {report.sample_id} "
+        f"[{report.machine_status.value}] score={report.score:.4f}"
+    )
+    print(f"요약: {report.headline_ko}")
+    print(
+        f"여유: NG({cfg.scoring.ng_min:.2f})까지 {report.margin_to_ng:+.4f} / "
+        f"REVIEW 상한까지 {report.margin_to_review_band:+.4f}"
+    )
+    for attr in report.components:
+        print(f"  - {attr.explanation_ko}")
+
+    if args.json_out is not None:
+        try:
+            _write_json_file(args.json_out, report.to_dict())
+        except OSError as exc:
+            _print_error(f"설명 JSON을 저장하지 못했습니다: {exc}")
+            return EXIT_STORAGE
+        print(f"설명 JSON: {args.json_out}")
+    return EXIT_OK
+
+
+def _cmd_agent_calibrate(args: argparse.Namespace) -> int:
+    from .agent.calibration import analyze_human_feedback
+    from .config import REVIEW_BAND_MAX, default_config
+    from .io.artifacts import CONFIG_SNAPSHOT, RESULTS_JSONL
+    from .review import ReviewError, ReviewStorageError, ReviewStore
+
+    run_dir = Path(args.run_dir)
+    if not run_dir.is_dir():
+        _print_error(f"run 디렉터리가 없습니다: {run_dir}")
+        return EXIT_INPUT
+    try:
+        records = _load_jsonl_dicts(run_dir / RESULTS_JSONL)
+    except ValueError as exc:
+        _print_error(str(exc))
+        return EXIT_INPUT
+
+    try:
+        decisions = ReviewStore(run_dir).read_all()
+    except (ReviewError, ReviewStorageError) as exc:
+        _print_error(f"검토 결정을 읽지 못했습니다: {exc}")
+        return EXIT_INPUT
+
+    snap = run_dir / CONFIG_SNAPSHOT
+    cfg = default_config()
+    if snap.is_file():
+        with contextlib.suppress(ConfigError):
+            cfg = load_config(snap)
+
+    summary = analyze_human_feedback(
+        records,
+        decisions,
+        ng_min=float(cfg.scoring.ng_min),
+        review_band_max=REVIEW_BAND_MAX,
+    )
+    print(
+        f"Phase 4 캘리브레이션: REVIEW {summary.total_review_samples}건 중 "
+        f"결정 완료 {summary.decided_count}건 (미결정 {summary.undecided_count}건)"
+    )
+    for band in ("P0", "P1", "P2", "P3"):
+        pb = summary.by_priority[band]
+        ng_r = pb["confirmed_ng_ratio"]
+        pct = "-" if ng_r["value"] is None else f"{ng_r['value'] * 100:.1f}%"
+        print(
+            f"  - {band}: REVIEW {pb['review_count']}건 / 결정 {pb['decided_count']}건 / "
+            f"NG {pb['confirmed_ng_count']}건 (확정률 {pct}, 분모 {int(ng_r['denominator'])})"
+        )
+    print(f"하드 샘플 큐: {len(summary.hard_examples)}건")
+    for h in summary.hard_examples[:10]:
+        print(
+            f"  * [{h['kind']}] {h['sample_id']} "
+            f"({h['priority']}, score={h['score']:.4f}, human={h['human_status']})"
+        )
+    for rec in summary.recommendations_ko:
+        print(f"권고: {rec}")
+
+    if args.json_out is not None:
+        try:
+            _write_json_file(args.json_out, summary.to_dict())
+        except OSError as exc:
+            _print_error(f"캘리브레이션 JSON을 저장하지 못했습니다: {exc}")
+            return EXIT_STORAGE
+        print(f"캘리브레이션 JSON: {args.json_out}")
+    return EXIT_OK
+
+
 def _run_agent_command(args: argparse.Namespace) -> int:
     if args.agent_command == "run":
         return _cmd_agent_run(args)
     if args.agent_command == "replay":
         return _cmd_agent_replay(args)
-    print("agent 하위 명령이 필요합니다: run, replay", file=sys.stderr)
+    if args.agent_command == "audit":
+        return _cmd_agent_audit(args)
+    if args.agent_command == "drift":
+        return _cmd_agent_drift(args)
+    if args.agent_command == "triage":
+        return _cmd_agent_triage(args)
+    if args.agent_command == "explain":
+        return _cmd_agent_explain(args)
+    if args.agent_command == "calibrate":
+        return _cmd_agent_calibrate(args)
+    print(
+        "agent 하위 명령이 필요합니다: run, replay, audit, drift, triage, explain, calibrate",
+        file=sys.stderr,
+    )
     return EXIT_USAGE
 
 
@@ -1799,6 +2552,8 @@ def build_parser() -> argparse.ArgumentParser:
     _add_records_parser(subparsers)
     _add_worker_parser(subparsers)
     _add_agent_parser(subparsers)
+    _add_gate_parser(subparsers)
+    _add_repro_parser(subparsers)
     return parser
 
 
@@ -2097,6 +2852,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_worker_command(args)
     if args.command == "agent":
         return _run_agent_command(args)
+    if args.command == "gate":
+        return _cmd_gate(args)
+    if args.command == "repro":
+        return _run_repro(args)
     parser.print_help(sys.stdout)
     return EXIT_USAGE
 

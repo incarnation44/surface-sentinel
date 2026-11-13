@@ -7,6 +7,7 @@
     OK/NG는 불변입니다. 결정은 추가만 되고(append-only) 마지막 결정이 최종 상태입니다.
   </p>
   <input type="hidden" name="return_to" value="{{ return_to }}">
+  {% if sort_mode is defined and sort_mode %}<input type="hidden" name="sort" value="{{ sort_mode }}">{% endif %}
   <label>최종 상태 (필수)</label>
   <div class="radios">
     <label><input type="radio" name="final_status" value="OK" required> OK — 정상 확인</label>

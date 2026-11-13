@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}에이전트 트리아지 &amp; Lift 분석실 — {{ run.run_id }} — Surface Sentinel{% endblock %}
+{% block content %}
+<h1>에이전트 트리아지 &amp; Lift 분석실</h1>
+<p class="meta num">{{ run.run_id }} · Phase 2 observe-only 우선순위 분석 (기계 판정 불변)</p>
+<div class="navlinks">
+  <a href="/runs/{{ run.run_id }}">run 요약</a>
+  <a href="/runs/{{ run.run_id }}/review?sort=priority">위험도순 검토 큐 →</a>
+  <a href="/runs/{{ run.run_id }}/metrics">지표·혼동행렬</a>
+</div>
+
+{% set top20 = lift["top_k"]["0.20"] %}
+<div class="kpi-strip">
+  <div class="kpi">
+    <div class="kpi-label">REVIEW 대상 건수</div>
+    <div class="kpi-val">{{ lift["total_review"] }}</div>
+    <div class="kpi-sub num">전체 {{ total_records }}건 중</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">REVIEW 내 실제 결함</div>
+    <div class="kpi-val">{{ lift["total_defects"] }}</div>
+    <div class="kpi-sub num">기본 결함률 {{ lift["baseline_defect_rate"]["formatted"] if "formatted" in lift["baseline_defect_rate"] else ("%.2f%%"|format(lift["baseline_defect_rate"]["value"] * 100) if lift["baseline_defect_rate"]["value"] is not none else "-") }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Top-20% 결함 포착률</div>
+    <div class="kpi-val">{% if top20["recall_at_k"]["value"] is not none %}{{ "%.1f%%"|format(top20["recall_at_k"]["value"] * 100) }}{% else %}-{% endif %}</div>
+    <div class="kpi-sub num">{{ top20["captured_defects"] }} / {{ lift["total_defects"] }} (k={{ top20["k"] }})</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Top-20% Lift 배수</div>
+    <div class="kpi-val">{% if top20["lift"] is not none %}{{ "%.2fx"|format(top20["lift"]) }}{% else %}-{% endif %}</div>
+    <div class="kpi-sub">무작위 대비 조기 회수 배수</div>
+  </div>
+</div>
+
+{% if not rows %}
+<div class="notice">이 run에는 REVIEW 샘플이 없어 트리아지 큐가 비어 있습니다.</div>
+{% else %}
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin:14px 0">
+  <div class="card">
+    <h2 style="margin-top:0">누적 결함 회수 곡선 (Gain / Lift Curve)</h2>
+    <p class="meta">실선(파랑): 에이전트 우선순위 정렬 · 점선(회색): 무작위 검토 기준선</p>
+    {% if gain_svg.available %}
+    <svg viewBox="0 0 430 200" width="100%" style="display:block;max-height:220px" role="img" aria-label="누적 결함 회수 곡선">
+      <line x1="{{ gain_svg.x0 }}" y1="{{ gain_svg.y1 }}" x2="{{ gain_svg.x1 }}" y2="{{ gain_svg.y1 }}" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="{{ gain_svg.x0 }}" y1="{{ gain_svg.y0 }}" x2="{{ gain_svg.x0 }}" y2="{{ gain_svg.y1 }}" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="{{ gain_svg.x0 }}" y1="{{ gain_svg.y1 }}" x2="{{ gain_svg.x1 }}" y2="{{ gain_svg.y0 }}" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4,4"/>
+      <polygon points="{{ gain_svg.area_points }}" fill="rgba(37, 99, 235, 0.12)"/>
+      <polyline points="{{ gain_svg.curve_points }}" fill="none" stroke="#1d4ed8" stroke-width="2.2"/>
+      {% for mk in gain_svg.markers %}
+      <circle cx="{{ mk.x }}" cy="{{ mk.y }}" r="3.5" fill="#1d4ed8" stroke="#fff" stroke-width="1"/>
+      <text x="{{ mk.x }}" y="{{ mk.y - 6 }}" font-size="9.5" fill="#0f172a" text-anchor="middle">{{ mk.label }} ({{ mk.recall_pct }}%)</text>
+      {% endfor %}
+      <text x="{{ gain_svg.x0 }}" y="185" font-size="10" fill="#475569">0%</text>
+      <text x="{{ (gain_svg.x0 + gain_svg.x1) / 2 }}" y="192" font-size="10" fill="#475569" text-anchor="middle">검토 진행 비율 (우선순위 상위 →)</text>
+      <text x="{{ gain_svg.x1 }}" y="185" font-size="10" fill="#475569" text-anchor="end">100%</text>
+      <text x="8" y="24" font-size="10" fill="#475569">100%</text>
+      <text x="14" y="{{ gain_svg.y1 }}" font-size="10" fill="#475569">0%</text>
+    </svg>
+    {% else %}
+    <div class="notice">정답 라벨(defect)이 있는 REVIEW 샘플이 없어 Gain 곡선을 그릴 수 없습니다.</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Top-K 조기 결함 회수 지표</h2>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>구간</th><th>건수(k)</th><th>포착 결함</th><th>Recall@K (분모)</th><th>PPV (분모)</th><th>Lift</th></tr></thead>
+      <tbody>
+        {% for frac_key in ["0.10", "0.20", "0.30"] %}
+        {% set tk = lift["top_k"][frac_key] %}
+        {% set rec = tk["recall_at_k"] %}
+        {% set ppv = tk["precision_at_k"] %}
+        <tr>
+          <td class="num"><strong>Top-{{ (tk["fraction"] * 100)|int }}%</strong></td>
+          <td class="num">{{ tk["k"] }}</td>
+          <td class="num">{{ tk["captured_defects"] }}</td>
+          <td class="num">{% if rec["value"] is not none %}{{ "%.4f"|format(rec["value"]) }} <span class="meta">(분모 {{ rec["denominator"] }})</span>{% else %}- <span class="meta">(분모 {{ rec["denominator"] }})</span>{% endif %}</td>
+          <td class="num">{% if ppv["value"] is not none %}{{ "%.4f"|format(ppv["value"]) }} <span class="meta">(분모 {{ ppv["denominator"] }})</span>{% else %}- <span class="meta">(분모 {{ ppv["denominator"] }})</span>{% endif %}</td>
+          <td class="num">{% if tk["lift"] is not none %}<strong>{{ "%.2fx"|format(tk["lift"]) }}</strong>{% else %}-{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <h3>기하 패턴 분포</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      {% for pname, pcount in pattern_counts %}
+      <span class="flag-pill">{{ pname }}: {{ pcount }}</span>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<h2>우선순위 등급 (P0~P3) 분포</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>등급</th><th>건수</th><th>비율 (분모 {{ rows|length }})</th><th>평균 우선순위 점수</th><th>결함(defect)</th><th>검토 완료</th></tr></thead>
+  <tbody>
+    {% for item in priority_summary %}
+    <tr>
+      <td><span class="prio p-{{ item.band }}">{{ item.band }}</span></td>
+      <td class="num">{{ item.count }}</td>
+      <td class="num">{{ item.ratio.formatted() }}</td>
+      <td class="num">{{ "%.3f"|format(item.mean_score) }}</td>
+      <td class="num">{{ item.defects }}</td>
+      <td class="num">{{ item.decided }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>우선순위 정렬 검토 대기열 ({{ rows|length }}건)</h2>
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>순위</th><th>샘플</th><th>등급</th><th>우선순위 점수</th><th>기계 점수</th>
+      <th>라벨</th><th>기하 패턴</th><th>작업자 지침 (논증 요약)</th><th>검토</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      <td class="num">{{ row.rank }}</td>
+      <td class="num"><a href="{{ row.url }}">{{ row.triage.sample_id }}</a></td>
+      <td><span class="prio p-{{ row.triage.priority.value }}">{{ row.triage.priority.value }}</span></td>
+      <td class="num"><strong>{{ "%.3f"|format(row.triage.priority_score) }}</strong></td>
+      <td class="num">{{ "%.4f"|format(row.record.score) }}</td>
+      <td>{{ row.record.label }}</td>
+      <td><code>{{ row.triage.weak_pattern.value }}</code></td>
+      <td style="font-size:12px">{{ row.triage.argumentation.operator_guidance }}</td>
+      <td style="white-space:nowrap">
+        {% if row.decision %}
+        <span class="badge b-{{ row.decision.final_status }}">{{ row.decision.final_status }}</span>
+        {% else %}
+        <a href="{{ row.review_url }}">우선 검토</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

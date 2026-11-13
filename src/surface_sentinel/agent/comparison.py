@@ -36,13 +36,13 @@ def stratified_subset(
     """label 비례 층화 추출(최대 나머지 할당). 정렬+시드로 결정론적이다."""
 
     if size <= 0:
-        raise ValueError("size must be positive")
+        raise ValueError("size는 양수여야 합니다")
     by_label: dict[str, list[Mapping[str, str]]] = {}
     for row in rows:
         by_label.setdefault(row["label"], []).append(row)
     total = len(rows)
     if total == 0:
-        raise ValueError("empty rows")
+        raise ValueError("입력 행이 비어 있습니다")
     if size >= total:
         return sorted(rows, key=lambda row: row["sample_id"])
 

@@ -80,9 +80,16 @@ def test_pages_no_console_errors_no_external_requests(
     paths = [
         "/",
         f"/runs/{ui_run.RUN_ID}",
+        f"/runs/{ui_run.RUN_ID}/triage",
         f"/runs/{ui_run.RUN_ID}/samples/70002",
+        f"/runs/{ui_run.RUN_ID}/samples/70002/mask",
         f"/runs/{ui_run.RUN_ID}/review",
+        f"/runs/{ui_run.RUN_ID}/review?sort=priority",
         f"/runs/{ui_run.RUN_ID}/metrics",
+        "/watchdog",
+        "/inspections",
+        "/stats",
+        "/compare",
     ]
     for path in paths:
         page.goto(base_url + path, wait_until="networkidle")
@@ -117,3 +124,114 @@ def test_review_submit_flow(
     assert "결정 완료" in content
     assert errors == []
     assert external == []
+
+def test_browser_interactive_filters_and_loupe(
+    browser_page: tuple[Any, list[str], list[str]], base_url: str
+) -> None:
+    page, errors, external = browser_page
+    page.goto(base_url + f"/runs/{ui_run.RUN_ID}", wait_until="networkidle")
+    page.click('button.filter-btn[data-filter="REVIEW"]')
+    assert "표시 2 / 7장" in page.text_content("#filter-count")
+    page.fill("#sample-search", "80002")
+    assert "표시 1 / 7장" in page.text_content("#filter-count")
+    page.fill("#sample-search", "")
+    page.click('button.filter-btn[data-filter="ALL"]')
+    assert "표시 7 / 7장" in page.text_content("#filter-count")
+
+    page.goto(base_url + f"/runs/{ui_run.RUN_ID}/samples/70002/mask", wait_until="networkidle")
+    page.click('button.alpha-preset[data-alpha="100"]')
+    assert page.text_content("#loupe-alpha-val") == "100%"
+    assert errors == []
+    assert external == []
+
+
+def test_browser_live_workbench_with_api_enabled(
+    tmp_path: Path, browser_page: tuple[Any, list[str], list[str]]
+) -> None:
+    import cv2
+    import numpy as np
+    import uvicorn
+
+    runs_dir = tmp_path / "live_runs"
+    raw_root = tmp_path / "live_raw"
+    runs_dir.mkdir()
+    raw_root.mkdir()
+    ui_run.make_run(runs_dir, raw_root)
+
+    img_path = tmp_path / "probe.png"
+    img = np.full((80, 80), 120, dtype=np.uint8)
+    ok, buf = cv2.imencode(".png", img)
+    assert ok
+    img_path.write_bytes(buf.tobytes())
+
+    app = create_app(runs_dir=runs_dir, raw_root=raw_root, enable_api=True)
+    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=0, log_level="error"))
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    try:
+        while not server.started:
+            if not thread.is_alive():
+                raise RuntimeError("라이브 서버 시작 실패")
+            time.sleep(0.05)
+        port = server.servers[0].sockets[0].getsockname()[1]
+        live_url = f"http://127.0.0.1:{port}"
+
+        page, errors, external = browser_page
+        page.goto(live_url + "/inspections", wait_until="networkidle")
+        page.set_input_files("#live-file", str(img_path))
+        page.click("#live-submit")
+        page.wait_for_selector("#live-result .okbox a")
+        page.click("#live-result .okbox a")
+        page.wait_for_load_state("networkidle")
+        assert "검사 상세 #1" in page.content()
+        assert errors == []
+        assert all(u.startswith((live_url, "data:")) for u in external)
+    finally:
+        server.should_exit = True
+        thread.join(timeout=5)
+
+
+def test_browser_wave3b_phase_diagram_hotspot_and_watchdog(
+    browser_page: tuple[Any, list[str], list[str]], base_url: str
+) -> None:
+    page, errors, external = browser_page
+    page.goto(base_url + f"/runs/{ui_run.RUN_ID}/samples/70002", wait_until="networkidle")
+    assert page.locator("#phase-diagram-svg").count() == 1
+    assert page.locator("#cf-table .cf-row").count() == 1
+    page.click("#cf-table .cf-row[data-comp-idx='0']")
+    assert page.get_attribute(".cf-dot[data-comp-idx='0']", "stroke") == "#2563eb"
+
+    page.goto(base_url + f"/runs/{ui_run.RUN_ID}/metrics", wait_until="networkidle")
+    assert "2D 라인스캔 스트립 공간 핫스팟 지도" in page.content()
+
+    page.goto(base_url + f"/watchdog?run_id={ui_run.RUN_ID}", wait_until="networkidle")
+    assert "Phase 4 사람-기계 피드백 캘리브레이션" in page.content()
+    assert errors == []
+    assert external == []
+
+
+
+def test_t10_integrated_guide_desktop_and_mobile(
+    browser_page: tuple[Any, list[str], list[str]],
+) -> None:
+    guide_path = (
+        Path(__file__).resolve().parents[2] / "docs" / "surface-sentinel-integrated-guide.html"
+    )
+    assert guide_path.is_file()
+    guide_url = guide_path.resolve().as_uri()
+    page, errors, external = browser_page
+
+    # 1) 데스크톱 (1280x800)
+    page.set_viewport_size({"width": 1280, "height": 800})
+    page.goto(guide_url, wait_until="load")
+    assert page.locator("#sec-01-cover").count() == 1
+    assert page.locator("#sec-30-changelog").count() == 1
+    assert page.locator("nav#guide-toc a").count() == 30
+
+    # 2) 모바일 (390x844)
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.goto(guide_url, wait_until="load")
+    assert page.locator("#mobile-toc-details").count() == 1
+
+    assert errors == []
+    assert [u for u in external if u.startswith(("http://", "https://"))] == []

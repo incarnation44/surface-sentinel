@@ -23,9 +23,24 @@ from ..config import AppConfig
 from ..contracts import EngineObservation, ErrorCode, SampleResult, Status
 from .config import AgentConfig, PolicyConfig
 from .evidence import CrossEvidenceAssessment, EvidencePolicy, assess_cross_evidence
+from .stability import (
+    PatchArbitration,
+    WeakGeometryReport,
+    analyze_weak_geometry,
+    arbitrate_patches,
+)
 from .trace import TraceWriter, hash_action, hash_args, hash_result, result_summary
 
-WORK_TOOLS = frozenset({"run_profile", "inspect_artifact", "compare", "cross_evidence"})
+WORK_TOOLS = frozenset(
+    {
+        "run_profile",
+        "inspect_artifact",
+        "compare",
+        "cross_evidence",
+        "inspect_geometry",
+        "arbitrate_patches",
+    }
+)
 TERMINAL_TOOLS = frozenset({"escalate_review", "stop"})
 ALL_TOOLS = WORK_TOOLS | TERMINAL_TOOLS
 
@@ -179,17 +194,27 @@ def choose_evidence_action(
     policy: PolicyConfig,
     *,
     cross_evidence_done: bool,
+    assessment_flags: Sequence[str] = (),
+    arbitration_available: bool = False,
+    arbitration_done: bool = False,
+    budget_remaining_actions: int | None = None,
 ) -> Decision:
-    """Phase 1 observe-only 정책 표(교차 증거 에피소드 전용).
+    """Phase 1/2 observe-only 정책 표(교차 증거 + 능동 패치 중재).
 
-    교차 증거 기록 → 결합 결과 확인 → 파이프라인 상태 그대로 종료.
-    2프로파일 재검사는 하지 않는다(민감도 검사는 Phase 2, 별도 승인).
-    판정은 항상 파이프라인(결합 결과) 소유이며 증거가 판정을 바꾸지 않는다.
+    교차 증거 기록 → (불일치/단일 NG 이면서 이미지·예산이 충분하면) 능동 패치 중재 →
+    결합 결과 확인 → 파이프라인 상태 그대로 종료.
+    판정은 항상 파이프라인(결합 결과) 소유이며 증거/중재가 판정을 바꾸지 않는다.
     """
 
     if not cross_evidence_done:
         return ToolCall("cross_evidence", {})
     if not results:
+        needs_arbitration = bool(
+            {"LOCALIZATION_MISMATCH", "NG_SINGLE_ENGINE"} & set(assessment_flags)
+        )
+        has_budget = budget_remaining_actions is None or budget_remaining_actions >= 2
+        if arbitration_available and not arbitration_done and needs_arbitration and has_budget:
+            return ToolCall("arbitrate_patches", {})
         return ToolCall("run_profile", {"profile_id": policy.base_profile})
     first = results[0]
     if first.status is Status.OK:
@@ -225,6 +250,9 @@ class AgentEngine:
         profile_hashes: Mapping[str, str] | None = None,
         observations: Sequence[EngineObservation] = (),
         evidence_policy: EvidencePolicy | None = None,
+        image_bgr: Any | None = None,
+        arbitration_available: bool = False,
+        recorded_arbitration: Mapping[str, Any] | None = None,
     ) -> None:
         self._config = agent_config
         self._profiles = dict(profiles)
@@ -236,8 +264,18 @@ class AgentEngine:
         # 에피소드로 동작한다 — T09 기본 경로(미주입)는 그대로다.
         self._observations = tuple(observations)
         self._evidence_policy = evidence_policy
+        self._image_bgr = image_bgr
+        self._arbitration_available = bool(
+            arbitration_available or image_bgr is not None or recorded_arbitration is not None
+        )
+        self._recorded_arbitration = (
+            dict(recorded_arbitration) if recorded_arbitration is not None else None
+        )
         self._assessment: CrossEvidenceAssessment | None = None
+        self._arbitration: PatchArbitration | None = None
+        self._geometry: WeakGeometryReport | None = None
         self._cross_evidence_done = False
+        self._arbitration_done = False
         self._state = AgentState.OBSERVE
         self._results: dict[str, ProfileObservation] = {}
         self._summaries: dict[str, dict[str, Any]] = {}
@@ -261,6 +299,18 @@ class AgentEngine:
 
         return self._assessment
 
+    @property
+    def arbitration(self) -> PatchArbitration | None:
+        """능동 패치 중재 산출물(없으면 None). 기계 판정과 분리된 별도 증거다."""
+
+        return self._arbitration
+
+    @property
+    def geometry(self) -> WeakGeometryReport | None:
+        """약후보 기하 분석 산출물(없으면 None). 기계 판정과 분리된 별도 증거다."""
+
+        return self._geometry
+
     def run(
         self,
         *,
@@ -269,7 +319,7 @@ class AgentEngine:
         split: str = "tune",
     ) -> AgentEpisode:
         if self._episode is not None:
-            raise AgentGuardError("INVALID_TRANSITION", "episode already finished")
+            raise AgentGuardError("INVALID_TRANSITION", "에피소드가 이미 종료되었습니다")
         profiles_payload = (
             dict(self._profile_hashes)
             if self._profile_hashes is not None
@@ -285,6 +335,8 @@ class AgentEngine:
             start_payload["engine_observations"] = [
                 observation.to_dict() for observation in self._observations
             ]
+            if self._arbitration_available:
+                start_payload["arbitration_available"] = True
         self._emit("episode_start", **start_payload)
         pending: ToolCall | None = None
         tool_result: dict[str, Any] | None = None
@@ -294,10 +346,20 @@ class AgentEngine:
                 self._state = AgentState.PLAN
             elif self._state is AgentState.PLAN:
                 if self._observations:
+                    flags = (
+                        tuple(flag.value for flag in self._assessment.flags)
+                        if self._assessment is not None
+                        else ()
+                    )
+                    remaining = self._config.budget.max_actions - self._actions_used
                     decision = choose_evidence_action(
                         tuple(self._results.values()),
                         self._config.policy,
                         cross_evidence_done=self._cross_evidence_done,
+                        assessment_flags=flags,
+                        arbitration_available=self._arbitration_available,
+                        arbitration_done=self._arbitration_done,
+                        budget_remaining_actions=remaining,
                     )
                 else:
                     decision = choose_action(tuple(self._results.values()), self._config.policy)
@@ -415,48 +477,49 @@ class AgentEngine:
                 args_hash=args_hash,
                 action_hash=action_hash,
                 code=ErrorCode.E_BUDGET_EXCEEDED.value,
-                message="extra latency budget exceeded",
+                message="추가 지연 예산을 초과했습니다",
             )
             self._rejections.append(record)
             raise AgentGuardError(
-                ErrorCode.E_BUDGET_EXCEEDED.value, "extra latency budget exceeded"
+                ErrorCode.E_BUDGET_EXCEEDED.value, "추가 지연 예산을 초과했습니다"
             )
         return result
 
     def _guard(self, call: ToolCall) -> None:
         if self._state is not AgentState.ACT:
             raise AgentGuardError(
-                "INVALID_TRANSITION", f"tool call in state {self._state.value}"
+                "INVALID_TRANSITION",
+                f"허용되지 않은 상태({self._state.value})에서 도구를 호출했습니다",
             )
         if call.tool not in ALL_TOOLS:
-            raise AgentGuardError("INVALID_TRANSITION", f"unknown tool {call.tool!r}")
+            raise AgentGuardError("INVALID_TRANSITION", f"알 수 없는 도구입니다: {call.tool!r}")
         action_hash = hash_action(call.tool, hash_args(call.args))
         if action_hash in self._action_hashes:
             raise AgentGuardError(
-                "DUPLICATE_ACTION", f"duplicate action_hash {action_hash[:12]}"
+                "DUPLICATE_ACTION", f"중복된 action_hash입니다: {action_hash[:12]}"
             )
         budget = self._config.budget
         if call.tool in WORK_TOOLS:
             if self._actions_used >= budget.max_actions:
                 raise AgentGuardError(
-                    ErrorCode.E_BUDGET_EXCEEDED.value, "action budget exhausted"
+                    ErrorCode.E_BUDGET_EXCEEDED.value, "행동 예산을 모두 소진했습니다"
                 )
             if self._extra_latency_ms >= budget.extra_latency_ms:
                 raise AgentGuardError(
-                    ErrorCode.E_BUDGET_EXCEEDED.value, "latency budget exhausted"
+                    ErrorCode.E_BUDGET_EXCEEDED.value, "추가 지연 예산을 모두 소진했습니다"
                 )
         if call.tool == "run_profile":
             profile_id = call.args.get("profile_id")
             if not isinstance(profile_id, str) or profile_id not in self._profiles:
                 raise AgentGuardError(
-                    ErrorCode.E_PROFILE_UNKNOWN.value, f"unknown profile {profile_id!r}"
+                    ErrorCode.E_PROFILE_UNKNOWN.value, f"알 수 없는 프로파일입니다: {profile_id!r}"
                 )
             if self._profiles_used >= budget.max_profiles:
                 raise AgentGuardError(
-                    ErrorCode.E_BUDGET_EXCEEDED.value, "profile budget exhausted"
+                    ErrorCode.E_BUDGET_EXCEEDED.value, "프로파일 예산을 모두 소진했습니다"
                 )
             if self._ng_seen:
-                raise AgentGuardError("RETRY_AFTER_NG", "no retry after NG")
+                raise AgentGuardError("RETRY_AFTER_NG", "NG 판정 이후에는 재시도할 수 없습니다")
 
     def _execute(self, call: ToolCall) -> dict[str, Any]:
         tool = call.tool
@@ -489,7 +552,8 @@ class AgentEngine:
             profile_id = call.args.get("profile_id")
             if profile_id not in self._summaries:
                 raise ToolError(
-                    ErrorCode.E_TOOL_FAILED.value, f"no cached artifact for {profile_id!r}"
+                    ErrorCode.E_TOOL_FAILED.value,
+                    f"캐시된 프로파일 산출물이 없습니다: {profile_id!r}",
                 )
             return {"profile_id": profile_id, **self._summaries[profile_id]}
         if tool == "compare":
@@ -497,7 +561,7 @@ class AgentEngine:
             profile_b = call.args.get("profile_b")
             if profile_a not in self._summaries or profile_b not in self._summaries:
                 raise ToolError(
-                    ErrorCode.E_TOOL_FAILED.value, "compare requires two cached profiles"
+                    ErrorCode.E_TOOL_FAILED.value, "compare는 캐시된 두 개의 프로파일이 필요합니다"
                 )
             status_a = self._summaries[profile_a]["status"]
             status_b = self._summaries[profile_b]["status"]
@@ -512,7 +576,7 @@ class AgentEngine:
             if len(self._observations) < 2:
                 raise ToolError(
                     ErrorCode.E_TOOL_FAILED.value,
-                    "cross_evidence requires two engine observations",
+                    "cross_evidence는 두 개의 엔진 관찰(EngineObservation)이 필요합니다",
                 )
             assessment = assess_cross_evidence(
                 self._observations[0],
@@ -522,12 +586,65 @@ class AgentEngine:
             self._assessment = assessment
             self._cross_evidence_done = True
             return assessment.to_dict()
+        if tool == "inspect_geometry":
+            if not self._observations:
+                raise ToolError(
+                    ErrorCode.E_TOOL_FAILED.value,
+                    "inspect_geometry는 엔진 관찰(EngineObservation)이 필요합니다",
+                )
+            target_engine = call.args.get("engine")
+            if target_engine is not None:
+                matched = next(
+                    (obs for obs in self._observations if obs.engine == str(target_engine)),
+                    None,
+                )
+                if matched is None:
+                    raise ToolError(
+                        ErrorCode.E_TOOL_FAILED.value,
+                        f"요청한 엔진 관찰을 찾을 수 없습니다: {target_engine!r}",
+                    )
+                components = matched.result.components
+                roi = matched.result.roi
+            else:
+                components = tuple(
+                    comp for obs in self._observations for comp in obs.result.components
+                )
+                roi = next(
+                    (obs.result.roi for obs in self._observations if obs.result.roi is not None),
+                    None,
+                )
+            report = analyze_weak_geometry(components, roi=roi)
+            self._geometry = report
+            return report.to_dict()
+        if tool == "arbitrate_patches":
+            if len(self._observations) < 2:
+                raise ToolError(
+                    ErrorCode.E_TOOL_FAILED.value,
+                    "arbitrate_patches는 두 개의 엔진 관찰(EngineObservation)이 필요합니다",
+                )
+            if self._recorded_arbitration is not None:
+                self._arbitration_done = True
+                return dict(self._recorded_arbitration)
+            if self._image_bgr is None:
+                raise ToolError(
+                    ErrorCode.E_TOOL_FAILED.value,
+                    "arbitrate_patches는 입력 이미지(image_bgr)가 필요합니다",
+                )
+            arbitration = arbitrate_patches(
+                self._image_bgr,
+                self._observations[0],
+                self._observations[1],
+            )
+            self._arbitration = arbitration
+            self._arbitration_done = True
+            return arbitration.to_dict()
         if tool == "escalate_review":
             return {"terminal": "REVIEW", "reason": str(call.args.get("reason", ""))}
         if tool == "stop":
             if not self._summaries:
                 raise ToolError(
-                    ErrorCode.E_TOOL_FAILED.value, "stop requires a pipeline result"
+                    ErrorCode.E_TOOL_FAILED.value,
+                    "stop은 파이프라인 판정 결과가 최소 1개 필요합니다",
                 )
             statuses = {summary["status"] for summary in self._summaries.values()}
             if "NG" in statuses:
@@ -536,10 +653,10 @@ class AgentEngine:
                 final = "OK"
             else:
                 raise ToolError(
-                    ErrorCode.E_TOOL_FAILED.value, "stop cannot confirm a verdict"
+                    ErrorCode.E_TOOL_FAILED.value, "stop으로 판정을 확정할 수 없습니다"
                 )
             return {"terminal": "DONE", "status": final}
-        raise ToolError(ErrorCode.E_TOOL_FAILED.value, f"unknown tool {tool!r}")
+        raise ToolError(ErrorCode.E_TOOL_FAILED.value, f"알 수 없는 도구입니다: {tool!r}")
 
     def _account(self, call: ToolCall, elapsed_ms: float) -> None:
         if call.tool in WORK_TOOLS:
@@ -571,8 +688,8 @@ class AgentEngine:
             return None
         if call.tool == "compare":
             return compare_terminal(Status(result["status_a"]), Status(result["status_b"]))
-        if call.tool == "cross_evidence":
-            # observe-only: 증거 기록은 종료 상태를 만들지 않는다(판정 불변).
+        if call.tool in {"cross_evidence", "inspect_geometry", "arbitrate_patches"}:
+            # observe-only: 증거·기하·패치 중재는 종료 상태를 만들지 않는다(판정 불변).
             return None
         if call.tool == "escalate_review":
             return Terminal(

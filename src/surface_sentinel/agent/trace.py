@@ -353,7 +353,10 @@ def replay_trace(events: Sequence[Mapping[str, Any]]) -> ReplayReport:
     observations = tuple(
         rebuild_observation(item) for item in start.get("engine_observations", [])
     )
+    arbitration_available = bool(start.get("arbitration_available", False))
     recorded: dict[str, dict[str, Any]] = {}
+    recorded_arbitration: dict[str, Any] | None = None
+    arbitration_tampered = False
     elapsed: list[float] = []
     for event in events:
         if event.get("event") != "act":
@@ -361,6 +364,14 @@ def replay_trace(events: Sequence[Mapping[str, Any]]) -> ReplayReport:
         elapsed.append(float(event.get("elapsed_ms", 0.0)))
         if event.get("tool") == "run_profile":
             recorded[str(event["args"]["profile_id"])] = dict(event["result"])
+        elif event.get("tool") == "arbitrate_patches":
+            arb_payload = dict(event["result"])
+            expected_arb = sha256_text(
+                canonical_json({k: v for k, v in arb_payload.items() if k != "arbitration_hash"})
+            )
+            if arb_payload.get("arbitration_hash") != expected_arb:
+                arbitration_tampered = True
+            recorded_arbitration = arb_payload
 
     def inspector(profile_id: str, _config: Any) -> SampleResult:
         if profile_id not in recorded:
@@ -377,6 +388,8 @@ def replay_trace(events: Sequence[Mapping[str, Any]]) -> ReplayReport:
         trace=writer,
         profile_hashes=profile_hashes,
         observations=observations,
+        arbitration_available=arbitration_available,
+        recorded_arbitration=recorded_arbitration,
     )
     try:
         engine.run(
@@ -397,6 +410,8 @@ def replay_trace(events: Sequence[Mapping[str, Any]]) -> ReplayReport:
 
     generated = writer.events
     mismatches: list[str] = []
+    if arbitration_tampered:
+        mismatches.append("arbitrate_patches: arbitration_hash mismatch")
     for index in range(max(len(generated), len(events))):
         if index >= len(generated):
             mismatches.append(f"event {index}: missing in replay")

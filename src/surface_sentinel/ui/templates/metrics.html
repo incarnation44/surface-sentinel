@@ -2,10 +2,11 @@
 {% block title %}지표 — {{ run.run_id }} — Surface Sentinel{% endblock %}
 {% block content %}
 <h1>지표·혼동행렬</h1>
-<p class="meta">{{ run.run_id }}</p>
+<p class="meta num">{{ run.run_id }}</p>
 <div class="navlinks">
   <a href="/runs/{{ run.run_id }}">run 요약</a>
   <a href="/runs/{{ run.run_id }}/review">검토 큐</a>
+  <a href="/runs/{{ run.run_id }}/triage">에이전트 트리아지</a>
 </div>
 <p class="meta">
   아래 지표는 <b>기계 판정 기준</b>입니다(평가 CLI와 같은 정의, 설계 §4.2).
@@ -14,6 +15,7 @@
 </p>
 
 <h2>혼동행렬 (기계 판정)</h2>
+<div class="table-wrap">
 <table>
   <thead>
     <tr><th>정답 \ 판정</th><th>OK</th><th>NG</th><th>REVIEW</th><th>ERROR</th><th>전체</th><th>평가됨(ERROR 제외)</th></tr>
@@ -22,53 +24,123 @@
     {% for label in ["good", "defect"] %}
     <tr>
       <th>{{ label }}</th>
-      <td>{{ confusion.count(label, "OK") }}</td>
-      <td>{{ confusion.count(label, "NG") }}</td>
-      <td>{{ confusion.count(label, "REVIEW") }}</td>
-      <td>{{ confusion.count(label, "ERROR") }}</td>
-      <td>{{ confusion.total(label) }}</td>
-      <td>{{ confusion.evaluated(label) }}</td>
+      <td class="num">{{ confusion.count(label, "OK") }}</td>
+      <td class="num">{{ confusion.count(label, "NG") }}</td>
+      <td class="num">{{ confusion.count(label, "REVIEW") }}</td>
+      <td class="num">{{ confusion.count(label, "ERROR") }}</td>
+      <td class="num">{{ confusion.total(label) }}</td>
+      <td class="num">{{ confusion.evaluated(label) }}</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
 
 <h2>이미지 지표 (Wilson 95% 구간, 분모 명시)</h2>
+<div class="table-wrap">
 <table>
-  <thead><tr><th>지표</th><th>값 [95% 구간] (분모)</th></tr></thead>
+  <thead><tr><th>지표</th><th>값 [95% 구간] (분모)</th><th style="width:240px">Wilson 95% 신뢰구간 시각화</th></tr></thead>
   <tbody>
     {% for name, ratio in ratios.items() %}
-    <tr><td><code>{{ name }}</code></td><td>{{ ratio.formatted() }}</td></tr>
+    <tr>
+      <td><code>{{ name }}</code></td>
+      <td class="num">{{ ratio.formatted() }}</td>
+      <td>
+        {% if ratio.value is not none and ratio.ci_low is not none and ratio.ci_high is not none %}
+        {% set lo_pct = (ratio.ci_low * 100)|round(1) %}
+        {% set hi_pct = (ratio.ci_high * 100)|round(1) %}
+        {% set val_pct = (ratio.value * 100)|round(1) %}
+        <div style="position:relative;height:14px;background:#eef2f6;border:1px solid var(--line-soft);border-radius:3px">
+          <div style="position:absolute;top:5px;height:4px;left:{{ lo_pct }}%;width:{{ [hi_pct - lo_pct, 1.0]|max }}%;background:#93c5fd;border-radius:2px"></div>
+          <div style="position:absolute;top:2px;left:calc({{ val_pct }}% - 3px);width:6px;height:10px;background:var(--navy);border-radius:2px"></div>
+        </div>
+        {% else %}
+        <span class="meta">-</span>
+        {% endif %}
+      </td>
+    </tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
 
 <h2>검토 현황</h2>
 <table>
   <tbody>
-    <tr><th>REVIEW 샘플</th><td>{{ review_total }}</td>
-        <th>결정 완료</th><td>{{ review_done }}</td>
-        <th>미결정</th><td>{{ review_total - review_done }}</td></tr>
+    <tr><th>REVIEW 샘플</th><td>{{ review_total }}</td><th>결정 완료</th><td>{{ review_done }}</td><th>미결정</th><td>{{ review_total - review_done }}</td></tr>
   </tbody>
 </table>
 
+<div class="card" style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+  <div>
+    <strong style="font-size:13px">에이전트 REVIEW 우선순위 분포</strong>
+    <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
+      {% for band in ["P0", "P1", "P2", "P3"] %}
+      <span class="prio p-{{ band }}">{{ band }}: {{ priority_counts[band] }}건</span>
+      {% endfor %}
+    </div>
+  </div>
+  <a class="btn" href="/runs/{{ run.run_id }}/triage">트리아지 &amp; Lift 분석실 →</a>
+</div>
+
+<h2>2D 라인스캔 스트립 공간 핫스팟 지도 (6×14 정규화 격자)</h2>
+<p class="meta">results.jsonl 의 모든 후보 bbox 중심점을 KSDD2 세로형 스트립 비율(가로 6열 × 세로 14행)에 누적했습니다. 점선은 좌·우 가장자리 15% 경계입니다.</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:14px">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
+      <strong style="font-size:13px">NG 샘플 후보 밀도</strong>
+      <span class="meta num">후보 {{ hotspot.ng_total_hits }}건 · 최대 셀 {{ hotspot.ng_max_cell }}</span>
+    </div>
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+      <svg viewBox="{{ hotspot.view_box }}" width="168" style="border:1px solid var(--line-soft);border-radius:5px;background:#fff;flex-shrink:0" role="img" aria-label="NG 샘플 후보 공간 핫스팟 히트맵">
+        {% for cell in hotspot.ng_cells %}<rect x="{{ cell.x }}" y="{{ cell.y }}" width="{{ cell.w }}" height="{{ cell.h }}" fill="{{ cell.fill }}" stroke="#e2e8f0" stroke-width="0.6"><title>열 {{ cell.col + 1 }}/6, 행 {{ cell.row + 1 }}/14: {{ cell.count }}건</title></rect>{% endfor %}
+        <rect x="{{ hotspot.pad }}" y="{{ hotspot.pad }}" width="{{ hotspot.grid_w }}" height="{{ hotspot.grid_h }}" fill="none" stroke="#334155" stroke-width="1"/>
+        <line x1="{{ hotspot.left_15_x }}" y1="{{ hotspot.pad }}" x2="{{ hotspot.left_15_x }}" y2="{{ hotspot.pad + hotspot.grid_h }}" stroke="#991b1b" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="{{ hotspot.right_15_x }}" y1="{{ hotspot.pad }}" x2="{{ hotspot.right_15_x }}" y2="{{ hotspot.pad + hotspot.grid_h }}" stroke="#991b1b" stroke-width="1" stroke-dasharray="3,3"/>
+      </svg>
+      <div style="font-size:12px">
+        <div style="font-weight:700;margin-bottom:4px">좌·우 가장자리(15%) 집중 비율</div>
+        <div class="num">{{ hotspot.ng_edge_ratio.formatted() }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
+      <strong style="font-size:13px">REVIEW 보류 후보 밀도</strong>
+      <span class="meta num">후보 {{ hotspot.review_total_hits }}건 · 최대 셀 {{ hotspot.review_max_cell }}</span>
+    </div>
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+      <svg viewBox="{{ hotspot.view_box }}" width="168" style="border:1px solid var(--line-soft);border-radius:5px;background:#fff;flex-shrink:0" role="img" aria-label="REVIEW 보류 후보 공간 핫스팟 히트맵">
+        {% for cell in hotspot.review_cells %}<rect x="{{ cell.x }}" y="{{ cell.y }}" width="{{ cell.w }}" height="{{ cell.h }}" fill="{{ cell.fill }}" stroke="#e2e8f0" stroke-width="0.6"><title>열 {{ cell.col + 1 }}/6, 행 {{ cell.row + 1 }}/14: {{ cell.count }}건</title></rect>{% endfor %}
+        <rect x="{{ hotspot.pad }}" y="{{ hotspot.pad }}" width="{{ hotspot.grid_w }}" height="{{ hotspot.grid_h }}" fill="none" stroke="#334155" stroke-width="1"/>
+        <line x1="{{ hotspot.left_15_x }}" y1="{{ hotspot.pad }}" x2="{{ hotspot.left_15_x }}" y2="{{ hotspot.pad + hotspot.grid_h }}" stroke="#92400e" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="{{ hotspot.right_15_x }}" y1="{{ hotspot.pad }}" x2="{{ hotspot.right_15_x }}" y2="{{ hotspot.pad + hotspot.grid_h }}" stroke="#92400e" stroke-width="1" stroke-dasharray="3,3"/>
+      </svg>
+      <div style="font-size:12px">
+        <div style="font-weight:700;margin-bottom:4px">좌·우 가장자리(15%) 집중 비율</div>
+        <div class="num">{{ hotspot.review_edge_ratio.formatted() }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <h2>실패 링크</h2>
 <p class="meta">escape = 정답 defect인데 기계가 OK로 놓친 샘플. 오탐 = 정답 good인데 기계가 NG로 잡은 샘플.</p>
-<h3 style="font-size:15px">escape ({{ escapes|length }}건)</h3>
+<h3>escape ({{ escapes|length }}건)</h3>
 {% if escapes %}
 <ul>
   {% for r in escapes %}
-  <li><a href="/runs/{{ run.run_id }}/samples/{{ r.sample_id }}">{{ r.sample_id }}</a>
-      <span class="meta">점수 {{ "%.4f"|format(r.score) }}</span></li>
+  <li><a class="num" href="/runs/{{ run.run_id }}/samples/{{ r.sample_id }}">{{ r.sample_id }}</a>
+      <span class="meta num">점수 {{ "%.4f"|format(r.score) }}</span></li>
   {% endfor %}
 </ul>
 {% else %}<p class="meta">없음.</p>{% endif %}
-<h3 style="font-size:15px">오탐 ({{ false_ng|length }}건)</h3>
+<h3>오탐 ({{ false_ng|length }}건)</h3>
 {% if false_ng %}
 <ul>
   {% for r in false_ng %}
-  <li><a href="/runs/{{ run.run_id }}/samples/{{ r.sample_id }}">{{ r.sample_id }}</a>
-      <span class="meta">점수 {{ "%.4f"|format(r.score) }}</span></li>
+  <li><a class="num" href="/runs/{{ run.run_id }}/samples/{{ r.sample_id }}">{{ r.sample_id }}</a>
+      <span class="meta num">점수 {{ "%.4f"|format(r.score) }}</span></li>
   {% endfor %}
 </ul>
 {% else %}<p class="meta">없음.</p>{% endif %}

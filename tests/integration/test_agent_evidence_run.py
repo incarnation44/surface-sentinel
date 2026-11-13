@@ -146,3 +146,16 @@ def test_run_id_collision_gets_suffix(tmp_path: Path) -> None:
     assert first.run_id == "fixed-run"
     assert second.run_id == "fixed-run-01"
     assert first.run_dir != second.run_dir
+
+
+def test_evidence_episode_with_arbitration_enabled_is_deterministic(tmp_path: Path) -> None:
+    outcome = _run(tmp_path, combined_status=Status.REVIEW, enable_arbitration=True)
+    assert outcome.episode.final_status is Status.REVIEW
+    assert outcome.episode.actions_used == 3
+    assert outcome.arbitration is not None
+    payload = json.loads(outcome.result_path.read_text(encoding="utf-8"))
+    assert payload["arbitration"]["arbitration_hash"] == outcome.arbitration.arbitration_hash
+    report = replay_trace(load_trace(outcome.trace_path))
+    assert report.audit_valid is True
+    assert report.deterministic is True
+    assert report.final_status == "REVIEW"

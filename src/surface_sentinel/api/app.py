@@ -6,8 +6,9 @@
 * YOLO 엔진은 ``surface_sentinel.yolo.inspect.inspect_with_yolo``를 **지연
   import**한다. 모듈·진입점·모델 파일이 없으면 503과 한국어 안내를 돌려주며,
   조용히 opencv로 폴백하지 않는다.
-* 검사 결과는 :mod:`surface_sentinel.records.store`로 DB에 남긴다. 같은
-  ``sha256``은 기존 행을 재사용한다(중복제거).
+* 검사 결과는 :mod:`surface_sentinel.records.store`로 DB에 남긴다.
+  ``(image_sha256, inspection_fingerprint)`` 쌍이 같으면 기존 행을 재사용한다
+  (중복제거).
 * ``inspections.status``는 기계 판정이며 불변이다. 사람 판정은
   ``POST /api/inspections/{id}/review``가 append-only로만 쌓는다.
 
@@ -28,12 +29,15 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Annotated, Any
 
+import cv2
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.concurrency import run_in_threadpool
 
 from ..agent.evidence import assess_cross_evidence
-from ..config import AppConfig, default_config, load_config
+from ..agent.review import assess_review_triage
+from ..agent.stability import analyze_weak_geometry, arbitrate_patches
+from ..config import REVIEW_BAND_MAX, AppConfig, default_config, load_config
 from ..contracts import Status
 from ..pipeline import InspectionOutcome, inspect_image
 from ..records.db import DatabaseError, connect, init_db
@@ -48,13 +52,17 @@ from ..records.store import (
     get_inspection,
     insert_engine_observation,
     insert_inspection,
+    list_agent_assessments,
+    list_engine_observations,
     list_inspections,
     stats_payload,
 )
 from ..version import __version__
 from .schemas import (
+    AgentAssessmentOut,
     ComponentOut,
     EngineName,
+    EngineObservationOut,
     InspectionDetail,
     InspectionItem,
     InspectionList,
@@ -160,6 +168,68 @@ def _reviews(connection: sqlite3.Connection, inspection_id: int) -> list[ReviewI
         )
         for row in rows
     ]
+
+
+
+def _observations(
+    connection: sqlite3.Connection, inspection_id: int
+) -> list[EngineObservationOut]:
+    """검사 한 건의 엔진별 원본 관찰 목록을 id 오름차순으로 읽는다."""
+
+    rows = list_engine_observations(connection, inspection_id)
+    items: list[EngineObservationOut] = []
+    for row in rows:
+        components_raw = json.loads(str(row.get("components") or "[]"))
+        timing_raw = json.loads(str(row.get("timing_ms") or "{}"))
+        items.append(
+            EngineObservationOut(
+                observation_id=int(row["id"]),
+                engine=str(row["engine"]),
+                task=str(row.get("task") or ""),
+                status=Status(str(row["status"])),
+                score=float(row["score"]),
+                reasons=[str(r) for r in json.loads(str(row.get("reasons") or "[]"))],
+                components=[ComponentOut(**c) for c in components_raw],
+                model_sha256=str(row.get("model_sha256") or ""),
+                overlay_path=str(row.get("overlay_path") or ""),
+                error_code=str(row.get("error_code") or ""),
+                timing_ms={str(k): float(v) for k, v in timing_raw.items()},
+                created_at=str(row["created_at"]),
+            )
+        )
+    return items
+
+
+def _assessments(
+    connection: sqlite3.Connection, inspection_id: int
+) -> list[AgentAssessmentOut]:
+    """검사 한 건의 교차 증거·트리아지 평가 목록을 id 오름차순으로 읽는다."""
+
+    rows = list_agent_assessments(connection, inspection_id)
+    items: list[AgentAssessmentOut] = []
+    for row in rows:
+        diag_raw = json.loads(str(row.get("diagnostics_json") or "{}"))
+        items.append(
+            AgentAssessmentOut(
+                assessment_id=int(row["id"]),
+                assessment_hash=str(row["assessment_hash"]),
+                policy_hash=str(row["policy_hash"]),
+                flags=[str(f) for f in json.loads(str(row.get("flags_json") or "[]"))],
+                review_priority=(
+                    str(row["review_priority"])
+                    if row.get("review_priority") is not None
+                    else None
+                ),
+                stability=(
+                    str(row["stability"]) if row.get("stability") is not None else None
+                ),
+                recommended_action=str(row["recommended_action"]),
+                diagnostics=diag_raw if isinstance(diag_raw, dict) else {},
+                trace_path=str(row.get("trace_path") or ""),
+                created_at=str(row["created_at"]),
+            )
+        )
+    return items
 
 
 def _load_yolo_entry(engine: str) -> Callable[..., InspectionOutcome]:
@@ -333,6 +403,7 @@ def create_inspection_app(
         finally:
             connection.close()
 
+    @app.get("/api/healthz")
     @app.get("/healthz")
     def healthz() -> JSONResponse:
         with open_db() as connection:
@@ -414,13 +485,36 @@ def create_inspection_app(
                     model_sha256="" if observation.engine == "opencv" else spec.model_sha256,
                 )
             if len(outcome.engine_observations) >= 2:
-                # 교차 증거(Phase 1, observe-only): 별도 증거만 append 한다.
+                # 교차 증거(Phase 1/2, observe-only): 별도 증거·트리아지만 append 한다.
                 # 기계 판정은 건드리지 않으며, 증거 실패는 검사 응답을 막지
                 # 않도록 격리한다(워커와 같은 계약).
                 try:
-                    assessment = assess_cross_evidence(
-                        outcome.engine_observations[0], outcome.engine_observations[1]
+                    obs_a = outcome.engine_observations[0]
+                    obs_b = outcome.engine_observations[1]
+                    assessment = assess_cross_evidence(obs_a, obs_b)
+                    arbitration = None
+                    try:
+                        bgr = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
+                        if bgr is not None:
+                            arbitration = arbitrate_patches(bgr, obs_a, obs_b)
+                    except Exception:  # noqa: BLE001 - 패치 중재 실패 시 교차 증거는 유지
+                        arbitration = None
+                    geom = analyze_weak_geometry(result.components, result.roi)
+                    triage = assess_review_triage(
+                        result,
+                        geometry=geom,
+                        cross_assessment=assessment,
+                        arbitration=arbitration,
+                        ng_min=config.scoring.ng_min,
+                        review_band_max=REVIEW_BAND_MAX,
                     )
+                    diagnostics = {
+                        **assessment.to_dict(),
+                        "triage": triage.to_dict(),
+                        "arbitration": (
+                            arbitration.to_dict() if arbitration is not None else None
+                        ),
+                    }
                     append_agent_assessment(
                         connection,
                         inspection_id,
@@ -428,7 +522,8 @@ def create_inspection_app(
                         policy_hash=assessment.policy_hash,
                         flags=[flag.value for flag in assessment.flags],
                         recommended_action=assessment.recommended_action,
-                        diagnostics=assessment.to_dict(),
+                        diagnostics=diagnostics,
+                        review_priority=triage.priority.value,
                     )
                 except Exception:  # noqa: BLE001 - 증거 실패는 검사 기록과 격리
                     _logger.warning(
@@ -512,6 +607,8 @@ def create_inspection_app(
                 model_sha256=str(row["model_sha256"]),
                 inspection_fingerprint=str(row["inspection_fingerprint"]),
                 provenance_complete=bool(row["provenance_complete"]),
+                observations=_observations(connection, inspection_id),
+                assessments=_assessments(connection, inspection_id),
             )
 
     @app.post(

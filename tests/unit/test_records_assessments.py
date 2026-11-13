@@ -185,3 +185,28 @@ def test_assessments_isolated_per_inspection(conn: sqlite3.Connection) -> None:
     _append(conn, first)
     assert list_agent_assessments(conn, other) == []
     assert len(list_agent_assessments(conn, first)) == 1
+
+
+def test_phase2_review_priority_and_stability_stored_and_validated(
+    conn: sqlite3.Connection, inspection_id: int
+) -> None:
+    from surface_sentinel.records.store import REVIEW_PRIORITIES, STABILITY_LEVELS
+
+    assert REVIEW_PRIORITIES == ("P0", "P1", "P2", "P3")
+    assert STABILITY_LEVELS == ("STABLE", "SENSITIVE", "UNSTABLE")
+
+    row_id = _append(
+        conn,
+        inspection_id,
+        review_priority="P0",
+        stability="STABLE",
+    )
+    rows = list_agent_assessments(conn, inspection_id)
+    assert rows[0]["id"] == row_id
+    assert rows[0]["review_priority"] == "P0"
+    assert rows[0]["stability"] == "STABLE"
+
+    with pytest.raises(RecordsError):
+        _append(conn, inspection_id, assessment_hash=HASH_2, review_priority="P9")
+    with pytest.raises(RecordsError):
+        _append(conn, inspection_id, assessment_hash=HASH_2, stability="BROKEN")

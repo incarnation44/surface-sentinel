@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -123,6 +124,38 @@ class ReviewItem(BaseModel):
     created_at: str
 
 
+class EngineObservationOut(BaseModel):
+    """결합 검사 시 엔진별 원본 관찰 한 건(observe-only 보존)."""
+
+    observation_id: int
+    engine: str
+    task: str = ""
+    status: Status
+    score: float
+    reasons: list[str]
+    components: list[ComponentOut] = []
+    model_sha256: str = ""
+    overlay_path: str = ""
+    error_code: str = ""
+    timing_ms: dict[str, float] = {}
+    created_at: str
+
+
+class AgentAssessmentOut(BaseModel):
+    """교차 증거·트리아지 평가 한 건(append-only)."""
+
+    assessment_id: int
+    assessment_hash: str
+    policy_hash: str
+    flags: list[str]
+    review_priority: str | None = None
+    stability: str | None = None
+    recommended_action: str
+    diagnostics: dict[str, Any] = {}
+    trace_path: str = ""
+    created_at: str
+
+
 class InspectionDetail(InspectionItem):
     """``GET /api/inspections/{id}`` 응답. 리뷰 이력을 함께 준다."""
 
@@ -136,6 +169,8 @@ class InspectionDetail(InspectionItem):
     model_sha256: str = ""
     inspection_fingerprint: str = ""
     provenance_complete: bool = False
+    observations: list[EngineObservationOut] = []
+    assessments: list[AgentAssessmentOut] = []
 
 
 class ReviewRequest(BaseModel):
@@ -188,8 +223,10 @@ class StatsResponse(BaseModel):
 
 
 __all__ = [
+    "AgentAssessmentOut",
     "ComponentOut",
     "EngineName",
+    "EngineObservationOut",
     "InspectResponse",
     "InspectionDetail",
     "InspectionItem",

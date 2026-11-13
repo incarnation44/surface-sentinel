@@ -1,0 +1,749 @@
+{
+  "schema_version": "phase2-triage-eval-v2",
+  "generated": "2026-11-13",
+  "config_hash": "a762ba63944133ddfbc2f962342001e09d0dffd0f0ea14fd79095274865d8098",
+  "sealed_splits_accessed": false,
+  "aspect_ratio_correction_history": {
+    "before": {
+      "weak_pattern_distribution": {
+        "BORDER_ARTIFACT_SUSPECT": 1,
+        "COLLINEAR_SCRATCH_SUSPECT": 391,
+        "DIFFUSE_SURFACE_TEXTURE": 88,
+        "LOCAL_CLUSTER": 81,
+        "SINGLE_CANDIDATE": 218
+      },
+      "recall_top10_captured": 17,
+      "recall_top10_pct": 38.64,
+      "recall_top20_captured": 23,
+      "recall_top20_pct": 52.27,
+      "recall_top30_captured": 26,
+      "recall_top30_pct": 59.09,
+      "p0_count": 96,
+      "p0_defects": 18,
+      "p0_ppv_pct": 18.75
+    },
+    "after": {
+      "weak_pattern_distribution": {
+        "BORDER_ARTIFACT_SUSPECT": 1,
+        "COLLINEAR_SCRATCH_SUSPECT": 57,
+        "DIFFUSE_SURFACE_TEXTURE": 378,
+        "LOCAL_CLUSTER": 125,
+        "SINGLE_CANDIDATE": 218
+      },
+      "orthogonal_rms_threshold_px": 14.0,
+      "elongated_orthogonal_rms_threshold_px": 18.0
+    }
+  },
+  "tune_review": {
+    "split": "tune",
+    "total_tune_samples": 2001,
+    "review_samples": 779,
+    "review_defects": 44,
+    "review_goods": 735,
+    "elapsed_seconds": 64.017,
+    "latency_ms": {
+      "p50": 66.2178,
+      "p95": 95.2887,
+      "mean": 68.874
+    },
+    "verdict_immutability_violations": 0,
+    "stability_distribution": {
+      "SENSITIVE": 120,
+      "STABLE": 183,
+      "UNSTABLE": 476
+    },
+    "weak_pattern_distribution": {
+      "BORDER_ARTIFACT_SUSPECT": 1,
+      "COLLINEAR_SCRATCH_SUSPECT": 57,
+      "DIFFUSE_SURFACE_TEXTURE": 378,
+      "LOCAL_CLUSTER": 125,
+      "SINGLE_CANDIDATE": 218
+    },
+    "priority_breakdown": {
+      "P0": {
+        "count": 66,
+        "defects": 17,
+        "goods": 49,
+        "ppv": {
+          "definition": "P0 등급 내 실제 결함 비율(PPV)",
+          "numerator": 17,
+          "denominator": 66,
+          "value": 0.25757575757575757,
+          "ci95_low": 0.1674884361182427,
+          "ci95_high": 0.3743309854640803
+        }
+      },
+      "P1": {
+        "count": 190,
+        "defects": 13,
+        "goods": 177,
+        "ppv": {
+          "definition": "P1 등급 내 실제 결함 비율(PPV)",
+          "numerator": 13,
+          "denominator": 190,
+          "value": 0.06842105263157895,
+          "ci95_low": 0.040418272568199846,
+          "ci95_high": 0.11352948970229496
+        }
+      },
+      "P2": {
+        "count": 268,
+        "defects": 8,
+        "goods": 260,
+        "ppv": {
+          "definition": "P2 등급 내 실제 결함 비율(PPV)",
+          "numerator": 8,
+          "denominator": 268,
+          "value": 0.029850746268656716,
+          "ci95_low": 0.01520190436169214,
+          "ci95_high": 0.057787178711841164
+        }
+      },
+      "P3": {
+        "count": 255,
+        "defects": 6,
+        "goods": 249,
+        "ppv": {
+          "definition": "P3 등급 내 실제 결함 비율(PPV)",
+          "numerator": 6,
+          "denominator": 255,
+          "value": 0.023529411764705882,
+          "ci95_low": 0.010827332999988368,
+          "ci95_high": 0.050374063765697044
+        }
+      }
+    },
+    "triage_lift": {
+      "total_review": 779,
+      "total_defects": 44,
+      "baseline_defect_rate": {
+        "definition": "REVIEW 내 전체 결함 비율",
+        "numerator": 44,
+        "denominator": 779,
+        "value": 0.05648267008985879,
+        "ci95_low": 0.04234199223499928,
+        "ci95_high": 0.07497609022712277
+      },
+      "top_k": {
+        "0.10": {
+          "fraction": 0.1,
+          "k": 78,
+          "captured_defects": 18,
+          "recall_at_k": {
+            "definition": "상위 10%(78/779) 내 결함 포착 / 전체 REVIEW 결함",
+            "numerator": 18,
+            "denominator": 44,
+            "value": 0.4090909090909091,
+            "ci95_low": 0.2768785562754973,
+            "ci95_high": 0.555902462589681
+          },
+          "precision_at_k": {
+            "definition": "상위 10%(78/779) 내 결함 비율(PPV)",
+            "numerator": 18,
+            "denominator": 78,
+            "value": 0.23076923076923078,
+            "ci95_low": 0.15125508850526875,
+            "ci95_high": 0.3355575782628359
+          },
+          "random_expected_recall": 0.100128,
+          "lift": 4.085664
+        },
+        "0.20": {
+          "fraction": 0.2,
+          "k": 156,
+          "captured_defects": 24,
+          "recall_at_k": {
+            "definition": "상위 20%(156/779) 내 결함 포착 / 전체 REVIEW 결함",
+            "numerator": 24,
+            "denominator": 44,
+            "value": 0.5454545454545454,
+            "ci95_low": 0.40066183198961974,
+            "ci95_high": 0.6829476585777909
+          },
+          "precision_at_k": {
+            "definition": "상위 20%(156/779) 내 결함 비율(PPV)",
+            "numerator": 24,
+            "denominator": 156,
+            "value": 0.15384615384615385,
+            "ci95_low": 0.10561655343828537,
+            "ci95_high": 0.21871393755684804
+          },
+          "random_expected_recall": 0.200257,
+          "lift": 2.723776
+        },
+        "0.30": {
+          "fraction": 0.3,
+          "k": 234,
+          "captured_defects": 27,
+          "recall_at_k": {
+            "definition": "상위 30%(234/779) 내 결함 포착 / 전체 REVIEW 결함",
+            "numerator": 27,
+            "denominator": 44,
+            "value": 0.6136363636363636,
+            "ci95_low": 0.4662357539237828,
+            "ci95_high": 0.7427879724947443
+          },
+          "precision_at_k": {
+            "definition": "상위 30%(234/779) 내 결함 비율(PPV)",
+            "numerator": 27,
+            "denominator": 234,
+            "value": 0.11538461538461539,
+            "ci95_low": 0.08052145396991284,
+            "ci95_high": 0.16267188628074603
+          },
+          "random_expected_recall": 0.300385,
+          "lift": 2.042832
+        }
+      }
+    },
+    "baseline_id_sort_lift": {
+      "total_review": 779,
+      "total_defects": 44,
+      "baseline_defect_rate": {
+        "definition": "REVIEW 내 전체 결함 비율",
+        "numerator": 44,
+        "denominator": 779,
+        "value": 0.05648267008985879,
+        "ci95_low": 0.04234199223499928,
+        "ci95_high": 0.07497609022712277
+      },
+      "top_k": {
+        "0.10": {
+          "fraction": 0.1,
+          "k": 78,
+          "captured_defects": 2,
+          "recall_at_k": {
+            "definition": "상위 10%(78/779) 내 결함 포착 / 전체 REVIEW 결함",
+            "numerator": 2,
+            "denominator": 44,
+            "value": 0.045454545454545456,
+            "ci95_low": 0.012555109949594967,
+            "ci95_high": 0.15134998437629657
+          },
+          "precision_at_k": {
+            "definition": "상위 10%(78/779) 내 결함 비율(PPV)",
+            "numerator": 2,
+            "denominator": 78,
+            "value": 0.02564102564102564,
+            "ci95_low": 0.007060093472759203,
+            "ci95_high": 0.08875270035675845
+          },
+          "random_expected_recall": 0.100128,
+          "lift": 0.453963
+        },
+        "0.20": {
+          "fraction": 0.2,
+          "k": 156,
+          "captured_defects": 6,
+          "recall_at_k": {
+            "definition": "상위 20%(156/779) 내 결함 포착 / 전체 REVIEW 결함",
+            "numerator": 6,
+            "denominator": 44,
+            "value": 0.13636363636363635,
+            "ci95_low": 0.06402954497555872,
+            "ci95_high": 0.2670945304851544
+          },
+          "precision_at_k": {
+            "definition": "상위 20%(156/779) 내 결함 비율(PPV)",
+            "numerator": 6,
+            "denominator": 156,
+            "value": 0.038461538461538464,
+            "ci95_low": 0.0177444321590843,
+            "ci95_high": 0.08136288916776027
+          },
+          "random_expected_recall": 0.200257,
+          "lift": 0.680944
+        },
+        "0.30": {
+          "fraction": 0.3,
+          "k": 234,
+          "captured_defects": 10,
+          "recall_at_k": {
+            "definition": "상위 30%(234/779) 내 결함 포착 / 전체 REVIEW 결함",
+            "numerator": 10,
+            "denominator": 44,
+            "value": 0.22727272727272727,
+            "ci95_low": 0.12841947594917152,
+            "ci95_high": 0.3699235806463633
+          },
+          "precision_at_k": {
+            "definition": "상위 30%(234/779) 내 결함 비율(PPV)",
+            "numerator": 10,
+            "denominator": 234,
+            "value": 0.042735042735042736,
+            "ci95_low": 0.023375838752485195,
+            "ci95_high": 0.07686513243440918
+          },
+          "random_expected_recall": 0.300385,
+          "lift": 0.756605
+        }
+      }
+    },
+    "reference_score_sort_lift": {
+      "total_review": 779,
+      "total_defects": 44,
+      "baseline_defect_rate": {
+        "definition": "REVIEW 내 전체 결함 비율",
+        "numerator": 44,
+        "denominator": 779,
+        "value": 0.05648267008985879,
+        "ci95_low": 0.04234199223499928,
+        "ci95_high": 0.07497609022712277
+      },
+      "top_k": {
+        "0.10": {
+          "fraction": 0.1,
+          "k": 78,
+          "captured_defects": 8,
+          "recall_at_k": {
+            "definition": "상위 10%(78/779) 내 결함 포착 / 전체 REVIEW 결함",
+            "numerator": 8,
+            "denominator": 44,
+            "value": 0.18181818181818182,
+            "ci95_low": 0.09512805715627728,
+            "ci95_high": 0.3196055088718468
+          },
+          "precision_at_k": {
+            "definition": "상위 10%(78/779) 내 결함 비율(PPV)",
+            "numerator": 8,
+            "denominator": 78,
+            "value": 0.10256410256410256,
+            "ci95_low": 0.052893347657463854,
+            "ci95_high": 0.18954439852402394
+          },
+          "random_expected_recall": 0.100128,
+          "lift": 1.815851
+        },
+        "0.20": {
+          "fraction": 0.2,
+          "k": 156,
+          "captured_defects": 12,
+          "recall_at_k": {
+            "definition": "상위 20%(156/779) 내 결함 포착 / 전체 REVIEW 결함",
+            "numerator": 12,
+            "denominator": 44,
+            "value": 0.2727272727272727,
+            "ci95_low": 0.16346381623843378,
+            "ci95_high": 0.418488730924512
+          },
+          "precision_at_k": {
+            "definition": "상위 20%(156/779) 내 결함 비율(PPV)",
+            "numerator": 12,
+            "denominator": 156,
+            "value": 0.07692307692307693,
+            "ci95_low": 0.04454835847715382,
+            "ci95_high": 0.12963335273912036
+          },
+          "random_expected_recall": 0.200257,
+          "lift": 1.361888
+        },
+        "0.30": {
+          "fraction": 0.3,
+          "k": 234,
+          "captured_defects": 17,
+          "recall_at_k": {
+            "definition": "상위 30%(234/779) 내 결함 포착 / 전체 REVIEW 결함",
+            "numerator": 17,
+            "denominator": 44,
+            "value": 0.38636363636363635,
+            "ci95_low": 0.2572120275052556,
+            "ci95_high": 0.5337642460762172
+          },
+          "precision_at_k": {
+            "definition": "상위 30%(234/779) 내 결함 비율(PPV)",
+            "numerator": 17,
+            "denominator": 234,
+            "value": 0.07264957264957266,
+            "ci95_low": 0.04585046872595251,
+            "ci95_high": 0.11325324266366842
+          },
+          "random_expected_recall": 0.300385,
+          "lift": 1.286228
+        }
+      }
+    },
+    "failure_examples": {
+      "p3_missed_defects": [
+        {
+          "sample_id": "10045",
+          "priority_score": 0.285141,
+          "stability": "UNSTABLE",
+          "weak_pattern": "DIFFUSE_SURFACE_TEXTURE",
+          "guidance": "P3 후순위 검토: 최대 대비 59.0·점수 0.314, 섭동 후 신호 0% 유지(UNSTABLE)"
+        },
+        {
+          "sample_id": "11169",
+          "priority_score": 0.259489,
+          "stability": "UNSTABLE",
+          "weak_pattern": "DIFFUSE_SURFACE_TEXTURE",
+          "guidance": "P3 후순위 검토: 최대 대비 44.0·점수 0.344, 섭동 후 신호 0% 유지(UNSTABLE)"
+        },
+        {
+          "sample_id": "20564",
+          "priority_score": 0.232592,
+          "stability": "UNSTABLE",
+          "weak_pattern": "DIFFUSE_SURFACE_TEXTURE",
+          "guidance": "P3 후순위 검토: 최대 대비 39.0·점수 0.386, 섭동 후 신호 0% 유지(UNSTABLE)"
+        },
+        {
+          "sample_id": "20744",
+          "priority_score": 0.194796,
+          "stability": "UNSTABLE",
+          "weak_pattern": "DIFFUSE_SURFACE_TEXTURE",
+          "guidance": "P3 후순위 검토: 최대 대비 36.0·점수 0.367, 섭동 후 신호 0% 유지(UNSTABLE)"
+        },
+        {
+          "sample_id": "20141",
+          "priority_score": 0.191077,
+          "stability": "UNSTABLE",
+          "weak_pattern": "SINGLE_CANDIDATE",
+          "guidance": "P3 후순위 검토: 최대 대비 29.0·점수 0.255, 섭동 후 신호 0% 유지(UNSTABLE)"
+        }
+      ],
+      "p0_good_false_alarms": [
+        {
+          "sample_id": "20472",
+          "priority_score": 0.919196,
+          "stability": "STABLE",
+          "weak_pattern": "SINGLE_CANDIDATE",
+          "guidance": "P0 최우선 검토: 최대 대비 70.0·점수 0.482, 섭동 후 신호 101% 유지(STABLE)"
+        },
+        {
+          "sample_id": "11136",
+          "priority_score": 0.917843,
+          "stability": "STABLE",
+          "weak_pattern": "SINGLE_CANDIDATE",
+          "guidance": "P0 최우선 검토: 최대 대비 93.0·점수 0.418, 섭동 후 신호 101% 유지(STABLE)"
+        },
+        {
+          "sample_id": "10058",
+          "priority_score": 0.85883,
+          "stability": "STABLE",
+          "weak_pattern": "SINGLE_CANDIDATE",
+          "guidance": "P0 최우선 검토: 최대 대비 58.0·점수 0.464, 섭동 후 신호 101% 유지(STABLE)"
+        },
+        {
+          "sample_id": "20038",
+          "priority_score": 0.855739,
+          "stability": "STABLE",
+          "weak_pattern": "COLLINEAR_SCRATCH_SUSPECT",
+          "guidance": "P0 최우선 검토: 후보 4개 직선 배열(R²=1.00), 섭동 후 신호 90% 유지(STABLE)"
+        },
+        {
+          "sample_id": "10930",
+          "priority_score": 0.843872,
+          "stability": "STABLE",
+          "weak_pattern": "DIFFUSE_SURFACE_TEXTURE",
+          "guidance": "P0 최우선 검토: 최대 대비 156.0·점수 0.424, 섭동 후 신호 98% 유지(STABLE)"
+        }
+      ]
+    },
+    "top_5_ranked": [
+      {
+        "sample_id": "11956",
+        "label": "defect",
+        "priority": "P0",
+        "priority_score": 0.944155,
+        "stability": "STABLE",
+        "weak_pattern": "SINGLE_CANDIDATE",
+        "guidance": "P0 최우선 검토: 최대 대비 112.0·점수 0.460, 섭동 후 신호 100% 유지(STABLE)"
+      },
+      {
+        "sample_id": "20472",
+        "label": "good",
+        "priority": "P0",
+        "priority_score": 0.919196,
+        "stability": "STABLE",
+        "weak_pattern": "SINGLE_CANDIDATE",
+        "guidance": "P0 최우선 검토: 최대 대비 70.0·점수 0.482, 섭동 후 신호 101% 유지(STABLE)"
+      },
+      {
+        "sample_id": "11136",
+        "label": "good",
+        "priority": "P0",
+        "priority_score": 0.917843,
+        "stability": "STABLE",
+        "weak_pattern": "SINGLE_CANDIDATE",
+        "guidance": "P0 최우선 검토: 최대 대비 93.0·점수 0.418, 섭동 후 신호 101% 유지(STABLE)"
+      },
+      {
+        "sample_id": "11867",
+        "label": "defect",
+        "priority": "P0",
+        "priority_score": 0.88607,
+        "stability": "STABLE",
+        "weak_pattern": "SINGLE_CANDIDATE",
+        "guidance": "P0 최우선 검토: 최대 대비 121.0·점수 0.390, 섭동 후 신호 102% 유지(STABLE)"
+      },
+      {
+        "sample_id": "10058",
+        "label": "good",
+        "priority": "P0",
+        "priority_score": 0.85883,
+        "stability": "STABLE",
+        "weak_pattern": "SINGLE_CANDIDATE",
+        "guidance": "P0 최우선 검토: 최대 대비 58.0·점수 0.464, 섭동 후 신호 101% 유지(STABLE)"
+      }
+    ]
+  },
+  "val_combined": {
+    "measured": true,
+    "split": "val",
+    "combined_task": "seg",
+    "total_val_samples": 400,
+    "elapsed_seconds": 90.76,
+    "status_distribution": {
+      "NG": 55,
+      "OK": 210,
+      "REVIEW": 135
+    },
+    "cross_evidence_flag_counts": {
+      "AREA_RATIO_LARGE": 2,
+      "EVIDENCE_ALIGNED": 210,
+      "LOCALIZATION_MISMATCH": 22,
+      "NG_SINGLE_ENGINE": 40,
+      "SCORE_GAP_LARGE": 183,
+      "SINGLE_ENGINE_EVIDENCE": 163,
+      "STATUS_MISMATCH": 172,
+      "UNMATCHED_COMPONENTS": 5,
+      "WEAK_MATCH": 5
+    },
+    "episodes_executed": 188,
+    "arbitrated_episodes": 56,
+    "arbitration_verdict_distribution": {
+      "BORDER_NOISE_SUSPECT": 1,
+      "BOTH_SALIENT": 2,
+      "ENGINE_A_SALIENT": 52,
+      "ENGINE_B_SALIENT": 1
+    },
+    "episode_latency_ms": {
+      "p50": 1.0462,
+      "p95": 4.2776
+    },
+    "verdict_immutability_violations": 0,
+    "audit_failures": 0,
+    "replay_failures": 0,
+    "val_review_samples": 135,
+    "val_review_defects": 7,
+    "val_review_priority_breakdown": {
+      "P0": {
+        "count": 0,
+        "defects": 0,
+        "goods": 0,
+        "ppv": {
+          "definition": "P0 등급 내 실제 결함 비율(PPV)",
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "ci95_low": null,
+          "ci95_high": null
+        }
+      },
+      "P1": {
+        "count": 0,
+        "defects": 0,
+        "goods": 0,
+        "ppv": {
+          "definition": "P1 등급 내 실제 결함 비율(PPV)",
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "ci95_low": null,
+          "ci95_high": null
+        }
+      },
+      "P2": {
+        "count": 39,
+        "defects": 4,
+        "goods": 35,
+        "ppv": {
+          "definition": "P2 등급 내 실제 결함 비율(PPV)",
+          "numerator": 4,
+          "denominator": 39,
+          "value": 0.10256410256410256,
+          "ci95_low": 0.04061331344668381,
+          "ci95_high": 0.23578854462856527
+        }
+      },
+      "P3": {
+        "count": 96,
+        "defects": 3,
+        "goods": 93,
+        "ppv": {
+          "definition": "P3 등급 내 실제 결함 비율(PPV)",
+          "numerator": 3,
+          "denominator": 96,
+          "value": 0.03125,
+          "ci95_low": 0.010684070371201164,
+          "ci95_high": 0.0878867932453698
+        }
+      }
+    },
+    "val_triage_lift": {
+      "total_review": 135,
+      "total_defects": 7,
+      "baseline_defect_rate": {
+        "definition": "REVIEW 내 전체 결함 비율",
+        "numerator": 7,
+        "denominator": 135,
+        "value": 0.05185185185185185,
+        "ci95_low": 0.025341171985529154,
+        "ci95_high": 0.10316121463758576
+      },
+      "top_k": {
+        "0.10": {
+          "fraction": 0.1,
+          "k": 14,
+          "captured_defects": 1,
+          "recall_at_k": {
+            "definition": "상위 10%(14/135) 내 결함 포착 / 전체 REVIEW 결함",
+            "numerator": 1,
+            "denominator": 7,
+            "value": 0.14285714285714285,
+            "ci95_low": 0.02567962434474355,
+            "ci95_high": 0.5131278292743189
+          },
+          "precision_at_k": {
+            "definition": "상위 10%(14/135) 내 결함 비율(PPV)",
+            "numerator": 1,
+            "denominator": 14,
+            "value": 0.07142857142857142,
+            "ci95_low": 0.012722215247890939,
+            "ci95_high": 0.31468704424151117
+          },
+          "random_expected_recall": 0.103704,
+          "lift": 1.377551
+        },
+        "0.20": {
+          "fraction": 0.2,
+          "k": 27,
+          "captured_defects": 2,
+          "recall_at_k": {
+            "definition": "상위 20%(27/135) 내 결함 포착 / 전체 REVIEW 결함",
+            "numerator": 2,
+            "denominator": 7,
+            "value": 0.2857142857142857,
+            "ci95_low": 0.08221892400405678,
+            "ci95_high": 0.6410655481673808
+          },
+          "precision_at_k": {
+            "definition": "상위 20%(27/135) 내 결함 비율(PPV)",
+            "numerator": 2,
+            "denominator": 27,
+            "value": 0.07407407407407407,
+            "ci95_low": 0.020554654060988622,
+            "ci95_high": 0.23369592683023144
+          },
+          "random_expected_recall": 0.2,
+          "lift": 1.428571
+        },
+        "0.30": {
+          "fraction": 0.3,
+          "k": 41,
+          "captured_defects": 5,
+          "recall_at_k": {
+            "definition": "상위 30%(41/135) 내 결함 포착 / 전체 REVIEW 결함",
+            "numerator": 5,
+            "denominator": 7,
+            "value": 0.7142857142857143,
+            "ci95_low": 0.35893445183261935,
+            "ci95_high": 0.9177810759959433
+          },
+          "precision_at_k": {
+            "definition": "상위 30%(41/135) 내 결함 비율(PPV)",
+            "numerator": 5,
+            "denominator": 41,
+            "value": 0.12195121951219512,
+            "ci95_low": 0.053233364685777176,
+            "ci95_high": 0.25544211520976884
+          },
+          "random_expected_recall": 0.303704,
+          "lift": 2.351916
+        }
+      }
+    },
+    "val_baseline_id_sort_lift": {
+      "total_review": 135,
+      "total_defects": 7,
+      "baseline_defect_rate": {
+        "definition": "REVIEW 내 전체 결함 비율",
+        "numerator": 7,
+        "denominator": 135,
+        "value": 0.05185185185185185,
+        "ci95_low": 0.025341171985529154,
+        "ci95_high": 0.10316121463758576
+      },
+      "top_k": {
+        "0.10": {
+          "fraction": 0.1,
+          "k": 14,
+          "captured_defects": 1,
+          "recall_at_k": {
+            "definition": "상위 10%(14/135) 내 결함 포착 / 전체 REVIEW 결함",
+            "numerator": 1,
+            "denominator": 7,
+            "value": 0.14285714285714285,
+            "ci95_low": 0.02567962434474355,
+            "ci95_high": 0.5131278292743189
+          },
+          "precision_at_k": {
+            "definition": "상위 10%(14/135) 내 결함 비율(PPV)",
+            "numerator": 1,
+            "denominator": 14,
+            "value": 0.07142857142857142,
+            "ci95_low": 0.012722215247890939,
+            "ci95_high": 0.31468704424151117
+          },
+          "random_expected_recall": 0.103704,
+          "lift": 1.377551
+        },
+        "0.20": {
+          "fraction": 0.2,
+          "k": 27,
+          "captured_defects": 2,
+          "recall_at_k": {
+            "definition": "상위 20%(27/135) 내 결함 포착 / 전체 REVIEW 결함",
+            "numerator": 2,
+            "denominator": 7,
+            "value": 0.2857142857142857,
+            "ci95_low": 0.08221892400405678,
+            "ci95_high": 0.6410655481673808
+          },
+          "precision_at_k": {
+            "definition": "상위 20%(27/135) 내 결함 비율(PPV)",
+            "numerator": 2,
+            "denominator": 27,
+            "value": 0.07407407407407407,
+            "ci95_low": 0.020554654060988622,
+            "ci95_high": 0.23369592683023144
+          },
+          "random_expected_recall": 0.2,
+          "lift": 1.428571
+        },
+        "0.30": {
+          "fraction": 0.3,
+          "k": 41,
+          "captured_defects": 2,
+          "recall_at_k": {
+            "definition": "상위 30%(41/135) 내 결함 포착 / 전체 REVIEW 결함",
+            "numerator": 2,
+            "denominator": 7,
+            "value": 0.2857142857142857,
+            "ci95_low": 0.08221892400405678,
+            "ci95_high": 0.6410655481673808
+          },
+          "precision_at_k": {
+            "definition": "상위 30%(41/135) 내 결함 비율(PPV)",
+            "numerator": 2,
+            "denominator": 41,
+            "value": 0.04878048780487805,
+            "ci95_low": 0.013480945365169042,
+            "ci95_high": 0.16138978870370846
+          },
+          "random_expected_recall": 0.303704,
+          "lift": 0.940767
+        }
+      }
+    }
+  }
+}

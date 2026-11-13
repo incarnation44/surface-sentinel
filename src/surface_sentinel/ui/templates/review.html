@@ -4,6 +4,7 @@
 <h1>검토 큐 (REVIEW {{ queue|length }}건)</h1>
 <div class="navlinks">
   <a href="/runs/{{ run.run_id }}">run 요약</a>
+  <a href="/runs/{{ run.run_id }}/triage">에이전트 트리아지</a>
   <a href="/runs/{{ run.run_id }}/metrics">지표</a>
 </div>
 <p class="keyhint">
@@ -17,14 +18,23 @@
 {% else %}
 <div class="review-layout">
   <aside>
-    <h2 style="margin-top:0">대기열</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:6px">
+      <h2 style="margin:0">대기열</h2>
+    </div>
+    <div class="toolbar" style="margin:0 0 8px">
+      <a class="btn-ghost btn {% if sort_mode != 'priority' %}active{% endif %}" style="padding:4px 8px;font-size:12px" href="/runs/{{ run.run_id }}/review">기본 순서</a>
+      <a class="btn-ghost btn {% if sort_mode == 'priority' %}active{% endif %}" style="padding:4px 8px;font-size:12px" href="/runs/{{ run.run_id }}/review?sort=priority">위험도순 (P0→P3)</a>
+    </div>
     <ul class="queue">
       {% for item in queue %}
       <li{% if current and item.sample_id == current.sample_id %} class="current"{% endif %}>
         <a href="{{ item.review_url }}">
-          {{ item.sample_id }}
-          <span class="badge b-{{ item.effective_status }}">{{ item.effective_status }}</span>
-          {% if item.decision %}<span class="badge-note">결정 완료</span>{% else %}<span class="badge-note">미결정</span>{% endif %}
+          <span class="num">{{ item.sample_id }}</span>
+          <span style="display:inline-flex;align-items:center;gap:4px">
+            <span class="prio p-{{ item.priority }}">{{ item.priority }}</span>
+            <span class="badge b-{{ item.effective_status }}">{{ item.effective_status }}</span>
+            {% if item.decision %}<span class="badge-note">결정 완료</span>{% else %}<span class="badge-note">미결정</span>{% endif %}
+          </span>
         </a>
       </li>
       {% endfor %}
@@ -32,14 +42,16 @@
   </aside>
   <section>
     {% if current %}
-    <h2 style="margin-top:0">{{ current.sample_id }}
+    <h2 style="margin-top:0" class="num">{{ current.sample_id }}
       <span class="badge b-{{ current.machine_status }}">{{ current.machine_status }}</span>
+      <span class="prio p-{{ current.priority }}">{{ current.priority }} ({{ "%.3f"|format(current.priority_score) }})</span>
       {% if current.decision %}
       → 최종 <span class="badge b-{{ current.effective_status }}">{{ current.effective_status }}</span>
       {% endif %}
     </h2>
-    <p class="meta">
+    <p class="meta num">
       점수 {{ "%.4f"|format(current.record.score) }} · 정답 {{ current.record.label }} ·
+      패턴 <code>{{ current.geometry.pattern.value }}</code> ·
       사유 {{ current.record.reasons|join(", ") or "-" }} ·
       <a href="{{ current.url }}">상세 보기</a>
     </p>
@@ -47,6 +59,20 @@
       {% if prev_url %}<a href="{{ prev_url }}">← 이전 (K)</a>{% else %}<span class="meta">이전 없음</span>{% endif %}
       {% if next_url %}<a href="{{ next_url }}">다음 (J) →</a>{% else %}<span class="meta">다음 없음</span>{% endif %}
     </div>
+
+    <div class="arg-card">
+      <div class="arg-head">
+        <strong style="font-size:13px">에이전트 3단 논증 &amp; 작업자 지침</strong>
+        <span class="meta num">직선성 R²={{ "%.2f"|format(current.geometry.collinearity_r2) }} · 경계비={{ "%.0f"|format(current.geometry.border_touch_ratio * 100) }}%</span>
+      </div>
+      <div class="arg-steps">
+        <div class="arg-step"><div class="arg-step-title">가설</div><div class="arg-step-body">{{ current.triage.argumentation.hypothesis }}</div></div>
+        <div class="arg-step"><div class="arg-step-title">검증</div><div class="arg-step-body">{{ current.triage.argumentation.experiment }}</div></div>
+        <div class="arg-step"><div class="arg-step-title">결론</div><div class="arg-step-body">{{ current.triage.argumentation.verdict }}</div></div>
+        <div class="arg-step"><div class="arg-step-title">지침</div><div class="arg-step-body">{{ current.triage.argumentation.operator_guidance }}</div></div>
+      </div>
+    </div>
+
     <div class="images">
       <figure>
         {% if has_original %}

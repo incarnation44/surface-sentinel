@@ -78,11 +78,11 @@ def load_agent_config(path: str | Path) -> AgentConfig:
     try:
         text = config_path.read_text(encoding="utf-8-sig")
     except OSError as exc:
-        raise ConfigError(f"cannot read agent config: {config_path}") from exc
+        raise ConfigError(f"에이전트 설정을 읽을 수 없습니다: {config_path}") from exc
     try:
         data = tomllib.loads(text)
     except tomllib.TOMLDecodeError as exc:
-        raise ConfigError(f"invalid TOML in {config_path}: {exc}") from exc
+        raise ConfigError(f"유효하지 않은 TOML 형식입니다({config_path}): {exc}") from exc
     return parse_agent_config(data)
 
 
@@ -90,7 +90,7 @@ def parse_agent_config(data: Mapping[str, Any]) -> AgentConfig:
     _unknown_keys(data, _TOP_KEYS, "agent")
     schema_version = data.get("schema_version", AGENT_SCHEMA_VERSION)
     if schema_version != AGENT_SCHEMA_VERSION:
-        raise ConfigError(f"unsupported agent schema_version: {schema_version!r}")
+        raise ConfigError(f"지원하지 않는 에이전트 schema_version입니다: {schema_version!r}")
     config = AgentConfig(
         schema_version=schema_version,
         budget=_section(data, "budget", _BUDGET_KEYS, BudgetConfig),
@@ -109,7 +109,7 @@ def _section(
 ) -> Any:
     payload = data.get(name, {})
     if not isinstance(payload, Mapping):
-        raise ConfigError(f"agent.{name} must be a table")
+        raise ConfigError(f"agent.{name}은(는) 테이블이어야 합니다")
     _unknown_keys(payload, keys, f"agent.{name}")
     hints = get_type_hints(section_type)
     kwargs: dict[str, Any] = {}
@@ -117,49 +117,55 @@ def _section(
         expected = hints[key]
         if expected is int:
             if isinstance(value, bool) or not isinstance(value, int):
-                raise ConfigError(f"agent.{name}.{key} must be an int")
+                raise ConfigError(f"agent.{name}.{key}은(는) 정수(int)여야 합니다")
         elif expected is float:
             if isinstance(value, bool) or not isinstance(value, (int, float)):
-                raise ConfigError(f"agent.{name}.{key} must be a number")
+                raise ConfigError(f"agent.{name}.{key}은(는) 숫자여야 합니다")
             value = float(value)
         elif expected is str and not isinstance(value, str):
-            raise ConfigError(f"agent.{name}.{key} must be a string")
+            raise ConfigError(f"agent.{name}.{key}은(는) 문자열이어야 합니다")
         kwargs[key] = value
     return section_type(**kwargs)
 
 
 def _validate(config: AgentConfig) -> None:
     budget = config.budget
-    _require(1 <= budget.max_actions <= 10, "budget.max_actions must be in [1, 10]")
-    _require(1 <= budget.max_profiles <= 4, "budget.max_profiles must be in [1, 4]")
+    _require(
+        1 <= budget.max_actions <= 10,
+        "budget.max_actions는 1 이상 10 이하이어야 합니다",
+    )
+    _require(
+        1 <= budget.max_profiles <= 4,
+        "budget.max_profiles는 1 이상 4 이하이어야 합니다",
+    )
     _require(
         budget.max_profiles <= budget.max_actions,
-        "budget.max_profiles must be <= budget.max_actions",
+        "budget.max_profiles는 budget.max_actions 이하이어야 합니다",
     )
-    _require(budget.extra_latency_ms > 0.0, "budget.extra_latency_ms must be > 0")
+    _require(budget.extra_latency_ms > 0.0, "budget.extra_latency_ms는 0보다 커야 합니다")
 
     policy = config.policy
     names = ("base_profile", "quality_low_profile", "roi_uncertain_profile")
     ids = tuple(getattr(policy, name) for name in names)
     for name, value in zip(names, ids, strict=True):
-        _require(bool(value.strip()), f"policy.{name} must be non-empty")
-    _require(len(set(ids)) == len(ids), "policy profile ids must be distinct")
+        _require(bool(value.strip()), f"policy.{name}은(는) 비어 있을 수 없습니다")
+    _require(len(set(ids)) == len(ids), "policy 프로파일 ID는 서로 달라야 합니다")
 
     comparison = config.comparison
     _require(
         1 <= comparison.subset_size <= 100_000,
-        "comparison.subset_size must be in [1, 100000]",
+        "comparison.subset_size는 1 이상 100000 이하이어야 합니다",
     )
-    _require(comparison.seed >= 0, "comparison.seed must be >= 0")
+    _require(comparison.seed >= 0, "comparison.seed는 0 이상이어야 합니다")
     _require(
         comparison.review_drop_pp_min >= 0.0,
-        "comparison.review_drop_pp_min must be >= 0",
+        "comparison.review_drop_pp_min은 0 이상이어야 합니다",
     )
     _require(
         comparison.escape_increase_pp_max >= 0.0,
-        "comparison.escape_increase_pp_max must be >= 0",
+        "comparison.escape_increase_pp_max는 0 이상이어야 합니다",
     )
-    _require(comparison.extra_p95_ms_max > 0.0, "comparison.extra_p95_ms_max must be > 0")
+    _require(comparison.extra_p95_ms_max > 0.0, "comparison.extra_p95_ms_max는 0보다 커야 합니다")
 
 
 def _require(condition: bool, message: str) -> None:
@@ -170,7 +176,7 @@ def _require(condition: bool, message: str) -> None:
 def _unknown_keys(payload: Mapping[str, Any], allowed: set[str], where: str) -> None:
     unknown = sorted(set(payload) - allowed)
     if unknown:
-        raise ConfigError(f"unknown keys in {where}: {', '.join(unknown)}")
+        raise ConfigError(f"{where}에 알 수 없는 키가 있습니다: {', '.join(unknown)}")
 
 
 __all__ = [

@@ -5,33 +5,77 @@
 <div class="navlinks">
   <a href="/stats">검사 통계</a>
   <a href="/compare">run 비교</a>
+  <a href="/watchdog">Watchdog 관제</a>
+  <a href="/inspections">교차증거 DB</a>
 </div>
 <p class="meta">runs 디렉터리에서 run_id 형식의 디렉터리만 최신순으로 표시합니다.</p>
 {% if runs %}
+{% set latest_run = runs[0] %}
+<div class="kpi-strip">
+  <div class="kpi">
+    <div class="kpi-label">총 Run 수</div>
+    <div class="kpi-val">{{ runs|length }}</div>
+    <div class="kpi-sub">배치 실행 이력</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">총 검사 샘플</div>
+    <div class="kpi-val">{{ total_samples }}</div>
+    <div class="kpi-sub">누적 처리 건수</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">최근 Run 상태</div>
+    <div class="kpi-val"><span class="badge b-{{ latest_run.payload.get('status', 'ERROR') }}">{{ latest_run.payload.get("status", "-") }}</span></div>
+    <div class="kpi-sub">{{ latest_run.run_id }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">최근 시작(UTC)</div>
+    <div class="kpi-val" style="font-size:14px">{{ latest_run.payload.get("started_at", "-") }}</div>
+    <div class="kpi-sub">분할: {{ latest_run.payload.get("split", "-") }}</div>
+  </div>
+</div>
+<div class="table-wrap">
 <table>
   <thead>
     <tr>
       <th>run_id</th><th>상태</th><th>분할</th><th>샘플</th>
-      <th>OK</th><th>NG</th><th>REVIEW</th><th>ERROR</th><th>시작(UTC)</th>
+      <th>OK</th><th>NG</th><th>REVIEW</th><th>ERROR</th><th>분포</th><th>바로가기</th><th>시작(UTC)</th>
     </tr>
   </thead>
   <tbody>
     {% for run in runs %}
     {% set counts = run.payload.get("counts", {}) %}
+    {% set s_total = counts.get("samples", 0)|int %}
     <tr>
-      <td><a href="/runs/{{ run.run_id }}">{{ run.run_id }}</a></td>
+      <td class="num"><a href="/runs/{{ run.run_id }}">{{ run.run_id }}</a></td>
       <td><span class="badge b-{{ run.payload.get('status', 'ERROR') }}">{{ run.payload.get("status", "-") }}</span></td>
       <td>{{ run.payload.get("split", "-") }}</td>
-      <td>{{ counts.get("samples", "-") }}</td>
-      <td>{{ counts.get("ok", "-") }}</td>
-      <td>{{ counts.get("ng", "-") }}</td>
-      <td>{{ counts.get("review", "-") }}</td>
-      <td>{{ counts.get("error", "-") }}</td>
+      <td class="num">{{ counts.get("samples", "-") }}</td>
+      <td class="num">{{ counts.get("ok", "-") }}</td>
+      <td class="num">{{ counts.get("ng", "-") }}</td>
+      <td class="num">{{ counts.get("review", "-") }}</td>
+      <td class="num">{{ counts.get("error", "-") }}</td>
+      <td style="min-width:110px">
+        {% if s_total > 0 %}
+        <div class="stack-bar" title="OK {{ counts.get('ok', 0) }} / NG {{ counts.get('ng', 0) }} / REVIEW {{ counts.get('review', 0) }} / ERROR {{ counts.get('error', 0) }}">
+          <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('ok', 0)|int / s_total) * 100) }}%;background:var(--ok)"></div>
+          <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('ng', 0)|int / s_total) * 100) }}%;background:var(--ng)"></div>
+          <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('review', 0)|int / s_total) * 100) }}%;background:var(--review)"></div>
+          <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('error', 0)|int / s_total) * 100) }}%;background:var(--error)"></div>
+        </div>
+        {% else %}-{% endif %}
+      </td>
+      <td style="white-space:nowrap">
+        <a href="/runs/{{ run.run_id }}">요약</a> ·
+        <a href="/runs/{{ run.run_id }}/triage">트리아지</a> ·
+        <a href="/runs/{{ run.run_id }}/review">검토 큐</a> ·
+        <a href="/runs/{{ run.run_id }}/metrics">지표</a>
+      </td>
       <td class="meta">{{ run.payload.get("started_at", "-") }}</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% else %}
 <div class="notice">표시할 run이 없습니다. 먼저 <code>surface-sentinel batch</code>로 run을 만드세요.</div>
 {% endif %}

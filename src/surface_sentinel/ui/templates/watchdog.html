@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Watchdog 무결성 감사 &amp; PSI 드리프트 관제 — Surface Sentinel
+<h2>4. Phase 4 사람-기계 피드백 캘리브레이션 &amp; 하드 샘플 큐 (observe-only)</h2>
+{% if not calibration or calibration.decided_count == 0 %}
+<div class="notice">아직 기록된 작업자 검토 결정이 없습니다. 검토 큐에서 결정을 남기면 우선순위 정합성과 하드 샘플 큐가 자동 집계됩니다.</div>
+{% else %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+    <div>
+      <strong>검토 피드백 집계 ({{ selected_run_id }}):</strong>
+      <span class="meta num" style="margin-left:8px">결정 완료 <strong>{{ calibration.decided_count }}</strong> / 전체 REVIEW {{ calibration.total_review_samples }}건 (미결정 {{ calibration.undecided_count }}건)</span>
+    </div>
+    <div class="meta num">
+      사람 확정 NG: <strong>{{ "%.1f"|format((calibration.confirmed_ng_ratio.value or 0) * 100) }}%</strong> ({{ calibration.confirmed_ng_ratio.numerator }}/{{ calibration.confirmed_ng_ratio.denominator }}) ·
+      기각 OK: <strong>{{ "%.1f"|format((calibration.false_alarm_ok_ratio.value or 0) * 100) }}%</strong> ({{ calibration.false_alarm_ok_ratio.numerator }}/{{ calibration.false_alarm_ok_ratio.denominator }})
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>우선순위</th><th>REVIEW 건수</th><th>검토 완료</th><th>사람 확정 NG</th><th>기각 OK</th><th>확정 NG 비율 (분모)</th></tr></thead>
+        <tbody>
+          {% for band in ["P0", "P1", "P2", "P3"] %}
+          {% set pb = calibration.by_priority[band] %}
+          {% set pr = pb.confirmed_ng_ratio %}
+          <tr>
+            <td><span class="prio p-{{ band }}">{{ band }}</span></td>
+            <td class="num">{{ pb.review_count }}</td>
+            <td class="num">{{ pb.decided_count }}</td>
+            <td class="num">{{ pb.confirmed_ng_count }}</td>
+            <td class="num">{{ pb.false_alarm_ok_count }}</td>
+            <td class="num">{% if pr.value is not none %}{{ "%.1f"|format(pr.value * 100) }}% (분모 {{ pr.denominator|int }}){% else %}- (분모 0){% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>샘플</th><th>하드 샘플 유형</th><th>우선순위</th><th>점수</th><th>사람 판정</th><th>사유 / 메모</th></tr></thead>
+        <tbody>
+          {% for h in calibration.hard_examples %}
+          <tr>
+            <td class="num"><a href="/runs/{{ selected_run_id }}/samples/{{ h.sample_id }}">{{ h.sample_id }}</a></td>
+            <td><span class="badge {{ "b-NG" if h.kind == "BLINDSPOT_DEFECT" else ("b-REVIEW" if h.kind == "HIGH_PRIO_FALSE_ALARM" else "b-ERROR") }}">{{ h.kind }}</span></td>
+            <td><span class="prio p-{{ h.priority }}">{{ h.priority }}</span></td>
+            <td class="num">{{ "%.4f"|format(h.score) }}</td>
+            <td><span class="badge b-{{ h.human_status }}">{{ h.human_status }}</span></td>
+            <td class="meta"><code>{{ h.reason_code }}</code>{% if h.note %} — {{ h.note }}{% endif %}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="meta">불일치 하드 샘플이 없습니다.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <ul style="margin:10px 0 0;padding-left:18px;font-size:12px;color:var(--muted)">
+    {% for rec in calibration.recommendations_ko %}<li>{{ rec }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}
+{% block content %}
+<h1>Watchdog 무결성 감사 &amp; PSI 드리프트 관제</h1>
+<p class="meta">Phase 3 observe-only 관제 콘솔 · 저장소 하드 게이트 · run/DB 무결성 · 배치 분포 PSI 드리프트 감시 (기계 판정·설정 불변)</p>
+
+<div class="kpi-strip">
+  <div class="kpi">
+    <div class="kpi-label">저장소 하드 게이트</div>
+    <div class="kpi-val"><span class="badge b-{{ gate_report.verdict.value }}">{{ gate_report.verdict.value }}</span></div>
+    <div class="kpi-sub">{{ gate_report.summary }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Run 무결성 감사</div>
+    <div class="kpi-val">
+      {% if run_audit %}<span class="badge b-{{ run_audit.verdict.value }}">{{ run_audit.verdict.value }}</span>{% else %}-{% endif %}
+    </div>
+    <div class="kpi-sub num">{{ selected_run_id or "선택된 run 없음" }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">기록 DB 무결성</div>
+    <div class="kpi-val"><span class="badge b-{{ db_audit.verdict.value }}">{{ db_audit.verdict.value }}</span></div>
+    <div class="kpi-sub">{{ "DB 존재 (읽기 전용)" if db_exists else "DB 미생성 (읽기 전용)" }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">PSI 분포 드리프트</div>
+    <div class="kpi-val">
+      {% if drift_report %}<span class="badge b-{{ drift_report.status.value }}">{{ drift_report.status.value }}</span>{% else %}-{% endif %}
+    </div>
+    <div class="kpi-sub num">{% if drift_report %}기준 {{ drift_report.baseline_total }}건 vs 대상 {{ drift_report.target_total }}건{% else %}비교할 run 없음{% endif %}</div>
+  </div>
+</div>
+
+<h2>1. 저장소 하드 게이트 감사 (H1~H7)</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+  {% for chk in gate_report.checks %}
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px">
+      <code style="font-size:12px;font-weight:700">{{ chk.name }}</code>
+      <span class="badge {{ 'b-PASS' if chk.passed else ('b-REJECT' if chk.severity == 'REJECT' else 'b-REVISE') }}">
+        {{ "PASS" if chk.passed else chk.severity }}
+      </span>
+    </div>
+    <div class="meta">{{ chk.detail }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<h2>2. Run 디렉터리 &amp; DB 무결성 감사</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      <strong>Run 디렉터리 감사</strong>
+      {% if runs %}
+      <form method="get" action="/watchdog" style="display:flex;gap:6px;align-items:center">
+        <input type="hidden" name="baseline" value="{{ base_id }}">
+        <input type="hidden" name="target" value="{{ target_id }}">
+        <select name="run_id" aria-label="감사할 run 선택" style="padding:4px 6px;border:1px solid var(--line);border-radius:4px;font-size:12px">
+          {% for r in runs %}
+          <option value="{{ r.run_id }}" {% if r.run_id == selected_run_id %}selected{% endif %}>{{ r.run_id }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" style="padding:4px 10px;font-size:12px">감사</button>
+      </form>
+      {% endif %}
+    </div>
+    {% if run_audit %}
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>판정</th><th>세부 내용</th></tr></thead>
+      <tbody>
+        {% for chk in run_audit.checks %}
+        <tr>
+          <td><code>{{ chk.name }}</code></td>
+          <td><span class="badge {{ 'b-PASS' if chk.passed else ('b-REJECT' if chk.severity == 'REJECT' else 'b-REVISE') }}">{{ "PASS" if chk.passed else chk.severity }}</span></td>
+          <td class="meta">{{ chk.detail }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="notice">감사할 run 디렉터리가 없습니다.</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px">
+      <strong>검사 기록 DB 감사 (읽기 전용 ?mode=ro)</strong>
+      <span class="badge b-{{ db_audit.verdict.value }}">{{ db_audit.verdict.value }}</span>
+    </div>
+    <p class="meta hash" style="margin-top:0">경로: {{ db_path }}</p>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>판정</th><th>세부 내용</th></tr></thead>
+      <tbody>
+        {% for chk in db_audit.checks %}
+        <tr>
+          <td><code>{{ chk.name }}</code></td>
+          <td><span class="badge {{ 'b-PASS' if chk.passed else ('b-REJECT' if chk.severity == 'REJECT' else 'b-REVISE') }}">{{ "PASS" if chk.passed else chk.severity }}</span></td>
+          <td class="meta">{{ chk.detail }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<h2>3. PSI 분포 드리프트 감시 (observe-only)</h2>
+{% if runs %}
+<form method="get" action="/watchdog" class="card" style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:12px">
+  <input type="hidden" name="run_id" value="{{ selected_run_id }}">
+  <div>
+    <label for="w-base" style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">기준선 run (baseline)</label>
+    <select id="w-base" name="baseline" style="padding:5px 8px;border:1px solid var(--line);border-radius:4px;font-size:12px">
+      {% for r in runs %}
+      <option value="{{ r.run_id }}" {% if r.run_id == base_id %}selected{% endif %}>{{ r.run_id }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="w-target" style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">대상 run (target)</label>
+    <select id="w-target" name="target" style="padding:5px 8px;border:1px solid var(--line);border-radius:4px;font-size:12px">
+      {% for r in runs %}
+      <option value="{{ r.run_id }}" {% if r.run_id == target_id %}selected{% endif %}>{{ r.run_id }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit">드리프트 계측</button>
+</form>
+
+{% if drift_report %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+    <div>
+      <strong>드리프트 종합 판정:</strong>
+      <span class="badge b-{{ drift_report.status.value }}">{{ drift_report.status.value }}</span>
+      <span class="meta num" style="margin-left:8px">기준선 {{ drift_report.baseline_total }}건 · 대상 {{ drift_report.target_total }}건 · 최소 표본 {{ drift_policy.min_samples }}건</span>
+    </div>
+    <span class="meta num">WATCH ≥ {{ "%.2f"|format(drift_policy.watch_psi) }} · DRIFT_ALERT ≥ {{ "%.2f"|format(drift_policy.alert_psi) }}</span>
+  </div>
+  {% for w in drift_report.warnings %}
+  <div class="notice" style="margin:6px 0">{{ w }}</div>
+  {% endfor %}
+
+  {% if drift_gauges %}
+  <div class="table-wrap" style="margin-top:10px">
+  <table>
+    <thead><tr><th>피처</th><th>PSI</th><th>등급</th><th>평균 변화</th><th style="width:280px">PSI 게이지 (0.10 WATCH / 0.25 ALERT)</th></tr></thead>
+    <tbody>
+      {% for g in drift_gauges %}
+      {% set f = g.feature %}
+      <tr>
+        <td><code>{{ f.feature }}</code></td>
+        <td class="num"><strong>{{ "%.4f"|format(f.psi) }}</strong></td>
+        <td><span class="badge b-{{ f.status.value }}">{{ f.status.value }}</span></td>
+        <td class="num">{{ "%.4f"|format(f.baseline_mean) }} → {{ "%.4f"|format(f.target_mean) }} ({{ "%+.4f"|format(f.delta_mean) }})</td>
+        <td>
+          <div style="position:relative;height:16px;background:#eef2f6;border:1px solid var(--line-soft);border-radius:3px">
+            <div style="position:absolute;top:0;bottom:0;left:{{ g.watch_pct }}%;width:2px;background:#d97706" title="WATCH 0.10"></div>
+            <div style="position:absolute;top:0;bottom:0;left:{{ g.alert_pct }}%;width:2px;background:#dc2626" title="DRIFT_ALERT 0.25"></div>
+            <div style="height:100%;width:{{ g.psi_pct }}%;background:{{ 'var(--ng)' if f.psi >= 0.25 else ('var(--review)' if f.psi >= 0.10 else 'var(--ok)') }};opacity:0.8;border-radius:2px"></div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{% else %}
+<div class="notice">드리프트를 비교할 run 디렉터리가 없습니다.</div>
+{% endif %}
+{% endblock %}

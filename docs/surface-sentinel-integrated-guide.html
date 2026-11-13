@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surface Sentinel 공식 통합 기술 가이드 (T10 · SS-DESIGN-1.1)</title>
+<style>
+:root {
+  --navy: #0f172a; --navy-2: #1e293b; --navy-line: #334155;
+  --bg: #f4f6f9; --surface: #ffffff; --surface-2: #f8fafc;
+  --line: #d5dce4; --line-soft: #e6ebf1;
+  --text: #0f172a; --muted: #475569; --accent: #1d4ed8;
+  --ok: #15803d; --ok-bg: #f0fdf4; --ok-bd: #bbf7d0;
+  --ng: #b91c1c; --ng-bg: #fef2f2; --ng-bd: #fecaca;
+  --review: #a16207; --review-bg: #fffbeb; --review-bd: #fde68a;
+  --err: #334155; --err-bg: #f1f5f9; --err-bd: #cbd5e1;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; font-family: "Pretendard Variable", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif; color: var(--text); background: var(--bg); line-height: 1.58; font-size: 14px; }
+.num, table, code, pre, .kpi-val, .mono { font-variant-numeric: tabular-nums; }
+code, pre, .mono { font-family: "JetBrains Mono", "Consolas", "D2Coding", monospace; }
+code { background: #f1f5f9; border: 1px solid var(--line-soft); border-radius: 4px; padding: 1px 5px; font-size: 12.5px; }
+pre { background: #0f172a; color: #e2e8f0; padding: 12px 14px; border-radius: 6px; overflow-x: auto; font-size: 12.5px; line-height: 1.48; margin: 10px 0; }
+header.topbar { position: sticky; top: 0; z-index: 40; background: var(--navy); color: #f8fafc; border-bottom: 1px solid var(--navy-2); padding: 10px 20px; }
+.topbar-inner { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+.top-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: #cbd5e1; }
+.top-btn { background: var(--navy-2); color: #f8fafc; border: 1px solid var(--navy-line); border-radius: 5px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+.top-btn:hover { background: #334155; }
+.layout { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 20px; padding: 20px; }
+aside.sidebar { position: sticky; top: 64px; align-self: start; max-height: calc(100vh - 80px); overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+.sidebar-title { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; margin: 0 0 8px; }
+.toc-filter { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; font-size: 12.5px; margin-bottom: 8px; }
+nav#guide-toc ul { list-style: none; margin: 0; padding: 0; }
+nav#guide-toc li { margin: 1px 0; }
+nav#guide-toc a { display: block; padding: 4px 8px; border-radius: 4px; color: var(--text); text-decoration: none; font-size: 12.5px; }
+nav#guide-toc a:hover { background: #eff6ff; color: var(--accent); }
+nav#guide-toc a.active { background: #dbeafe; color: #1e40af; font-weight: 700; }
+#mobile-toc-details { display: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
+#mobile-toc-details summary { font-weight: 700; cursor: pointer; font-size: 13.5px; }
+.mobile-toc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 10px; margin-top: 8px; }
+.mobile-toc-grid a { font-size: 12px; color: var(--accent); text-decoration: none; padding: 2px 0; }
+main.content { min-width: 0; }
+section.doc-sec { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px 22px; margin-bottom: 16px; scroll-margin-top: 72px; }
+section.doc-sec h2 { margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line-soft); font-size: 17px; color: var(--navy); display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+h3 { font-size: 14.5px; margin: 14px 0 6px; color: var(--navy-2); }
+p { margin: 8px 0; }
+ul, ol { margin: 6px 0 10px; padding-left: 20px; }
+li { margin: 3px 0; }
+.tag { display: inline-block; font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); vertical-align: middle; }
+.tag-fact { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+.tag-design { background: #f5f3ff; color: #5b21b6; border-color: #ddd6fe; }
+.tag-measured { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+.tag-not-measured { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+.badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 4px; border: 1px solid transparent; }
+.b-ok { background: var(--ok-bg); color: var(--ok); border-color: var(--ok-bd); }
+.b-ng { background: var(--ng-bg); color: var(--ng); border-color: var(--ng-bd); }
+.b-rev { background: var(--review-bg); color: var(--review); border-color: var(--review-bd); }
+.b-err { background: var(--err-bg); color: var(--err); border-color: var(--err-bd); }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 10px; margin: 12px 0; }
+.kpi-card { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; }
+.kpi-label { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.kpi-val { font-size: 20px; font-weight: 700; color: var(--navy); margin: 3px 0; }
+.kpi-sub { font-size: 11.5px; color: var(--muted); }
+.callout { border-left: 4px solid var(--accent); background: #f8fafc; padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 10px 0; font-size: 13.5px; }
+.callout-fail { border-left-color: var(--ng); background: #fef2f2; }
+.table-wrap { overflow-x: auto; margin: 10px 0; }
+table { border-collapse: collapse; width: 100%; background: var(--surface); border: 1px solid var(--line); }
+th, td { border: 1px solid var(--line-soft); padding: 6px 9px; text-align: left; font-size: 12.5px; vertical-align: top; }
+th { background: #f1f5f9; color: #334155; font-weight: 700; }
+td.num, th.num { text-align: right; }
+.svg-box { background: #fcfdff; border: 1px solid var(--line); border-radius: 6px; padding: 10px; margin: 10px 0; overflow-x: auto; }
+.diagram-svg { width: 100%; height: auto; display: block; max-width: 820px; margin: 0 auto; }
+.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.cover-hero { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #f8fafc; border-radius: 8px; padding: 22px 24px; margin-bottom: 14px; }
+.cover-hero h1 { margin: 0 0 6px; font-size: 24px; letter-spacing: -0.02em; color: #ffffff; }
+.cover-hero p { margin: 4px 0; color: #cbd5e1; font-size: 13.5px; }
+@media (max-width: 960px) { .layout { grid-template-columns: 1fr; padding: 12px; } aside.sidebar { display: none; } #mobile-toc-details { display: block; } }
+@media print { header.topbar, aside.sidebar, #mobile-toc-details, .no-print { display: none !important; } body { background: #ffffff; font-size: 11px; } .layout { display: block; padding: 0; max-width: 100%; } section.doc-sec { border: 1px solid #cbd5e1; break-inside: avoid; page-break-inside: avoid; margin-bottom: 10px; padding: 12px; } table, .svg-box { break-inside: avoid; page-break-inside: avoid; } }
+</style>
+</head>
+<body>
+<header class="topbar no-print">
+  <div class="topbar-inner">
+    <div class="brand">Surface Sentinel · 공식 통합 기술 가이드 (T10)</div>
+    <div class="top-meta">
+      <span>설계: <code>SS-DESIGN-1.1</code></span>
+      <span>config: <code>a762ba63 (r20)</code></span>
+      <span>외부 CDN 0 · 오프라인 자립형</span>
+      <button type="button" class="top-btn" onclick="window.print()">인쇄 / PDF 저장</button>
+    </div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar no-print" aria-label="데스크톱 목차">
+    <p class="sidebar-title">통합 목차 (30 섹션)</p>
+    <input id="toc-search" class="toc-filter" type="search" placeholder="섹션 필터..." aria-label="목차 섹션 검색">
+    <nav id="guide-toc" aria-label="통합 가이드 목차"><ul><li><a href="#sec-01-cover">1. 표지</a></li>
+<li><a href="#sec-02-summary">2. 한 페이지 요약</a></li>
+<li><a href="#sec-03-problem">3. 문제/차별점</a></li>
+<li><a href="#sec-04-scope">4. 범위</a></li>
+<li><a href="#sec-05-user-flow">5. 사용자 흐름</a></li>
+<li><a href="#sec-06-screens">6. 화면</a></li>
+<li><a href="#sec-07-data-source">7. 데이터 출처/라이선스</a></li>
+<li><a href="#sec-08-data-structure">8. 데이터 구조</a></li>
+<li><a href="#sec-09-splits-leakage">9. 분할/누출</a></li>
+<li><a href="#sec-10-architecture">10. 아키텍처</a></li>
+<li><a href="#sec-11-pipeline">11. 파이프라인</a></li>
+<li><a href="#sec-12-algorithm">12. 알고리즘</a></li>
+<li><a href="#sec-13-features-scoring">13. 특징/점수</a></li>
+<li><a href="#sec-14-status-contract">14. 상태 계약</a></li>
+<li><a href="#sec-15-baselines-ablation">15. 기준선/ablation</a></li>
+<li><a href="#sec-16-metrics-denominators">16. 지표/분모</a></li>
+<li><a href="#sec-17-results">17. 결과</a></li>
+<li><a href="#sec-18-failures">18. 실패</a></li>
+<li><a href="#sec-19-tests-reproducibility">19. 테스트/재현성</a></li>
+<li><a href="#sec-20-artifacts">20. 산출물</a></li>
+<li><a href="#sec-21-cli-structure">21. CLI/폴더</a></li>
+<li><a href="#sec-22-install">22. 설치</a></li>
+<li><a href="#sec-23-agent-design">23. 에이전트 설계</a></li>
+<li><a href="#sec-24-agent-results">24. 에이전트 결과</a></li>
+<li><a href="#sec-25-gates-schedule">25. 일정/게이트</a></li>
+<li><a href="#sec-26-limitations">26. 한계</a></li>
+<li><a href="#sec-27-history">27. 작업/리뷰 이력</a></li>
+<li><a href="#sec-28-glossary">28. 용어</a></li>
+<li><a href="#sec-29-references">29. 출처</a></li>
+<li><a href="#sec-30-changelog">30. 변경 로그</a></li></ul></nav>
+  </aside>
+  <main class="content">
+    <details id="mobile-toc-details" class="no-print">
+      <summary>목차 열기 / 섹션 바로가기 (30개 필수 섹션)</summary>
+      <div class="mobile-toc-grid"><a href="#sec-01-cover">1. 표지</a>
+<a href="#sec-02-summary">2. 한 페이지 요약</a>
+<a href="#sec-03-problem">3. 문제/차별점</a>
+<a href="#sec-04-scope">4. 범위</a>
+<a href="#sec-05-user-flow">5. 사용자 흐름</a>
+<a href="#sec-06-screens">6. 화면</a>
+<a href="#sec-07-data-source">7. 데이터 출처/라이선스</a>
+<a href="#sec-08-data-structure">8. 데이터 구조</a>
+<a href="#sec-09-splits-leakage">9. 분할/누출</a>
+<a href="#sec-10-architecture">10. 아키텍처</a>
+<a href="#sec-11-pipeline">11. 파이프라인</a>
+<a href="#sec-12-algorithm">12. 알고리즘</a>
+<a href="#sec-13-features-scoring">13. 특징/점수</a>
+<a href="#sec-14-status-contract">14. 상태 계약</a>
+<a href="#sec-15-baselines-ablation">15. 기준선/ablation</a>
+<a href="#sec-16-metrics-denominators">16. 지표/분모</a>
+<a href="#sec-17-results">17. 결과</a>
+<a href="#sec-18-failures">18. 실패</a>
+<a href="#sec-19-tests-reproducibility">19. 테스트/재현성</a>
+<a href="#sec-20-artifacts">20. 산출물</a>
+<a href="#sec-21-cli-structure">21. CLI/폴더</a>
+<a href="#sec-22-install">22. 설치</a>
+<a href="#sec-23-agent-design">23. 에이전트 설계</a>
+<a href="#sec-24-agent-results">24. 에이전트 결과</a>
+<a href="#sec-25-gates-schedule">25. 일정/게이트</a>
+<a href="#sec-26-limitations">26. 한계</a>
+<a href="#sec-27-history">27. 작업/리뷰 이력</a>
+<a href="#sec-28-glossary">28. 용어</a>
+<a href="#sec-29-references">29. 출처</a>
+<a href="#sec-30-changelog">30. 변경 로그</a></div>
+    </details>
+    <section id="sec-01-cover" class="doc-sec">
+      <h2>1. 표지 <span class="tag tag-design">[DESIGN]</span></h2>
+      <div class="cover-hero">
+        <h1>Surface Sentinel 공식 통합 기술 가이드</h1>
+        <p>KolektorSDD2 표면 결함 검사 · 결정론적 10단계 파이프라인 · 3-Class(OK/NG/REVIEW) 격리 · 2계층 Observe-Only 에이전트 검증 시스템</p>
+        <p class="mono">설계 기준: SS-DESIGN-1.1 · ADR 0001–0008 · 동결 설정: configs/base.toml (a762ba63, r20)</p>
+      </div>
+      <div class="table-wrap"><table>
+        <tr><th>항목</th><th>정본 값</th><th>근거/태그</th></tr>
+        <tr><td>대상 데이터셋</td><td>KolektorSDD2 (정본 3,335장 = 결함 356 + 정상 2,979, CC BY-NC-SA 4.0)</td><td><span class="tag tag-fact">[FACT]</span></td></tr>
+        <tr><td>주 검사 엔진</td><td>결정론적 10단계 OpenCV 파이프라인 (<code>r20</code> 동결, config hash <code>a762ba63</code>)</td><td><span class="tag tag-design">[DESIGN]</span></td></tr>
+        <tr><td>비교 트랙(E트랙)</td><td>YOLO det/seg ONNX (선택 extra) — 독립 val 400 짝평가 이득 +0.0000 → 채택 보류·<code>r20</code> 유지</td><td><span class="tag tag-measured">[MEASURED]</span></td></tr>
+        <tr><td>에이전트 계층</td><td>Tier 1 전술(교차 증거·트리아지·반사실 해석) + Tier 2 Watchdog(감사·드리프트·재현성), 100% observe-only</td><td><span class="tag tag-design">[DESIGN]</span></td></tr>
+        <tr><td>문서 원칙</td><td>한국어 본문 · 영어 식별자 보존 · 모든 수치에 분모와 출처 태그 병기 · 실패/미달 은폐 금지</td><td><span class="tag tag-design">[DESIGN]</span></td></tr>
+      </table></div>
+    </section>
+    <section id="sec-02-summary" class="doc-sec">
+      <h2>2. 한 페이지 요약 <span class="tag tag-measured">[MEASURED]</span></h2>
+      <p>Surface Sentinel은 높은 정확도 수치를 과장하는 대신 <strong>데이터 누출 차단, <code>OK / NG / REVIEW / ERROR</code> 분리, 분모·Wilson 95% 신뢰구간 명시, 실패 사례 공개, 결정론적 재현성, 읽기 전용 무결성 감사</strong>를 핵심 가치로 삼는 표면 결함 검사 및 검증 하네스다.</p>
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">tune 2,001장 (r20 채택)</div><div class="kpi-val">11.68% escape</div><div class="kpi-sub">25/214 · false-NG 5.82% (104/1,787) · review 38.93% (779/2,001)</div></div>
+        <div class="kpi-card"><div class="kpi-label">봉인 test 1,334장 (T08)</div><div class="kpi-val">14.79% escape</div><div class="kpi-sub">21/142 · Wilson 상한 21.55% (FAIL) · false-NG 7.21% · review 34.71%</div></div>
+        <div class="kpi-card"><div class="kpi-label">Phase 2 트리아지 (779 REVIEW)</div><div class="kpi-val">40.91% Top-10%</div><div class="kpi-sub">Lift 4.09x (18/44) · Top-20% 54.55% (24/44) · P0 PPV 25.76%</div></div>
+        <div class="kpi-card"><div class="kpi-label">Phase 4 반사실 면적 병목</div><div class="kpi-val">95.12%</div><div class="kpi-sub">741/779 REVIEW가 면적(&lt;=133px) 병목 · 경계 도달 가능 38건(4.88%)</div></div>
+      </div>
+      <div class="callout callout-fail"><strong>목표 미달 투명 공개 <span class="tag tag-measured">[MEASURED]</span>:</strong> 봉인 <code>test</code> 1,334장에서 목표 5개 중 4개는 통과했으나 <strong>escape Wilson 95% 상한 21.55% (&gt; 20.00% 기준)</strong>이 미달(FAIL)했다. 봉인 개봉 후 사후 임계값 조정은 설계상 금지되므로 <code>r20</code> 설정을 변경하지 않고 그대로 보고한다.</div>
+    </section>
+    <section id="sec-03-problem" class="doc-sec">
+      <h2>3. 문제 정의와 차별점 <span class="tag tag-design">[DESIGN]</span></h2>
+      <p>제조 표면 검사 파이프라인에서는 (1) 동일 부품·복사본 혼합에 의한 <strong>데이터 누출</strong>, (2) 처리 오류를 정상(OK)으로 삼키는 <strong>판정 혼선</strong>, (3) 분모·신뢰구간 없는 <strong>측정 왜곡</strong>이 반복된다.</p>
+      <ul>
+        <li><strong>3-Class + ERROR 분리:</strong> <span class="badge b-ok">OK</span> <span class="badge b-ng">NG</span> <span class="badge b-rev">REVIEW</span>와 비판정 <span class="badge b-err">ERROR</span>를 분리해 오류를 정상으로 오분류하지 않는다.</li>
+        <li><strong>OK/NG 판정 불변 계약:</strong> 사람 검토와 에이전트 분석은 오직 <code>REVIEW</code> 샘플에만 부가되며, <code>OK</code>·<code>NG</code> 기계 판정은 절대 덮어쓰지 않는다.</li>
+        <li><strong>고정 규칙 엔진 채택 이유:</strong> 검사·감사·트리아지 전 과정에서 외부 모델 호출, 네트워크, 셸 실행을 배제해 오프라인 산업 환경에서 바이트 단위 결정론과 감사 추적성을 보장한다.</li>
+      </ul>
+    </section>
+    <section id="sec-04-scope" class="doc-sec">
+      <h2>4. 제품 범위와 비범위 <span class="tag tag-design">[DESIGN]</span></h2>
+      <div class="two-col">
+        <div><h3>포함 범위 (In-Scope)</h3><ul><li>KolektorSDD2 반입본 manifest·dHash 중복 그룹 분할·L1–L8 누출 감사</li><li>결정론적 10단계 OpenCV 파이프라인(<code>inspect</code>)과 원자적 배치 실행(<code>batch</code>)</li><li>기준선(B0/B1/B2)·집계 지표·ablation·부트스트랩 CI·봉인 1회 측정(<code>eval</code>)</li><li>로컬 정밀 계측 GUI(<code>serve</code>), append-only 검토 저장소, SQLite <code>records.db</code></li><li>2계층 Observe-Only 에이전트(교차 증거·트리아지·Watchdog·반사실 해석·캘리브레이션)</li></ul></div>
+        <div><h3>비범위 (Out-of-Scope / 미승인)</h3><ul><li>현장 양산 유병률 보정 및 공개 데이터셋 밖 공정 일반화 주장 <span class="tag tag-not-measured">[NOT_MEASURED]</span></li><li>PatchCore, anomalib, DirectML, PG2, AUPIMO, RKNN/Orange Pi 하드웨어 배포</li><li>에이전트 또는 작업자 UI가 기계 <code>OK</code>/<code>NG</code> 판정이나 <code>base.toml</code>을 자동 수정하는 행위</li><li>데이터셋 이미지 재배포 및 외부 CDN·클라우드 API 의존성</li></ul></div>
+      </div>
+    </section>
+    <section id="sec-05-user-flow" class="doc-sec">
+      <h2>5. 사용자 흐름 <span class="tag tag-design">[DESIGN]</span></h2>
+      <ol>
+        <li><strong>데이터 준비 및 무결성 확인:</strong> 반입본 <code>data/raw/kolektorsdd2</code>에서 <code>data build-manifest</code> → <code>make-splits</code> → <code>verify</code> 실행 후 <code>gate</code>로 봉인·설정 동결 확인.</li>
+        <li><strong>배치 검사 실행:</strong> <code>batch --split tune</code>으로 <code>runs/&lt;run_id&gt;/</code>에 원자적 산출물 생성(<code>test</code>·<code>official_test</code>는 <code>exit 6</code> 차단).</li>
+        <li><strong>트리아지 우선순위 검토:</strong> GUI <code>/runs/&lt;run_id&gt;/triage</code> 및 <code>/runs/&lt;run_id&gt;/review?sort=priority</code>에서 P0 최우선 <code>REVIEW</code> 큐를 키보드 <code>J</code>/<code>K</code>로 순회하며 사람 결정 append.</li>
+        <li><strong>원인 정밀 계측:</strong> <code>/runs/&lt;run_id&gt;/samples/&lt;id&gt;</code>에서 점수 눈금자·2D 등위선 위상도·반사실 반전 조건·마스크 중첩 루페 확인.</li>
+        <li><strong>무결성 감사 및 드리프트 점검:</strong> <code>/watchdog</code> 또는 <code>surface-sentinel gate</code>, <code>repro check</code>, <code>agent drift</code>로 변조·분포 이탈 감시.</li>
+      </ol>
+    </section>
+    <section id="sec-06-screens" class="doc-sec">
+      <h2>6. 로컬 GUI 화면과 라우트 <span class="tag tag-design">[DESIGN]</span></h2>
+      <p>로컬 FastAPI + Jinja2 콘솔(<code>127.0.0.1</code> 전용, 외부 요청 0건)은 T07 기본 6경로에서 Wave 3 정밀 계측 콘솔로 확장됐다.</p>
+      <div class="table-wrap"><table>
+        <tr><th>라우트</th><th>기능 및 계측 요소</th><th>데이터 접근 방식</th></tr>
+        <tr><td><code>/</code>, <code>/runs/&lt;run_id&gt;</code></td><td>배치 실행 목록 및 상태 필터(<code>ALL/OK/NG/REVIEW/ERROR</code>)·실시간 검색</td><td><code>runs/</code> 읽기 전용</td></tr>
+        <tr><td><code>/runs/&lt;run_id&gt;/triage</code></td><td>Phase 2 누적 결함 회수 곡선 SVG, Top-K Lift, P0–P3 우선순위 큐</td><td>메모리 내 결정론 계산</td></tr>
+        <tr><td><code>/runs/&lt;run_id&gt;/samples/&lt;id&gt;</code></td><td>점수 계측 눈금자 SVG, 2D <code>(면적×대비)</code> 등위선 위상도, 4단 논증·반사실 표, 단계 타이밍 바</td><td>읽기 전용 + SVG</td></tr>
+        <tr><td><code>/runs/&lt;run_id&gt;/samples/&lt;id&gt;/mask</code></td><td>5레이어 전환 + 오버레이 중첩 알파 슬라이더(<code>loupe-alpha</code>) 및 확대 루페</td><td>로컬 PNG/스테이지</td></tr>
+        <tr><td><code>/runs/&lt;run_id&gt;/review</code></td><td><code>sort=priority</code> 지원, <code>J/K</code> 단축키, <code>REVIEW</code> 전용 append-only 결정 폼</td><td><code>review_decisions.jsonl</code> append</td></tr>
+        <tr><td><code>/runs/&lt;run_id&gt;/metrics</code></td><td>혼동행렬·지표 테이블 + 2D 라인스캔 스트립 6×14 공간 핫스팟 지도</td><td>읽기 전용 집계</td></tr>
+        <tr><td><code>/watchdog</code></td><td>저장소 하드 게이트, run/DB 무결성 감사, PSI 드리프트, Phase 4 피드백 캘리브레이션</td><td>DB <code>?mode=ro</code> (미존재 시 미생성)</td></tr>
+        <tr><td><code>/inspections</code>, <code>/inspections/&lt;id&gt;</code></td><td>DB 이력 탐색기, 엔진별 관찰 비교, 패치 중재 결론, <code>--with-api</code> 시 실시간 업로드 검사</td><td><code>?mode=ro</code> (실시간 API 선택)</td></tr>
+        <tr><td><code>/inspections/export.csv</code></td><td>전체 이력(<code>CSV 저장</code>)·불량 이력(<code>?status=NG</code>, <code>NG 이력 CSV</code>) UTF-8 BOM CSV 내려받기, <code>/inspections</code>의 <code>샘플 20장 자동 검사</code>(<code>/inspections/demo-samples</code>)</td><td><code>?mode=ro</code> 조회 · 검사 기록은 append-only</td></tr>
+        <tr><td><code>/cinema</code></td><td>10단계 3D 레이어·2D 와이프·결함 줌인 콜아웃 시연. 첫 프리셋은 발표 대표 불량 <code>#20117</code>(tune, r20에서 NG 1.1992 · 767px · 대비 122.0), run 프리셋은 동결 <code>config_hash</code>와 같은 run에서만 선택</td><td><code>TemporaryDirectory</code> 실행 · runs/DB 무기록</td></tr>
+        <tr><td><code>/stats</code>, <code>/compare</code></td><td>저장소 요약 통계 및 두 실행 간 지표 <code>Δ (target - base)</code> 비교</td><td>읽기 전용</td></tr>
+      </table></div>
+    </section>
+    <section id="sec-07-data-source" class="doc-sec">
+      <h2>7. 데이터 출처와 라이선스 <span class="tag tag-fact">[FACT]</span></h2>
+      <ul>
+        <li><span class="tag tag-fact">[FACT]</span> 공식 페이지 직접 진술: 결함 이미지 <strong>356장</strong>(<code>"356 images with visible defects"</code>), 정상 이미지 <strong>2,979장</strong>(<code>"2979 images without any defect"</code>) → 합산 도출 전체 <strong>3,335장</strong>.</li>
+        <li><span class="tag tag-fact">[FACT]</span> 공식 분할: 학습 세트 246 양성 + 2,085 음성(합산 <strong>2,331장</strong>), 테스트 세트 110 양성 + 894 음성(합산 <strong>1,004장</strong>).</li>
+        <li><span class="tag tag-fact">[FACT]</span> 근사 해상도: <code>approximately 230 x 630 pixels</code>, 결함 유형은 스크래치·미세 반점·표면 결함 등.</li>
+        <li><span class="tag tag-fact">[FACT]</span> 라이선스: <strong>CC BY-NC-SA 4.0</strong>. 상업적 이용은 별도 계약이 필요하며 이 저장소는 원본 이미지를 재배포하지 않는다.</li>
+      </ul>
+    </section>
+    <section id="sec-08-data-structure" class="doc-sec">
+      <h2>8. 데이터 구조와 중복 그룹 <span class="tag tag-measured">[MEASURED]</span></h2>
+      <div class="table-wrap"><table>
+        <tr><th>항목</th><th>실측 값</th><th>비고</th></tr>
+        <tr><td>manifest 전체 / 정본</td><td><strong>3,336행</strong>(복사본 1행 포함) / 정본 <strong>3,335</strong></td><td>결함 356 + 정상 2,979</td></tr>
+        <tr><td>완전 중복 1쌍</td><td><code>train/10301.png</code> ↔ <code>train/10301 (copy).png</code></td><td>이미지·마스크 sha256 동일, 복사본 마스크 <code>10301_GT (copy).png</code></td></tr>
+        <tr><td>채널 및 해상도 실측</td><td>이미지 3채널 uint8 · 폭 184–241px · 높이 597–665px</td><td>마스크 3,336개 1채널(정상 빈 마스크 2,979개)</td></tr>
+        <tr><td>dHash 유사 그룹</td><td>threshold=2 · 총 <strong>3,335그룹</strong> · 최대 2행</td><td>그룹 상한 2% 초과 0건, 재그룹핑 없음</td></tr>
+        <tr><td>약지도 정의 파일</td><td><code>split_weakly_*.pyb</code> 5개</td><td>설계 범위 외로 manifest·분할에서 제외</td></tr>
+      </table></div>
+    </section>
+    <section id="sec-09-splits-leakage" class="doc-sec">
+      <h2>9. 데이터 분할과 누출 방지 <span class="tag tag-measured">[MEASURED]</span></h2>
+      <p>중복 그룹 단위 층화 분할(<code>seed=42</code>)을 적용해 <code>data/audit/T03_audit.json</code>에서 누출 검사 <strong>L1–L4, L8 위반 0건</strong>을 확인했다.</p>
+      <div class="table-wrap"><table>
+        <tr><th>분할 이름</th><th>전체 행</th><th>결함 / 정상</th><th>접근 정책 및 잠금 상태</th></tr>
+        <tr><td><code>tune</code></td><td class="num"><strong>2,001</strong></td><td class="num">214 / 1,787 (10.69%)</td><td>상시 개발·평가·트리아지·캘리브레이션 허용</td></tr>
+        <tr><td><code>test</code> (내부 봉인)</td><td class="num"><strong>1,334</strong></td><td class="num">142 / 1,192 (10.64%)</td><td>기본 거부(<code>E_SEALED_DENIED</code>, exit 6) · T08 <code>test.lock.json</code> <code>access_count=2</code>(동결 후 미개봉)</td></tr>
+        <tr><td><code>official_test</code> (보조)</td><td class="num"><strong>1,004</strong></td><td class="num">110 / 894 (10.96%)</td><td>내부 <code>tune</code> 579 + <code>test</code> 425와 중복(L7 REPORTED) → 독립 감사 불가, 보조 참고만</td></tr>
+      </table></div>
+    </section>
+    <section id="sec-10-architecture" class="doc-sec">
+      <h2>10. 시스템 아키텍처 <span class="tag tag-design">[DESIGN]</span></h2>
+      <p>검사 판정은 고정 10단계 OpenCV 파이프라인이 단독 소유하며, 선택 E트랙(YOLO ONNX)과 2계층 에이전트는 <code>engine_observations</code> 및 <code>agent_assessments</code>로 분리 저장된다.</p>
+      <div class="svg-box"><svg viewBox="0 0 820 265" class="diagram-svg" role="img" aria-label="Surface Sentinel 시스템 아키텍처 다이어그램">
+        <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#334155"/></marker></defs>
+        <rect x="12" y="18" width="145" height="62" rx="6" fill="#eff6ff" stroke="#1d4ed8" stroke-width="1.5"/><text x="84" y="42" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a8a">입력 &amp; 봉인 가드</text><text x="84" y="60" text-anchor="middle" font-size="10.5" fill="#334155">tune 허용 / test exit 6</text>
+        <rect x="190" y="12" width="225" height="74" rx="6" fill="#f0fdf4" stroke="#15803d" stroke-width="1.6"/><text x="302" y="34" text-anchor="middle" font-size="12" font-weight="700" fill="#14532d">10단계 OpenCV 파이프라인 (r20)</text><text x="302" y="51" text-anchor="middle" font-size="10.5" fill="#334155">ROI · 전처리 · z-map · 정제 · 점수</text><text x="302" y="68" text-anchor="middle" font-size="10.5" font-weight="700" fill="#15803d">판정 소유: OK / NG / REVIEW / ERROR</text>
+        <rect x="190" y="110" width="225" height="58" rx="6" fill="#f8fafc" stroke="#64748b" stroke-dasharray="4,3" stroke-width="1.4"/><text x="302" y="133" text-anchor="middle" font-size="11.5" font-weight="700" fill="#334155">E트랙 YOLO ONNX (선택 비교)</text><text x="302" y="151" text-anchor="middle" font-size="10.5" fill="#475569">채택 보류 · engine_observations 기록</text>
+        <rect x="455" y="12" width="175" height="74" rx="6" fill="#fffbeb" stroke="#a16207" stroke-width="1.5"/><text x="542" y="34" text-anchor="middle" font-size="12" font-weight="700" fill="#78350f">Tier 1 전술 에이전트</text><text x="542" y="51" text-anchor="middle" font-size="10.5" fill="#334155">교차증거 · 패치중재 · 트리아지</text><text x="542" y="68" text-anchor="middle" font-size="10.5" fill="#92400e">반사실 해석 (observe-only)</text>
+        <rect x="455" y="110" width="175" height="58" rx="6" fill="#fef2f2" stroke="#b91c1c" stroke-width="1.5"/><text x="542" y="133" text-anchor="middle" font-size="12" font-weight="700" fill="#7f1d1d">Tier 2 Watchdog</text><text x="542" y="151" text-anchor="middle" font-size="10.5" fill="#334155">게이트 감사 · PSI 드리프트 · 재현성</text>
+        <rect x="665" y="18" width="142" height="150" rx="6" fill="#f1f5f9" stroke="#0f172a" stroke-width="1.5"/><text x="736" y="42" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">원자 저장 · 콘솔</text><text x="736" y="64" text-anchor="middle" font-size="10.5" fill="#334155">runs/&lt;run_id&gt;/</text><text x="736" y="82" text-anchor="middle" font-size="10.5" fill="#334155">records.db (SQLite v2)</text><text x="736" y="100" text-anchor="middle" font-size="10.5" fill="#334155">review_decisions.jsonl</text><text x="736" y="122" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d4ed8">로컬 UI / API</text><text x="736" y="140" text-anchor="middle" font-size="10" fill="#475569">/triage · /watchdog</text><text x="736" y="156" text-anchor="middle" font-size="10" fill="#475569">/inspections · /review</text>
+        <line x1="157" y1="49" x2="188" y2="49" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="157" y1="62" x2="188" y2="135" stroke="#64748b" stroke-width="1.3" stroke-dasharray="3,2" marker-end="url(#arr)"/>
+        <line x1="415" y1="49" x2="453" y2="49" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="415" y1="139" x2="453" y2="58" stroke="#64748b" stroke-width="1.3" marker-end="url(#arr)"/>
+        <line x1="630" y1="49" x2="663" y2="49" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="630" y1="139" x2="663" y2="139" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
+        <rect x="12" y="192" width="795" height="58" rx="6" fill="#0f172a"/><text x="410" y="216" text-anchor="middle" font-size="11.5" font-weight="700" fill="#f8fafc">불변 경계: 에이전트 계층(Tier 1·2)과 사람 리뷰는 OK / NG 기계 판정 및 동결 config(a762ba63)를 절대 수정하지 않음</text><text x="410" y="236" text-anchor="middle" font-size="10.5" fill="#cbd5e1">EngineSpec = (engine, task, model_sha256, config_hash, yolo_policy_hash, combine_policy_hash, preprocessing_version, code_sha, code_dirty)</text>
+      </svg></div>
+    </section>
+    <section id="sec-11-pipeline" class="doc-sec">
+      <h2>11. 10단계 검사 파이프라인 <span class="tag tag-design">[DESIGN]</span></h2>
+      <div class="table-wrap"><table>
+        <tr><th>단계</th><th>함수</th><th>핵심 연산 및 실패 처리</th></tr>
+        <tr><td>1</td><td><code>validate_input</code></td><td>경로·split 확인(<code>test</code>/<code>official_test</code>는 <code>E_SEALED_DENIED</code>), 라벨 검증</td></tr>
+        <tr><td>2</td><td><code>load_image</code></td><td>바이트 SHA256 + <code>cv2.imdecode</code>, 최소 해상도(64×64)·표준편차(&gt;=1.0) 검증</td></tr>
+        <tr><td>3</td><td><code>prepare_roi</code></td><td><code>dark_floor=8</code> 기반 부품 ROI 마스크 생성, 면적비 &lt; 0.20 시 <code>ROI_UNCERTAIN</code> 플래그</td></tr>
+        <tr><td>4</td><td><code>preprocess</code></td><td>3×3 median + 배경 평활화(ratio 0.10, 21–61px), dark/bright 차분 및 MAD 기반 robust z-map + 품질 지표</td></tr>
+        <tr><td>5</td><td><code>generate_candidates</code></td><td><code>(z_map &gt;= 7.6) &amp; (response &gt;= 16.0) &amp; ROI</code> 후 타원 open(3)·close(5)·merge(5)</td></tr>
+        <tr><td>6</td><td><code>refine_mask</code></td><td>재임계 + open(3) + 8-연결 요소 분해, <code>area_px &gt;= 40</code> 필터 및 <code>max_candidates=20</code> 상한</td></tr>
+        <tr><td>7</td><td><code>analyze_components</code></td><td>후보별 bbox·면적·평균/최대 대비·주변 링 대비·ROI 경계 접촉(<code>touches_roi_border</code>) 계산</td></tr>
+        <tr><td>8</td><td><code>calculate_score</code></td><td>컴포넌트 증거 계산 및 최댓값(<code>score</code>)과 다중 후보 보정값 산출</td></tr>
+        <tr><td>9</td><td><code>decide_status</code></td><td>상태 진리표에 따라 <code>OK</code> / <code>NG</code> / <code>REVIEW</code> 및 사유 코드(<code>ReasonCode</code>) 결정</td></tr>
+        <tr><td>10</td><td><code>save_evidence</code></td><td>오버레이 PNG(2배 확대 선택) 및 <code>SampleResult</code> JSON 직렬화</td></tr>
+      </table></div>
+    </section>
+    <section id="sec-12-algorithm" class="doc-sec">
+      <h2>12. 결정론적 알고리즘과 설정 <span class="tag tag-design">[DESIGN]</span></h2>
+      <p>동결 설정(<code>configs/base.toml</code>, 채택안 <code>t05_adopted_r20</code>, config hash <code>a762ba63…</code>)의 파라미터다. 난수·학습 가중치 없이 바이트 동일 출력을 보장한다.</p>
+      <pre>schema_version = "1.0"
+[roi]        mode="auto", dark_floor=8, margin_px=2, min_area_ratio=0.20, close_kernel=7
+[preprocess] median_kernel=3, bg_kernel_ratio=0.10 (21..61), noise_floor_gray=2.0
+[candidates] z_threshold=7.6, min_contrast_gray=16.0, open=3, close=5, merge=5, min_area_px=40, max_candidates=20
+[scoring]    ng_area_px=800.0, ng_contrast_gray=22.0, ng_min=0.50, multi_candidate_margin=0.15  # REVIEW_BAND_MAX=0.40 동결
+[quality]    blur_min_var=20.0, dark_mean_min=20.0, bright_mean_max=235.0, saturated_ratio_max=0.10</pre>
+    </section>
+    <section id="sec-13-features-scoring" class="doc-sec">
+      <h2>13. 특징 추출 · 점수식 · 계측 눈금자 <span class="tag tag-design">[DESIGN]</span></h2>
+      <p>각 유효 컴포넌트의 증거 점수 <code>evidence</code>는 정규화 면적과 정규화 평균 대비의 기하평균에 포화 상한 <code>1.5</code>를 적용한다:</p>
+      <p class="mono"><code>evidence = min( sqrt( min(area_px / 800.0, 1.5) * min(mean_contrast_gray / 22.0, 1.5) ), 1.5 )</code></p>
+      <div class="svg-box"><svg viewBox="0 0 780 118" class="diagram-svg" role="img" aria-label="점수 계측 눈금자">
+        <text x="12" y="18" font-size="11.5" font-weight="700" fill="#0f172a">점수(Score) 판정 구간 계측 눈금자 (0.00 ~ 1.50 상한)</text>
+        <rect x="20" y="34" width="197" height="24" fill="#f0fdf4" stroke="#15803d"/>
+        <rect x="217" y="34" width="49" height="24" fill="#fffbeb" stroke="#a16207"/>
+        <rect x="266" y="34" width="494" height="24" fill="#fef2f2" stroke="#b91c1c"/>
+        <text x="118" y="50" text-anchor="middle" font-size="11" font-weight="700" fill="#15803d">0.00 ~ 0.40 (유효후보 0이면 OK)</text>
+        <text x="241" y="50" text-anchor="middle" font-size="10.5" font-weight="700" fill="#a16207">REVIEW</text>
+        <text x="513" y="50" text-anchor="middle" font-size="11" font-weight="700" fill="#b91c1c">0.50 ~ 1.50 (NG 강증거 구간)</text>
+        <line x1="20" y1="68" x2="760" y2="68" stroke="#334155" stroke-width="1.5"/>
+        <line x1="20" y1="62" x2="20" y2="74" stroke="#0f172a" stroke-width="1.5"/>
+        <line x1="217" y1="62" x2="217" y2="74" stroke="#a16207" stroke-width="2"/>
+        <line x1="266" y1="62" x2="266" y2="74" stroke="#b91c1c" stroke-width="2"/>
+        <line x1="760" y1="62" x2="760" y2="74" stroke="#0f172a" stroke-width="1.5"/>
+        <text x="20" y="89" text-anchor="middle" font-size="10.5" fill="#0f172a">0.00</text>
+        <text x="217" y="89" text-anchor="middle" font-size="10.5" font-weight="700" fill="#a16207">0.40 (REVIEW_BAND_MAX)</text>
+        <text x="266" y="106" text-anchor="middle" font-size="10.5" font-weight="700" fill="#b91c1c">0.50 (ng_min)</text>
+        <text x="760" y="89" text-anchor="end" font-size="10.5" fill="#0f172a">1.50 (포화)</text>
+      </svg></div>
+      <p><code>ScoringConfig.ok_max</code>는 F4 결정(ADR 0006)으로 제거됐으며, <code>REVIEW_BAND_MAX = 0.40</code>이 코드 상수로 동결됐다. 유효 컴포넌트가 1개라도 존재하고 score가 0.50 미만이면 경계/다중후보 규칙에 따라 <code>REVIEW</code>로 격리된다.</p>
+    </section>
+    <section id="sec-14-status-contract" class="doc-sec">
+      <h2>14. 상태 계약과 판정 소유권 <span class="tag tag-design">[DESIGN]</span></h2>
+      <div class="table-wrap"><table>
+        <tr><th>상태</th><th>발생 조건 (우선순위 순)</th><th>불변·전환 규칙</th></tr>
+        <tr><td><span class="badge b-err">ERROR</span></td><td>입력/디코드/ROI/내부 오류 (<code>E_*</code>)</td><td>제품 판정이 아니며 지표 분모에서 제외</td></tr>
+        <tr><td><span class="badge b-ng">NG</span></td><td><code>score &gt;= ng_min (0.50)</code> → <code>DEFECT_EVIDENCE_STRONG</code></td><td><strong>영구 불변:</strong> 리뷰·에이전트가 OK로 되돌릴 수 없음</td></tr>
+        <tr><td><span class="badge b-rev">REVIEW</span></td><td>품질저하/ROI불확실/절단/경계접촉/REVIEW 대역(0.40–0.50)/다중약후보</td><td>사람 검토 대상(<code>review_decisions.jsonl</code> append-only)</td></tr>
+        <tr><td><span class="badge b-ok">OK</span></td><td>유효 컴포넌트 0개이고 보류 플래그 없음</td><td><strong>영구 불변:</strong> 리뷰·에이전트 개입 금지</td></tr>
+      </table></div>
+    </section>
+    <section id="sec-15-baselines-ablation" class="doc-sec">
+      <h2>15. 기준선 비교와 Ablation · 재보정 <span class="tag tag-measured">[MEASURED]</span></h2>
+      <p>T05에서 초기 기본 설정은 tune 714장에서 escape 0.0%였으나 <strong>false-NG 97.00%(485/500)</strong>로 실사용이 불가했다. 후보 생성 축 재보정(<code>T04_recalib</code> 23후보 → 7건 통과)과 전수 tune 2,001장 검증을 거쳐 <code>r20</code>을 채택했다(ADR 0006).</p>
+      <div class="table-wrap"><table>
+        <tr><th>비교 대상</th><th>설명</th><th>tune/test 역할</th></tr>
+        <tr><td><strong>B0</strong> (Always OK)</td><td>모든 이미지를 OK로 판정(마스크 없음)</td><td>유병률·최소 하한 기준선 (test escape 100.00%, false-NG 0.00%)</td></tr>
+        <tr><td><strong>B1</strong> (Otsu Binary)</td><td>ROI + median3 + Otsu + min_area=40 (독립 구현)</td><td>이진 기준선 (test escape 0.00%, false-NG 100.00%, recall@0.10 20.39%)</td></tr>
+        <tr><td><strong>P (r20 채택)</strong></td><td><code>z=7.6, min_contrast=16, min_area=40, ng_min=0.50</code></td><td>유일하게 3-Class 균형 달성 (test escape 14.79%, false-NG 7.21%)</td></tr>
+        <tr><td><strong>E트랙 (YOLO seg+OpenCV)</strong></td><td>ONNX seg + OpenCV 결합(<code>val</code> 400장 짝평가)</td><td>결합 escape 이득 +0.0000(4/43 동일) → G1/G5 FAIL, <strong>채택 보류</strong></td></tr>
+      </table></div>
+      <p><strong>전처리 3종 앞단 비교</strong> <span class="tag tag-measured">[MEASURED]</span> — 봉인 분할과 겹치지 않는 <code>tune∩train</code> 1,422장(결함 146 · GT 168, <code>official_test</code>와 겹치는 tune 579장 제외), 후단(r20) 설정 동일. 근거: <code>docs/evidence/project02_preprocess_comparison.json</code>.</p>
+      <div class="table-wrap"><table>
+        <tr><th>전처리</th><th>escape</th><th>false-NG</th><th>review</th><th>recall@IoU0.10</th><th>파이프라인 P95</th></tr>
+        <tr><td>CLAHE</td><td class="num">52.74% (77/146)</td><td class="num">0.00% (0/1,276)</td><td class="num">1.83% (26/1,422)</td><td class="num">15.48% (26/168)</td><td class="num">8.40 ms</td></tr>
+        <tr><td>Sobel</td><td class="num">44.52% (65/146)</td><td class="num">0.00% (0/1,276)</td><td class="num">5.70% (81/1,422)</td><td class="num">25.00% (42/168)</td><td class="num">6.83 ms</td></tr>
+        <tr><td><strong>Dual Morphology (정본)</strong></td><td class="num"><strong>11.64% (17/146)</strong></td><td class="num">4.94% (63/1,276)</td><td class="num">39.31% (559/1,422)</td><td class="num"><strong>63.69% (107/168)</strong></td><td class="num">16.10 ms</td></tr>
+      </table></div>
+      <p>CLAHE·Sobel의 false-NG 0%는 NG를 거의 내지 않은 결과이며 대가로 결함 절반 안팎을 놓친다. 후단 임계값은 Dual Morphology 기준으로 고정했으므로 CLAHE·Sobel 전용 재튜닝 성능은 <span class="tag tag-not-measured">[NOT_MEASURED]</span>이다.</p>
+    </section>
+    <section id="sec-16-metrics-denominators" class="doc-sec">
+      <h2>16. 지표 정의와 분모 · 신뢰구간 규칙 <span class="tag tag-design">[DESIGN]</span></h2>
+      <p>모든 비율 지표는 반드시 <code>numerator</code>(분자), <code>denominator</code>(분모), <code>ci95_low/ci95_high</code>(Wilson 95% CI)와 함께 기록한다. <code>ERROR</code> 행은 판정이 아니므로 분모에서 제외한다.</p>
+      <ul>
+        <li><code>defect_escape_rate</code> = <code>OK_on_defect / P</code> (목표: 점추정 &le; 15%, Wilson 상한 &le; 20%)</li>
+        <li><code>good_false_ng_rate</code> = <code>NG_on_good / N</code> (목표: &le; 20%)</li>
+        <li><code>review_rate</code> = <code>(REVIEW_defect + REVIEW_good) / T</code> (목표: &le; 40%)</li>
+        <li><code>localization_recall_iou0.10</code> = <code>matched_GT(IoU &gt;= 0.10) / 전체 GT</code> (목표: &ge; 50%)</li>
+        <li>그룹 부트스트랩(F6): <code>b=2000, seed=20261111, alpha=0.05</code> 이미지/그룹 단위 복원추출</li>
+      </ul>
+    </section>
+    <section id="sec-17-results" class="doc-sec">
+      <h2>17. 정량 성능 실측 결과 <span class="tag tag-measured">[MEASURED]</span></h2>
+      <p>동결 <code>configs/base.toml</code>(<code>a762ba63</code>, r20) 기준 <code>tune</code> 2,001장, 봉인 <code>test</code> 1,334장, 보조 <code>official_test</code> 1,004장 실측 원문이다.</p>
+      <div class="table-wrap"><table>
+        <tr><th>분할 (표본)</th><th>escape (분모 P)</th><th>escape Wilson 상한</th><th>false-NG (분모 N)</th><th>review (분모 T)</th><th>recall@IoU0.10</th><th>recall@IoU0.50</th></tr>
+        <tr><td><strong>tune</strong> (2,001 = 214 / 1,787)</td><td class="num"><strong>11.68%</strong> (25/214)</td><td class="num">16.68% (PASS)</td><td class="num">5.82% (104/1,787)</td><td class="num">38.93% (779/2,001)</td><td class="num">59.92% (145/242)</td><td class="num">20.66% (50/242)</td></tr>
+        <tr><td><strong>test 봉인</strong> (1,334 = 142 / 1,192)</td><td class="num"><strong>14.79%</strong> (21/142)</td><td class="num"><strong>21.55% (FAIL)</strong></td><td class="num">7.21% (86/1,192)</td><td class="num">34.71% (463/1,334)</td><td class="num">57.89% (88/152)</td><td class="num">20.39% (31/152)</td></tr>
+        <tr><td><code>official_test</code> 보조 (1,004 = 110 / 894)</td><td class="num">10.91% (12/110)</td><td class="num">18.10% (PASS)</td><td class="num">8.05% (72/894)</td><td class="num">37.75% (379/1,004)</td><td class="num">54.62% (65/119)</td><td class="num">—</td></tr>
+      </table></div>
+      <p>봉인 <code>test</code> 1,334장의 <code>P</code> 혼동 분포: 결함 142장 중 NG 90 · REVIEW 31 · OK(escape) 21, 정상 1,192장 중 OK 674 · REVIEW 432 · NG(false-NG) 86. <code>official_test</code>는 내부 <code>tune</code>(579장)·<code>test</code>(425장)와 중복되므로 독립 현장 시험이 아니다.</p>
+    </section>
+    <section id="sec-18-failures" class="doc-sec">
+      <h2>18. 실패 사례와 오경보 · 미검출 분석 <span class="tag tag-measured">[MEASURED]</span></h2>
+      <ul>
+        <li><strong>봉인 test escape (21건):</strong> 21건 모두 <code>NO_DEFECT_EVIDENCE</code> (<code>score=0.0</code>, 예: <code>10028</code>, <code>10065</code>) — <code>z=7.6</code>·<code>min_area=40</code> 필터에서 미세/저대비 결함 후보가 소거됨.</li>
+        <li><strong>봉인 test false-NG (86건):</strong> 전부 <code>DEFECT_EVIDENCE_STRONG</code> (최상위 오탐 예: <code>20462</code> score 1.2070, <code>12205</code> score 1.1292) — 정상 표면 반사·텍스처 경계.</li>
+        <li><strong>봉인 test REVIEW 집중 군집 (463건):</strong> <code>MULTIPLE_WEAK_CANDIDATES</code> 331건(good 313 + defect 18) + <code>EVIDENCE_IN_REVIEW_BAND</code> 131건(good 119 + defect 12) + <code>BORDER_TOUCHING_CANDIDATE</code> 1건.</li>
+        <li><strong>위치 정밀도 한계:</strong> <code>recall@IoU0.10</code>은 57.89%이나 <code>recall@IoU0.50</code>은 20.39%로 픽셀 경계 정합 정밀도는 낮다(<code>pixel_precision</code> 79.68%, <code>pixel_recall</code> 16.14%).</li>
+      </ul>
+    </section>
+    <section id="sec-19-tests-reproducibility" class="doc-sec">
+      <h2>19. 테스트, 게이트, 재현성 검증 <span class="tag tag-measured">[MEASURED]</span></h2>
+      <ul>
+        <li><strong>결정론적 재현 검증:</strong> <code>surface-sentinel repro check --trace</code> 및 <code>--run-a ... --run-b ...</code>로 트레이스 해시 사슬과 두 실행 결과의 바이트 단위 일치를 확인한다(불일치 시 <code>exit 7</code>).</li>
+        <li><strong>저장소 통합 게이트(<code>surface-sentinel gate</code>):</strong> <code>G_CONFIG_FROZEN</code>, <code>G_AGENT_CONFIG</code>, <code>G_DATA_LEAKAGE</code>, <code>G_SEAL_LOCK</code>, <code>G_EVIDENCE_DENOMINATORS</code>, <code>G_GUIDE_H7</code> 6개 하드 게이트를 단일 명령으로 검증한다.</li>
+        <li><strong>T08 1차 개봉 무효 투명 기록:</strong> 1차 개봉(<code>eef2a07</code>)에서 <code>allow_sealed</code> 배선 누락으로 1,334건 전부 <code>E_SEALED_DENIED</code>(분모 0)가 발생해 무효 기록 후 수정(<code>c24804a</code>) 및 재측정(<code>a6671e4</code>)을 수행했으며, <code>test.lock.json</code>에 <code>access_count=2</code>로 투명하게 보존했다.</li>
+      </ul>
+    </section>
+    <section id="sec-20-artifacts" class="doc-sec">
+      <h2>20. 산출물과 원자적 저장 · DB 스키마 <span class="tag tag-design">[DESIGN]</span></h2>
+      <ul>
+        <li><strong>배치 실행 디렉터리(<code>runs/&lt;run_id&gt;/</code>):</strong> <code>.tmp-&lt;run_id&gt;-&lt;pid&gt;</code>에 임시 생성 → <code>fsync</code> → <code>os.replace</code>로 교체하며 <code>run.json</code>은 마지막에 기록한다(실패 시 최종 디렉터리 미생성, <code>exit 5</code>).</li>
+        <li><strong>SQLite <code>records.db</code> (v2 스키마):</strong> <code>inspections</code>(<code>UNIQUE(image_sha256, inspection_fingerprint)</code>), <code>review_decisions</code>(REVIEW 행만 append-only), <code>engine_observations</code>(엔진별 원본), <code>agent_assessments</code>(에이전트 진단·해시 멱등 append-only).</li>
+        <li><strong>정규화 fingerprint:</strong> <code>image_sha256</code>과 <code>onnx_path</code>를 제외한 9개 실행 신원 필드의 canonical JSON SHA256으로 평가·서빙 동일성을 보장한다(ADR 0008).</li>
+      </ul>
+    </section>
+    <section id="sec-21-cli-structure" class="doc-sec">
+      <h2>21. CLI 명령어와 저장소 폴더 구조 <span class="tag tag-design">[DESIGN]</span></h2>
+      <div class="two-col">
+        <div><h3>주요 CLI 서브커맨드</h3><pre>surface-sentinel doctor
+surface-sentinel data build-manifest | make-splits | verify
+surface-sentinel inspect --image ... --split tune
+surface-sentinel batch --split tune --limit 20
+surface-sentinel eval --split tune
+surface-sentinel serve --runs-dir runs --with-api
+surface-sentinel agent run | replay | audit | drift | triage | explain | calibrate
+surface-sentinel gate --repo-root .
+surface-sentinel repro check --trace runs/.../agent_trace.jsonl</pre></div>
+        <div><h3>디렉터리 구조</h3><pre>src/surface_sentinel/
+  pipeline/   10단계 검사·에러·오버레이
+  evaluation/ 지표·기준선·부트스트랩·봉인
+  batch/      원자 배치 실행
+  io/         manifest·분할·감사
+  yolo/       ONNX 추론·세션 레지스트리(API 앱 범위·워커·평가 실행 범위 주입)
+  records/    SQLite v2 저장소·fingerprint
+  api/        로컬 FastAPI
+  ui/         정밀 계측 콘솔
+  agent/      Tier 1 전술 + Tier 2 Watchdog
+configs/      base.toml(r20), agent.toml, profiles/
+docs/         design/, decisions/, reports/, evidence/</pre></div>
+      </div>
+    </section>
+    <section id="sec-22-install" class="doc-sec">
+      <h2>22. 설치 · 실행 · 환경 요구사항 <span class="tag tag-fact">[FACT]</span></h2>
+      <p>검증 기준 환경: Windows 10.0.26300 (x64), Python 3.11 (3.11.9 / 3.11.16 확인), <code>uv</code> 0.12+, OpenCV 4.14.0, NumPy 2.4.6, CPU <code>12th Gen Intel Core i5-12400</code> (GPU 없음). 브라우저 테스트는 Playwright 패키지 + 시스템 Chrome 채널을 사용한다.</p>
+      <pre>uv sync --frozen                 # 기본 결정론 검사·UI 환경
+uv sync --frozen --extra yolo    # 선택 ONNX 비교 트랙 포함 시
+uv run surface-sentinel doctor
+uv run pytest -m "not data and not browser"
+uv run ruff check src tests scripts
+uv run surface-sentinel gate</pre>
+    </section>
+    <section id="sec-23-agent-design" class="doc-sec">
+      <h2>23. 2계층 에이전트 설계 (Tier 1 + Tier 2) <span class="tag tag-design">[DESIGN]</span></h2>
+      <p>T09 상태 머신(<code>OBSERVE → PLAN → ACT → VERIFY → DONE/ESCALATED</code>)을 기반으로, 제품 판정을 변경하지 않고 설명·정렬·감시만 수행하는 2계층 에이전트를 구축했다.</p>
+      <div class="svg-box"><svg viewBox="0 0 800 220" class="diagram-svg" role="img" aria-label="2계층 에이전트 구조도">
+        <rect x="16" y="16" width="370" height="148" rx="7" fill="#fffbeb" stroke="#a16207" stroke-width="1.5"/>
+        <text x="201" y="38" text-anchor="middle" font-size="12.5" font-weight="700" fill="#78350f">Tier 1: 전술 에이전트 (개별 이미지/REVIEW 큐)</text>
+        <text x="32" y="62" font-size="11" fill="#0f172a">• Phase 1 교차 증거 (agent/evidence.py): BBox IoU greedy 매칭, dual overlay</text>
+        <text x="32" y="83" font-size="11" fill="#0f172a">• Phase 2 능동 패치 중재 (agent/stability.py): 48×48 ROI 국소 대비·밝기 섭동</text>
+        <text x="32" y="104" font-size="11" fill="#0f172a">• Phase 2 트리아지 (agent/review.py): P0–P3 등급, 종횡비 공선성 RMS 보정</text>
+        <text x="32" y="125" font-size="11" fill="#0f172a">• Phase 4 반사실 해석 (agent/counterfactual.py): Leave-One-Out &amp; 경계 거리</text>
+        <text x="32" y="148" font-size="10.5" font-weight="700" fill="#92400e">예산 제한: 행동 3회 · 프로파일 2개 · 추가 지연 5,000ms</text>
+        <rect x="414" y="16" width="370" height="148" rx="7" fill="#fef2f2" stroke="#b91c1c" stroke-width="1.5"/>
+        <text x="599" y="38" text-anchor="middle" font-size="12.5" font-weight="700" fill="#7f1d1d">Tier 2: Watchdog 에이전트 (배치·DB·저장소)</text>
+        <text x="430" y="62" font-size="11" fill="#0f172a">• Phase 3 무결성 감사 (agent/audit.py): PASS / REVISE / REJECT 판정</text>
+        <text x="430" y="83" font-size="11" fill="#0f172a">• Phase 3 PSI 드리프트 (agent/drift.py): &lt;0.10 NORMAL, &gt;=0.25 DRIFT_ALERT</text>
+        <text x="430" y="104" font-size="11" fill="#0f172a">• Phase 3 소표본 방어: N &lt; 20 시 INSUFFICIENT_SAMPLE (억지 경보 차단)</text>
+        <text x="430" y="125" font-size="11" fill="#0f172a">• Phase 4 피드백 캘리브레이션 (agent/calibration.py): 사람-기계 괴리 리포트</text>
+        <text x="430" y="148" font-size="10.5" font-weight="700" fill="#991b1b">읽기 전용 강제: SQLite ?mode=ro · 봉인 CSV 미열람 · 자동 변경 0건</text>
+        <rect x="16" y="176" width="768" height="32" rx="5" fill="#0f172a"/>
+        <text x="400" y="196" text-anchor="middle" font-size="11" font-weight="700" fill="#f8fafc">공통 감사 사슬: agent_trace.jsonl SHA256 연쇄 해시 · 네트워크/셸 호출 0건 · 파이프라인 판정 100% 보존</text>
+      </svg></div>
+    </section>
+    <section id="sec-24-agent-results" class="doc-sec">
+      <h2>24. 에이전트 Phase 0–4 실측과 위상도 <span class="tag tag-measured">[MEASURED]</span></h2>
+      <p>Phase 0–4 전 구간에서 기계 판정 위반 <strong>0건</strong>, 감사 오류 <strong>0건</strong>, 봉인 분할 미접근을 유지하며 아래 정량 개선을 실측했다.</p>
+      <h3>24.1 Phase 0–3 핵심 실측 요약</h3>
+      <div class="table-wrap"><table>
+        <tr><th>단계</th><th>검증 범위</th><th>핵심 실측 지표</th><th>판정 / 의미</th></tr>
+        <tr><td>Phase 0</td><td>val 400장 짝 동일성</td><td>status 불일치 0건 · score 최대차 0.0 · fingerprint 일치</td><td>평가=서빙 신원 통합 (ADR 0008)</td></tr>
+        <tr><td>Phase 1</td><td>val ONNX combined 스모크</td><td><code>20117</code> LOCALIZATION_MISMATCH · <code>20012</code> EVIDENCE_ALIGNED</td><td>관찰 분리 기록, 판정 불변</td></tr>
+        <tr><td>Phase 2</td><td>tune REVIEW 779장 (결함 44) + val 400</td><td>Recall@Top-10% <strong>40.91%</strong> (Lift 4.09x) · Top-20% <strong>54.55%</strong> (2.72x) · Top-30% 61.36% · P0 PPV <strong>25.76%</strong> (17/66) · 패치 중재 56건</td><td>종횡비 착시 보정(391→57건)으로 우선순위 정밀도 대폭 향상</td></tr>
+        <tr><td>Phase 3</td><td>정상 홀드아웃 400 vs 합성 드리프트 400</td><td>정상 <code>score</code> PSI <strong>0.0238</strong> (NORMAL) vs 합성 <code>score</code> PSI <strong>5.6026</strong> (<code>mean_gray</code> 14.4225, DRIFT_ALERT)</td><td>소표본 10장 INSUFFICIENT_SAMPLE 방어 · <code>gate</code> 6/6 PASS</td></tr>
+      </table></div>
+      <h3>24.2 Phase 2 기하 공선성 종횡비 착시 보정 전/후</h3>
+      <p>KSDD2 이미지(1:2.7 세로형)에서 주축 직선 수직 RMS 폭 제한(<code>orthogonal_rms_px &lt;= 14.0px</code>)을 적용한 결과 <code>COLLINEAR_SCRATCH_SUSPECT</code>가 <strong>391건(50.2%) → 57건(7.3%)</strong>으로 감소하고 Top-10% Recall이 38.64% → 40.91%, P0 PPV가 18.75% → 25.76%로 상승했다.</p>
+      <h3>24.3 Phase 4 반사실적 2D (면적 × 평균대비) 등위선 쌍곡선 위상도</h3>
+      <p>점수 공식에서 <code>contrast</code>는 <code>33.0</code>에서 포화되므로 <strong>면적이 133px 이하인 후보는 대비를 무한히 높여도 단독으로 NG(0.50)에 도달할 수 없다</strong>. tune REVIEW 779장 중 <strong>95.12% (741/779장, 결함 42건)</strong>가 면적 병목 영역에 갇혀 있으며 경계 도달 가능은 38장(4.88%)이다.</p>
+      <div class="svg-box"><svg viewBox="0 0 600 280" class="diagram-svg" role="img" aria-label="2D 면적 대비 등위선 위상도">
+        <rect x="54" y="18" width="522" height="218" fill="#ffffff" stroke="#cbd5e1"/>
+        <polygon points="131.33,18.0 131.33,36.17 134.27,43.47 137.2,50.26 140.14,56.59 143.07,62.5 146.01,68.04 148.94,73.23 151.88,78.11 154.81,82.7 157.74,87.04 160.68,91.14 163.61,95.02 166.55,98.69 169.48,102.18 172.42,105.5 175.35,108.65 178.29,111.66 181.22,114.53 184.15,117.27 187.09,119.88 190.02,122.39 192.96,124.79 195.89,127.09 198.83,129.3 201.76,131.41 204.7,133.45 207.63,135.41 210.57,137.3 213.5,139.11 576.0,139.11 576.0,18.0 131.33,18.0" fill="rgba(185,28,28,0.09)"/>
+        <polyline points="103.49,18.0 103.49,36.17 105.37,43.47 107.25,50.26 109.13,56.59 111.01,62.5 112.88,68.04 114.76,73.23 116.64,78.11 118.52,82.7 120.4,87.04 122.27,91.14 124.15,95.02 126.03,98.69 127.91,102.18 129.79,105.5 131.66,108.65 133.54,111.66 135.42,114.53 137.3,117.27 139.18,119.88 141.06,122.39 142.93,124.79 144.81,127.09 146.69,129.3 148.57,131.41 150.45,133.45 152.32,135.41 154.2,137.3 156.08,139.11 576.0,139.11" fill="none" stroke="#a16207" stroke-width="1.6" stroke-dasharray="5,3"/>
+        <polyline points="131.33,18.0 131.33,36.17 134.27,43.47 137.2,50.26 140.14,56.59 143.07,62.5 146.01,68.04 148.94,73.23 151.88,78.11 154.81,82.7 157.74,87.04 160.68,91.14 163.61,95.02 166.55,98.69 169.48,102.18 172.42,105.5 175.35,108.65 178.29,111.66 181.22,114.53 184.15,117.27 187.09,119.88 190.02,122.39 192.96,124.79 195.89,127.09 198.83,129.3 201.76,131.41 204.7,133.45 207.63,135.41 210.57,137.3 213.5,139.11 576.0,139.11" fill="none" stroke="#b91c1c" stroke-width="2"/>
+        <line x1="131.33" y1="18" x2="131.33" y2="236" stroke="#64748b" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="54" y1="36.17" x2="576" y2="36.17" stroke="#64748b" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="54" y1="139.11" x2="576" y2="139.11" stroke="#94a3b8" stroke-width="1"/>
+        <line x1="77.2" y1="18" x2="77.2" y2="236" stroke="#94a3b8" stroke-width="1"/>
+        <text x="415" y="65" font-size="11.5" font-weight="700" fill="#b91c1c">NG 영역 (score &gt;= 0.50)</text>
+        <text x="90" y="192" font-size="10.5" fill="#475569">면적 병목 구역 (area &lt;= 133px)</text>
+        <text x="90" y="207" font-size="10.5" font-weight="700" fill="#0f172a">tune REVIEW의 95.12% (741/779)</text>
+        <circle cx="92.28" cy="76.72" r="5.5" fill="#a16207" stroke="#0f172a" stroke-width="1.3"/>
+        <text x="101.28" y="80.72" font-size="10" font-weight="700" fill="#78350f">#10045 REVIEW (66px, 대비26.3 · 면적병목)</text>
+        <circle cx="135.78" cy="68.03" r="5.5" fill="#2563eb" stroke="#0f172a" stroke-width="1.3"/>
+        <text x="144.78" y="72.03" font-size="10" font-weight="700" fill="#1e40af">#11957 REVIEW (141px · +18px/+3.47 시 NG)</text>
+        <circle cx="295.28" cy="18.0" r="5.5" fill="#b91c1c" stroke="#0f172a" stroke-width="1.3"/>
+        <text x="304.28" y="30.0" font-size="10" font-weight="700" fill="#991b1b">#10021 NG (416px, 대비47.4 · Pivotal #0)</text>
+        <text x="315" y="264" text-anchor="middle" font-size="11" font-weight="700" fill="#0f172a">후보 면적 area_px (0 ~ 900px, 하한 40px, 포화경계 133px)</text>
+        <text x="16" y="130" transform="rotate(-90 16 130)" text-anchor="middle" font-size="11" font-weight="700" fill="#0f172a">평균 대비 (gray, 포화 33)</text>
+      </svg></div>
+      <h3>24.4 6×14 스트립 공간 핫스팟 &amp; 사람-기계 피드백 캘리브레이션</h3>
+      <p>좌·우 가장자리 15% 대역에 NG 후보의 <strong>43.67%</strong>(586/1,342), REVIEW 후보의 <strong>45.86%</strong>(1,433/3,125)가 집중됐다. 120건 검토 시뮬레이션(seed 20261113)에서 P0 확정 NG 비율은 50.0%(2/4)로 P2/P3(1.7%) 대비 높아 우선순위 정렬 정합성이 확인됐으며, 사각지대(<code>20193</code>)와 고위험 오경보(<code>20472</code>·<code>10058</code>) 3건을 자동 추출했다.</p>
+      <div class="two-col"><div class="svg-box"><svg viewBox="0 0 184 210" class="diagram-svg" role="img" aria-label="NG 후보 6x14 핫스팟 (1342건)"><text x="92.0" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="#0f172a">NG 후보 6x14 핫스팟 (1342건)</text><rect x="14" y="24" width="25" height="11" rx="2" fill="rgba(185,28,28,0.76)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="33.5" text-anchor="middle" font-size="8" fill="#ffffff">48</text><rect x="40" y="24" width="25" height="11" rx="2" fill="rgba(185,28,28,0.65)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="33.5" text-anchor="middle" font-size="8" fill="#ffffff">40</text><rect x="66" y="24" width="25" height="11" rx="2" fill="rgba(185,28,28,0.45)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="33.5" text-anchor="middle" font-size="8" fill="#0f172a">26</text><rect x="92" y="24" width="25" height="11" rx="2" fill="rgba(185,28,28,0.41)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="33.5" text-anchor="middle" font-size="8" fill="#0f172a">23</text><rect x="118" y="24" width="25" height="11" rx="2" fill="rgba(185,28,28,0.54)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="33.5" text-anchor="middle" font-size="8" fill="#0f172a">32</text><rect x="144" y="24" width="25" height="11" rx="2" fill="rgba(185,28,28,0.37)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="33.5" text-anchor="middle" font-size="8" fill="#0f172a">20</text><rect x="14" y="36" width="25" height="11" rx="2" fill="rgba(185,28,28,0.51)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="45.5" text-anchor="middle" font-size="8" fill="#0f172a">30</text><rect x="40" y="36" width="25" height="11" rx="2" fill="rgba(185,28,28,0.27)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="45.5" text-anchor="middle" font-size="8" fill="#0f172a">13</text><rect x="66" y="36" width="25" height="11" rx="2" fill="rgba(185,28,28,0.24)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="45.5" text-anchor="middle" font-size="8" fill="#0f172a">11</text><rect x="92" y="36" width="25" height="11" rx="2" fill="rgba(185,28,28,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="45.5" text-anchor="middle" font-size="8" fill="#0f172a">8</text><rect x="118" y="36" width="25" height="11" rx="2" fill="rgba(185,28,28,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="45.5" text-anchor="middle" font-size="8" fill="#0f172a">8</text><rect x="144" y="36" width="25" height="11" rx="2" fill="rgba(185,28,28,0.24)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="45.5" text-anchor="middle" font-size="8" fill="#0f172a">11</text><rect x="14" y="48" width="25" height="11" rx="2" fill="rgba(185,28,28,0.34)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="57.5" text-anchor="middle" font-size="8" fill="#0f172a">18</text><rect x="40" y="48" width="25" height="11" rx="2" fill="rgba(185,28,28,0.25)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="57.5" text-anchor="middle" font-size="8" fill="#0f172a">12</text><rect x="66" y="48" width="25" height="11" rx="2" fill="rgba(185,28,28,0.32)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="57.5" text-anchor="middle" font-size="8" fill="#0f172a">17</text><rect x="92" y="48" width="25" height="11" rx="2" fill="rgba(185,28,28,0.22)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="57.5" text-anchor="middle" font-size="8" fill="#0f172a">10</text><rect x="118" y="48" width="25" height="11" rx="2" fill="rgba(185,28,28,0.15)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="57.5" text-anchor="middle" font-size="8" fill="#0f172a">5</text><rect x="144" y="48" width="25" height="11" rx="2" fill="rgba(185,28,28,0.27)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="57.5" text-anchor="middle" font-size="8" fill="#0f172a">13</text><rect x="14" y="60" width="25" height="11" rx="2" fill="rgba(185,28,28,0.32)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="69.5" text-anchor="middle" font-size="8" fill="#0f172a">17</text><rect x="40" y="60" width="25" height="11" rx="2" fill="rgba(185,28,28,0.27)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="69.5" text-anchor="middle" font-size="8" fill="#0f172a">13</text><rect x="66" y="60" width="25" height="11" rx="2" fill="rgba(185,28,28,0.28)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="69.5" text-anchor="middle" font-size="8" fill="#0f172a">14</text><rect x="92" y="60" width="25" height="11" rx="2" fill="rgba(185,28,28,0.22)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="69.5" text-anchor="middle" font-size="8" fill="#0f172a">10</text><rect x="118" y="60" width="25" height="11" rx="2" fill="rgba(185,28,28,0.22)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="69.5" text-anchor="middle" font-size="8" fill="#0f172a">10</text><rect x="144" y="60" width="25" height="11" rx="2" fill="rgba(185,28,28,0.25)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="69.5" text-anchor="middle" font-size="8" fill="#0f172a">12</text><rect x="14" y="72" width="25" height="11" rx="2" fill="rgba(185,28,28,0.22)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="81.5" text-anchor="middle" font-size="8" fill="#0f172a">10</text><rect x="40" y="72" width="25" height="11" rx="2" fill="rgba(185,28,28,0.24)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="81.5" text-anchor="middle" font-size="8" fill="#0f172a">11</text><rect x="66" y="72" width="25" height="11" rx="2" fill="rgba(185,28,28,0.14)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="81.5" text-anchor="middle" font-size="8" fill="#0f172a">4</text><rect x="92" y="72" width="25" height="11" rx="2" fill="rgba(185,28,28,0.12)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="81.5" text-anchor="middle" font-size="8" fill="#0f172a">3</text><rect x="118" y="72" width="25" height="11" rx="2" fill="rgba(185,28,28,0.15)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="81.5" text-anchor="middle" font-size="8" fill="#0f172a">5</text><rect x="144" y="72" width="25" height="11" rx="2" fill="rgba(185,28,28,0.28)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="81.5" text-anchor="middle" font-size="8" fill="#0f172a">14</text><rect x="14" y="84" width="25" height="11" rx="2" fill="rgba(185,28,28,0.34)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="93.5" text-anchor="middle" font-size="8" fill="#0f172a">18</text><rect x="40" y="84" width="25" height="11" rx="2" fill="rgba(185,28,28,0.22)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="93.5" text-anchor="middle" font-size="8" fill="#0f172a">10</text><rect x="66" y="84" width="25" height="11" rx="2" fill="rgba(185,28,28,0.14)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="93.5" text-anchor="middle" font-size="8" fill="#0f172a">4</text><rect x="92" y="84" width="25" height="11" rx="2" fill="rgba(185,28,28,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="93.5" text-anchor="middle" font-size="8" fill="#0f172a">8</text><rect x="118" y="84" width="25" height="11" rx="2" fill="rgba(185,28,28,0.18)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="93.5" text-anchor="middle" font-size="8" fill="#0f172a">7</text><rect x="144" y="84" width="25" height="11" rx="2" fill="rgba(185,28,28,0.32)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="93.5" text-anchor="middle" font-size="8" fill="#0f172a">17</text><rect x="14" y="96" width="25" height="11" rx="2" fill="rgba(185,28,28,0.38)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="105.5" text-anchor="middle" font-size="8" fill="#0f172a">21</text><rect x="40" y="96" width="25" height="11" rx="2" fill="rgba(185,28,28,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="105.5" text-anchor="middle" font-size="8" fill="#0f172a">8</text><rect x="66" y="96" width="25" height="11" rx="2" fill="rgba(185,28,28,0.25)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="105.5" text-anchor="middle" font-size="8" fill="#0f172a">12</text><rect x="92" y="96" width="25" height="11" rx="2" fill="rgba(185,28,28,0.31)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="105.5" text-anchor="middle" font-size="8" fill="#0f172a">16</text><rect x="118" y="96" width="25" height="11" rx="2" fill="rgba(185,28,28,0.35)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="105.5" text-anchor="middle" font-size="8" fill="#0f172a">19</text><rect x="144" y="96" width="25" height="11" rx="2" fill="rgba(185,28,28,0.42)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="105.5" text-anchor="middle" font-size="8" fill="#0f172a">24</text><rect x="14" y="108" width="25" height="11" rx="2" fill="rgba(185,28,28,0.47)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="117.5" text-anchor="middle" font-size="8" fill="#0f172a">27</text><rect x="40" y="108" width="25" height="11" rx="2" fill="rgba(185,28,28,0.25)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="117.5" text-anchor="middle" font-size="8" fill="#0f172a">12</text><rect x="66" y="108" width="25" height="11" rx="2" fill="rgba(185,28,28,0.25)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="117.5" text-anchor="middle" font-size="8" fill="#0f172a">12</text><rect x="92" y="108" width="25" height="11" rx="2" fill="rgba(185,28,28,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="117.5" text-anchor="middle" font-size="8" fill="#0f172a">8</text><rect x="118" y="108" width="25" height="11" rx="2" fill="rgba(185,28,28,0.25)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="117.5" text-anchor="middle" font-size="8" fill="#0f172a">12</text><rect x="144" y="108" width="25" height="11" rx="2" fill="rgba(185,28,28,0.49)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="117.5" text-anchor="middle" font-size="8" fill="#0f172a">29</text><rect x="14" y="120" width="25" height="11" rx="2" fill="rgba(185,28,28,0.32)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="129.5" text-anchor="middle" font-size="8" fill="#0f172a">17</text><rect x="40" y="120" width="25" height="11" rx="2" fill="rgba(185,28,28,0.28)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="129.5" text-anchor="middle" font-size="8" fill="#0f172a">14</text><rect x="66" y="120" width="25" height="11" rx="2" fill="rgba(185,28,28,0.18)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="129.5" text-anchor="middle" font-size="8" fill="#0f172a">7</text><rect x="92" y="120" width="25" height="11" rx="2" fill="rgba(185,28,28,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="129.5" text-anchor="middle" font-size="8" fill="#0f172a">8</text><rect x="118" y="120" width="25" height="11" rx="2" fill="rgba(185,28,28,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="129.5" text-anchor="middle" font-size="8" fill="#0f172a">8</text><rect x="144" y="120" width="25" height="11" rx="2" fill="rgba(185,28,28,0.39)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="129.5" text-anchor="middle" font-size="8" fill="#0f172a">22</text><rect x="14" y="132" width="25" height="11" rx="2" fill="rgba(185,28,28,0.54)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="141.5" text-anchor="middle" font-size="8" fill="#0f172a">32</text><rect x="40" y="132" width="25" height="11" rx="2" fill="rgba(185,28,28,0.22)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="141.5" text-anchor="middle" font-size="8" fill="#0f172a">10</text><rect x="66" y="132" width="25" height="11" rx="2" fill="rgba(185,28,28,0.28)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="141.5" text-anchor="middle" font-size="8" fill="#0f172a">14</text><rect x="92" y="132" width="25" height="11" rx="2" fill="rgba(185,28,28,0.15)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="141.5" text-anchor="middle" font-size="8" fill="#0f172a">5</text><rect x="118" y="132" width="25" height="11" rx="2" fill="rgba(185,28,28,0.15)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="141.5" text-anchor="middle" font-size="8" fill="#0f172a">5</text><rect x="144" y="132" width="25" height="11" rx="2" fill="rgba(185,28,28,0.32)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="141.5" text-anchor="middle" font-size="8" fill="#0f172a">17</text><rect x="14" y="144" width="25" height="11" rx="2" fill="rgba(185,28,28,0.41)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="153.5" text-anchor="middle" font-size="8" fill="#0f172a">23</text><rect x="40" y="144" width="25" height="11" rx="2" fill="rgba(185,28,28,0.22)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="153.5" text-anchor="middle" font-size="8" fill="#0f172a">10</text><rect x="66" y="144" width="25" height="11" rx="2" fill="rgba(185,28,28,0.15)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="153.5" text-anchor="middle" font-size="8" fill="#0f172a">5</text><rect x="92" y="144" width="25" height="11" rx="2" fill="rgba(185,28,28,0.15)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="153.5" text-anchor="middle" font-size="8" fill="#0f172a">5</text><rect x="118" y="144" width="25" height="11" rx="2" fill="rgba(185,28,28,0.25)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="153.5" text-anchor="middle" font-size="8" fill="#0f172a">12</text><rect x="144" y="144" width="25" height="11" rx="2" fill="rgba(185,28,28,0.28)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="153.5" text-anchor="middle" font-size="8" fill="#0f172a">14</text><rect x="14" y="156" width="25" height="11" rx="2" fill="rgba(185,28,28,0.35)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="165.5" text-anchor="middle" font-size="8" fill="#0f172a">19</text><rect x="40" y="156" width="25" height="11" rx="2" fill="rgba(185,28,28,0.21)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="165.5" text-anchor="middle" font-size="8" fill="#0f172a">9</text><rect x="66" y="156" width="25" height="11" rx="2" fill="rgba(185,28,28,0.22)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="165.5" text-anchor="middle" font-size="8" fill="#0f172a">10</text><rect x="92" y="156" width="25" height="11" rx="2" fill="rgba(185,28,28,0.22)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="165.5" text-anchor="middle" font-size="8" fill="#0f172a">10</text><rect x="118" y="156" width="25" height="11" rx="2" fill="rgba(185,28,28,0.32)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="165.5" text-anchor="middle" font-size="8" fill="#0f172a">17</text><rect x="144" y="156" width="25" height="11" rx="2" fill="rgba(185,28,28,0.28)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="165.5" text-anchor="middle" font-size="8" fill="#0f172a">14</text><rect x="14" y="168" width="25" height="11" rx="2" fill="rgba(185,28,28,0.37)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="177.5" text-anchor="middle" font-size="8" fill="#0f172a">20</text><rect x="40" y="168" width="25" height="11" rx="2" fill="rgba(185,28,28,0.24)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="177.5" text-anchor="middle" font-size="8" fill="#0f172a">11</text><rect x="66" y="168" width="25" height="11" rx="2" fill="rgba(185,28,28,0.17)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="177.5" text-anchor="middle" font-size="8" fill="#0f172a">6</text><rect x="92" y="168" width="25" height="11" rx="2" fill="rgba(185,28,28,0.17)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="177.5" text-anchor="middle" font-size="8" fill="#0f172a">6</text><rect x="118" y="168" width="25" height="11" rx="2" fill="rgba(185,28,28,0.34)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="177.5" text-anchor="middle" font-size="8" fill="#0f172a">18</text><rect x="144" y="168" width="25" height="11" rx="2" fill="rgba(185,28,28,0.28)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="177.5" text-anchor="middle" font-size="8" fill="#0f172a">14</text><rect x="14" y="180" width="25" height="11" rx="2" fill="rgba(185,28,28,0.95)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="189.5" text-anchor="middle" font-size="8" fill="#ffffff">61</text><rect x="40" y="180" width="25" height="11" rx="2" fill="rgba(185,28,28,0.64)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="189.5" text-anchor="middle" font-size="8" fill="#ffffff">39</text><rect x="66" y="180" width="25" height="11" rx="2" fill="rgba(185,28,28,0.71)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="189.5" text-anchor="middle" font-size="8" fill="#ffffff">44</text><rect x="92" y="180" width="25" height="11" rx="2" fill="rgba(185,28,28,0.37)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="189.5" text-anchor="middle" font-size="8" fill="#0f172a">20</text><rect x="118" y="180" width="25" height="11" rx="2" fill="rgba(185,28,28,0.49)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="189.5" text-anchor="middle" font-size="8" fill="#0f172a">29</text><rect x="144" y="180" width="25" height="11" rx="2" fill="rgba(185,28,28,0.58)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="189.5" text-anchor="middle" font-size="8" fill="#ffffff">35</text><rect x="14" y="24" width="25" height="167" fill="none" stroke="#1d4ed8" stroke-width="1.2" stroke-dasharray="3,2"/><rect x="144" y="24" width="25" height="167" fill="none" stroke="#1d4ed8" stroke-width="1.2" stroke-dasharray="3,2"/><text x="92.0" y="206" text-anchor="middle" font-size="9" fill="#475569">좌/우 파선 = 가장자리 15% 대역 (6열 x 14행)</text></svg></div><div class="svg-box"><svg viewBox="0 0 184 210" class="diagram-svg" role="img" aria-label="REVIEW 후보 6x14 핫스팟 (3125건)"><text x="92.0" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="#0f172a">REVIEW 후보 6x14 핫스팟 (3125건)</text><rect x="14" y="24" width="25" height="11" rx="2" fill="rgba(161,98,7,0.61)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="33.5" text-anchor="middle" font-size="8" fill="#ffffff">102</text><rect x="40" y="24" width="25" height="11" rx="2" fill="rgba(161,98,7,0.49)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="33.5" text-anchor="middle" font-size="8" fill="#0f172a">79</text><rect x="66" y="24" width="25" height="11" rx="2" fill="rgba(161,98,7,0.44)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="33.5" text-anchor="middle" font-size="8" fill="#0f172a">70</text><rect x="92" y="24" width="25" height="11" rx="2" fill="rgba(161,98,7,0.43)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="33.5" text-anchor="middle" font-size="8" fill="#0f172a">67</text><rect x="118" y="24" width="25" height="11" rx="2" fill="rgba(161,98,7,0.39)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="33.5" text-anchor="middle" font-size="8" fill="#0f172a">60</text><rect x="144" y="24" width="25" height="11" rx="2" fill="rgba(161,98,7,0.39)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="33.5" text-anchor="middle" font-size="8" fill="#0f172a">60</text><rect x="14" y="36" width="25" height="11" rx="2" fill="rgba(161,98,7,0.33)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="45.5" text-anchor="middle" font-size="8" fill="#0f172a">48</text><rect x="40" y="36" width="25" height="11" rx="2" fill="rgba(161,98,7,0.20)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="45.5" text-anchor="middle" font-size="8" fill="#0f172a">24</text><rect x="66" y="36" width="25" height="11" rx="2" fill="rgba(161,98,7,0.20)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="45.5" text-anchor="middle" font-size="8" fill="#0f172a">23</text><rect x="92" y="36" width="25" height="11" rx="2" fill="rgba(161,98,7,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="45.5" text-anchor="middle" font-size="8" fill="#0f172a">21</text><rect x="118" y="36" width="25" height="11" rx="2" fill="rgba(161,98,7,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="45.5" text-anchor="middle" font-size="8" fill="#0f172a">21</text><rect x="144" y="36" width="25" height="11" rx="2" fill="rgba(161,98,7,0.25)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="45.5" text-anchor="middle" font-size="8" fill="#0f172a">32</text><rect x="14" y="48" width="25" height="11" rx="2" fill="rgba(161,98,7,0.36)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="57.5" text-anchor="middle" font-size="8" fill="#0f172a">55</text><rect x="40" y="48" width="25" height="11" rx="2" fill="rgba(161,98,7,0.25)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="57.5" text-anchor="middle" font-size="8" fill="#0f172a">33</text><rect x="66" y="48" width="25" height="11" rx="2" fill="rgba(161,98,7,0.17)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="57.5" text-anchor="middle" font-size="8" fill="#0f172a">17</text><rect x="92" y="48" width="25" height="11" rx="2" fill="rgba(161,98,7,0.17)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="57.5" text-anchor="middle" font-size="8" fill="#0f172a">18</text><rect x="118" y="48" width="25" height="11" rx="2" fill="rgba(161,98,7,0.14)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="57.5" text-anchor="middle" font-size="8" fill="#0f172a">12</text><rect x="144" y="48" width="25" height="11" rx="2" fill="rgba(161,98,7,0.23)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="57.5" text-anchor="middle" font-size="8" fill="#0f172a">29</text><rect x="14" y="60" width="25" height="11" rx="2" fill="rgba(161,98,7,0.30)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="69.5" text-anchor="middle" font-size="8" fill="#0f172a">43</text><rect x="40" y="60" width="25" height="11" rx="2" fill="rgba(161,98,7,0.20)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="69.5" text-anchor="middle" font-size="8" fill="#0f172a">23</text><rect x="66" y="60" width="25" height="11" rx="2" fill="rgba(161,98,7,0.24)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="69.5" text-anchor="middle" font-size="8" fill="#0f172a">30</text><rect x="92" y="60" width="25" height="11" rx="2" fill="rgba(161,98,7,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="69.5" text-anchor="middle" font-size="8" fill="#0f172a">22</text><rect x="118" y="60" width="25" height="11" rx="2" fill="rgba(161,98,7,0.17)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="69.5" text-anchor="middle" font-size="8" fill="#0f172a">17</text><rect x="144" y="60" width="25" height="11" rx="2" fill="rgba(161,98,7,0.25)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="69.5" text-anchor="middle" font-size="8" fill="#0f172a">33</text><rect x="14" y="72" width="25" height="11" rx="2" fill="rgba(161,98,7,0.36)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="81.5" text-anchor="middle" font-size="8" fill="#0f172a">55</text><rect x="40" y="72" width="25" height="11" rx="2" fill="rgba(161,98,7,0.24)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="81.5" text-anchor="middle" font-size="8" fill="#0f172a">30</text><rect x="66" y="72" width="25" height="11" rx="2" fill="rgba(161,98,7,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="81.5" text-anchor="middle" font-size="8" fill="#0f172a">21</text><rect x="92" y="72" width="25" height="11" rx="2" fill="rgba(161,98,7,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="81.5" text-anchor="middle" font-size="8" fill="#0f172a">21</text><rect x="118" y="72" width="25" height="11" rx="2" fill="rgba(161,98,7,0.16)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="81.5" text-anchor="middle" font-size="8" fill="#0f172a">16</text><rect x="144" y="72" width="25" height="11" rx="2" fill="rgba(161,98,7,0.30)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="81.5" text-anchor="middle" font-size="8" fill="#0f172a">43</text><rect x="14" y="84" width="25" height="11" rx="2" fill="rgba(161,98,7,0.33)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="93.5" text-anchor="middle" font-size="8" fill="#0f172a">48</text><rect x="40" y="84" width="25" height="11" rx="2" fill="rgba(161,98,7,0.16)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="93.5" text-anchor="middle" font-size="8" fill="#0f172a">16</text><rect x="66" y="84" width="25" height="11" rx="2" fill="rgba(161,98,7,0.16)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="93.5" text-anchor="middle" font-size="8" fill="#0f172a">15</text><rect x="92" y="84" width="25" height="11" rx="2" fill="rgba(161,98,7,0.21)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="93.5" text-anchor="middle" font-size="8" fill="#0f172a">25</text><rect x="118" y="84" width="25" height="11" rx="2" fill="rgba(161,98,7,0.15)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="93.5" text-anchor="middle" font-size="8" fill="#0f172a">14</text><rect x="144" y="84" width="25" height="11" rx="2" fill="rgba(161,98,7,0.32)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="93.5" text-anchor="middle" font-size="8" fill="#0f172a">46</text><rect x="14" y="96" width="25" height="11" rx="2" fill="rgba(161,98,7,0.33)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="105.5" text-anchor="middle" font-size="8" fill="#0f172a">48</text><rect x="40" y="96" width="25" height="11" rx="2" fill="rgba(161,98,7,0.17)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="105.5" text-anchor="middle" font-size="8" fill="#0f172a">18</text><rect x="66" y="96" width="25" height="11" rx="2" fill="rgba(161,98,7,0.17)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="105.5" text-anchor="middle" font-size="8" fill="#0f172a">17</text><rect x="92" y="96" width="25" height="11" rx="2" fill="rgba(161,98,7,0.21)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="105.5" text-anchor="middle" font-size="8" fill="#0f172a">25</text><rect x="118" y="96" width="25" height="11" rx="2" fill="rgba(161,98,7,0.27)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="105.5" text-anchor="middle" font-size="8" fill="#0f172a">36</text><rect x="144" y="96" width="25" height="11" rx="2" fill="rgba(161,98,7,0.47)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="105.5" text-anchor="middle" font-size="8" fill="#0f172a">75</text><rect x="14" y="108" width="25" height="11" rx="2" fill="rgba(161,98,7,0.30)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="117.5" text-anchor="middle" font-size="8" fill="#0f172a">42</text><rect x="40" y="108" width="25" height="11" rx="2" fill="rgba(161,98,7,0.23)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="117.5" text-anchor="middle" font-size="8" fill="#0f172a">29</text><rect x="66" y="108" width="25" height="11" rx="2" fill="rgba(161,98,7,0.22)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="117.5" text-anchor="middle" font-size="8" fill="#0f172a">28</text><rect x="92" y="108" width="25" height="11" rx="2" fill="rgba(161,98,7,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="117.5" text-anchor="middle" font-size="8" fill="#0f172a">22</text><rect x="118" y="108" width="25" height="11" rx="2" fill="rgba(161,98,7,0.20)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="117.5" text-anchor="middle" font-size="8" fill="#0f172a">23</text><rect x="144" y="108" width="25" height="11" rx="2" fill="rgba(161,98,7,0.34)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="117.5" text-anchor="middle" font-size="8" fill="#0f172a">50</text><rect x="14" y="120" width="25" height="11" rx="2" fill="rgba(161,98,7,0.27)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="129.5" text-anchor="middle" font-size="8" fill="#0f172a">37</text><rect x="40" y="120" width="25" height="11" rx="2" fill="rgba(161,98,7,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="129.5" text-anchor="middle" font-size="8" fill="#0f172a">22</text><rect x="66" y="120" width="25" height="11" rx="2" fill="rgba(161,98,7,0.22)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="129.5" text-anchor="middle" font-size="8" fill="#0f172a">27</text><rect x="92" y="120" width="25" height="11" rx="2" fill="rgba(161,98,7,0.20)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="129.5" text-anchor="middle" font-size="8" fill="#0f172a">24</text><rect x="118" y="120" width="25" height="11" rx="2" fill="rgba(161,98,7,0.20)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="129.5" text-anchor="middle" font-size="8" fill="#0f172a">24</text><rect x="144" y="120" width="25" height="11" rx="2" fill="rgba(161,98,7,0.37)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="129.5" text-anchor="middle" font-size="8" fill="#0f172a">56</text><rect x="14" y="132" width="25" height="11" rx="2" fill="rgba(161,98,7,0.29)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="141.5" text-anchor="middle" font-size="8" fill="#0f172a">41</text><rect x="40" y="132" width="25" height="11" rx="2" fill="rgba(161,98,7,0.21)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="141.5" text-anchor="middle" font-size="8" fill="#0f172a">26</text><rect x="66" y="132" width="25" height="11" rx="2" fill="rgba(161,98,7,0.16)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="141.5" text-anchor="middle" font-size="8" fill="#0f172a">15</text><rect x="92" y="132" width="25" height="11" rx="2" fill="rgba(161,98,7,0.18)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="141.5" text-anchor="middle" font-size="8" fill="#0f172a">20</text><rect x="118" y="132" width="25" height="11" rx="2" fill="rgba(161,98,7,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="141.5" text-anchor="middle" font-size="8" fill="#0f172a">22</text><rect x="144" y="132" width="25" height="11" rx="2" fill="rgba(161,98,7,0.29)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="141.5" text-anchor="middle" font-size="8" fill="#0f172a">41</text><rect x="14" y="144" width="25" height="11" rx="2" fill="rgba(161,98,7,0.30)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="153.5" text-anchor="middle" font-size="8" fill="#0f172a">42</text><rect x="40" y="144" width="25" height="11" rx="2" fill="rgba(161,98,7,0.14)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="153.5" text-anchor="middle" font-size="8" fill="#0f172a">12</text><rect x="66" y="144" width="25" height="11" rx="2" fill="rgba(161,98,7,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="153.5" text-anchor="middle" font-size="8" fill="#0f172a">21</text><rect x="92" y="144" width="25" height="11" rx="2" fill="rgba(161,98,7,0.19)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="153.5" text-anchor="middle" font-size="8" fill="#0f172a">22</text><rect x="118" y="144" width="25" height="11" rx="2" fill="rgba(161,98,7,0.18)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="153.5" text-anchor="middle" font-size="8" fill="#0f172a">20</text><rect x="144" y="144" width="25" height="11" rx="2" fill="rgba(161,98,7,0.27)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="153.5" text-anchor="middle" font-size="8" fill="#0f172a">37</text><rect x="14" y="156" width="25" height="11" rx="2" fill="rgba(161,98,7,0.41)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="165.5" text-anchor="middle" font-size="8" fill="#0f172a">63</text><rect x="40" y="156" width="25" height="11" rx="2" fill="rgba(161,98,7,0.15)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="165.5" text-anchor="middle" font-size="8" fill="#0f172a">14</text><rect x="66" y="156" width="25" height="11" rx="2" fill="rgba(161,98,7,0.20)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="165.5" text-anchor="middle" font-size="8" fill="#0f172a">23</text><rect x="92" y="156" width="25" height="11" rx="2" fill="rgba(161,98,7,0.21)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="165.5" text-anchor="middle" font-size="8" fill="#0f172a">25</text><rect x="118" y="156" width="25" height="11" rx="2" fill="rgba(161,98,7,0.18)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="165.5" text-anchor="middle" font-size="8" fill="#0f172a">19</text><rect x="144" y="156" width="25" height="11" rx="2" fill="rgba(161,98,7,0.26)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="165.5" text-anchor="middle" font-size="8" fill="#0f172a">34</text><rect x="14" y="168" width="25" height="11" rx="2" fill="rgba(161,98,7,0.41)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="177.5" text-anchor="middle" font-size="8" fill="#0f172a">63</text><rect x="40" y="168" width="25" height="11" rx="2" fill="rgba(161,98,7,0.20)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="177.5" text-anchor="middle" font-size="8" fill="#0f172a">24</text><rect x="66" y="168" width="25" height="11" rx="2" fill="rgba(161,98,7,0.15)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="177.5" text-anchor="middle" font-size="8" fill="#0f172a">13</text><rect x="92" y="168" width="25" height="11" rx="2" fill="rgba(161,98,7,0.16)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="177.5" text-anchor="middle" font-size="8" fill="#0f172a">15</text><rect x="118" y="168" width="25" height="11" rx="2" fill="rgba(161,98,7,0.18)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="177.5" text-anchor="middle" font-size="8" fill="#0f172a">19</text><rect x="144" y="168" width="25" height="11" rx="2" fill="rgba(161,98,7,0.24)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="177.5" text-anchor="middle" font-size="8" fill="#0f172a">30</text><rect x="14" y="180" width="25" height="11" rx="2" fill="rgba(161,98,7,0.95)" stroke="#e2e8f0" stroke-width="0.5"/><text x="26.5" y="189.5" text-anchor="middle" font-size="8" fill="#ffffff">168</text><rect x="40" y="180" width="25" height="11" rx="2" fill="rgba(161,98,7,0.53)" stroke="#e2e8f0" stroke-width="0.5"/><text x="52.5" y="189.5" text-anchor="middle" font-size="8" fill="#0f172a">86</text><rect x="66" y="180" width="25" height="11" rx="2" fill="rgba(161,98,7,0.59)" stroke="#e2e8f0" stroke-width="0.5"/><text x="78.5" y="189.5" text-anchor="middle" font-size="8" fill="#ffffff">98</text><rect x="92" y="180" width="25" height="11" rx="2" fill="rgba(161,98,7,0.49)" stroke="#e2e8f0" stroke-width="0.5"/><text x="104.5" y="189.5" text-anchor="middle" font-size="8" fill="#0f172a">80</text><rect x="118" y="180" width="25" height="11" rx="2" fill="rgba(161,98,7,0.47)" stroke="#e2e8f0" stroke-width="0.5"/><text x="130.5" y="189.5" text-anchor="middle" font-size="8" fill="#0f172a">76</text><rect x="144" y="180" width="25" height="11" rx="2" fill="rgba(161,98,7,0.41)" stroke="#e2e8f0" stroke-width="0.5"/><text x="156.5" y="189.5" text-anchor="middle" font-size="8" fill="#0f172a">64</text><rect x="14" y="24" width="25" height="167" fill="none" stroke="#1d4ed8" stroke-width="1.2" stroke-dasharray="3,2"/><rect x="144" y="24" width="25" height="167" fill="none" stroke="#1d4ed8" stroke-width="1.2" stroke-dasharray="3,2"/><text x="92.0" y="206" text-anchor="middle" font-size="9" fill="#475569">좌/우 파선 = 가장자리 15% 대역 (6열 x 14행)</text></svg></div></div>
+    </section>
+    <section id="sec-25-gates-schedule" class="doc-sec">
+      <h2>25. 하드 게이트(H1–H7)와 마일스톤 현황 <span class="tag tag-measured">[MEASURED]</span></h2>
+      <div class="table-wrap"><table>
+        <tr><th>게이트 / 마일스톤</th><th>내용</th><th>현재 상태</th></tr>
+        <tr><td>H1–H7 (T08 하드 게이트)</td><td>데이터 무결성, 계약, 결정론, 원자 저장, 봉인 분리, clean clone, 문서 수치 일치</td><td><strong>PASS</strong> (<code>G_GUIDE_H7</code> 포함 6/6 저장소 게이트 통과)</td></tr>
+        <tr><td>T01–T09 · E트랙 게이트</td><td>부트스트랩·데이터·파이프라인·배치·r20 채택·UI·봉인 1회·T09·val 짝평가</td><td><strong>완료</strong> (E트랙 채택 보류·r20 유지)</td></tr>
+        <tr><td>Phase 0–4 + GUI 고도화</td><td>무결성 기반(ADR 0008), 교차증거, 트리아지, Watchdog, 반사실/캘리브레이션</td><td><strong>구현·실측 완료</strong> (100% observe-only)</td></tr>
+        <tr><td>T10 공식 통합 가이드</td><td>30개 필수 섹션 자립형 HTML + 브라우저/H7/게이트 검증</td><td><strong>완료</strong> (본 문서)</td></tr>
+        <tr><td>T11 릴리스 점검</td><td>clean clone 최종 태그 <code>v1.0.0</code>·<code>v1.0.1</code>, 금지 파일 점검</td><td><strong>PASS</strong> (<code>origin/main</code> 및 태그 푸시 완료)</td></tr>
+      </table></div>
+    </section>
+    <section id="sec-26-limitations" class="doc-sec">
+      <h2>26. 알려진 한계와 미입증 사항 <span class="tag tag-not-measured">[NOT_MEASURED]</span></h2>
+      <ul>
+        <li><strong>봉인 test escape Wilson 상한 미달:</strong> 점추정 14.79%이나 상한이 21.55%(&gt; 20%)로 FAIL이다.</li>
+        <li><strong>생산 유병률 보정 및 현장 일반화:</strong> KolektorSDD2 표본 유병률(~10.7%) 기반 측정이며 실제 양산 라인 유병률 보정·현장 일반화는 <span class="tag tag-not-measured">[NOT_MEASURED]</span> 상태다.</li>
+        <li><strong>면적 병목 구조:</strong> REVIEW의 95.12%가 133px 이하 면적 병목에 속하며, T09 교정 프로파일은 120장 부분집합에서 발동 0건으로 고정 모드 유지가 확정됐다.</li>
+        <li><strong>가장자리 15% 편중:</strong> NG 후보 43.67%·REVIEW 후보 45.86%가 스트립 좌·우 경계에 집중돼 조명/가장자리 ROI 정밀 점검이 필요하다.</li>
+      </ul>
+    </section>
+    <section id="sec-27-history" class="doc-sec">
+      <h2>27. 설계 결정(ADR) 이력 <span class="tag tag-fact">[FACT]</span></h2>
+      <ul>
+        <li><strong>ADR 0001–0005:</strong> dHash 그룹 분할·official_test 중복 보고(L7), timing_ms dict 강제, 메타데이터 커밋 원칙, 상태 문서 자기 해시 금지, T06 원자 저장 확정.</li>
+        <li><strong>ADR 0006:</strong> <code>r20</code> 채택, <code>ScoringConfig.ok_max</code> 제거 및 <code>REVIEW_BAND_MAX=0.40</code> 동결.</li>
+        <li><strong>ADR 0007:</strong> E트랙(YOLO ONNX + SQLite + API) 가산 모듈 승인(단, val 400 게이트 미통과로 기본 채택 보류).</li>
+        <li><strong>ADR 0008:</strong> Phase 0 무결성 기반(9개 신원 fingerprint, 진입점 1회 <code>code_sha</code>, 단일 트랜잭션 v2 마이그레이션, 세션별 lock) 확정.</li>
+        <li><strong>Phase 1–4 + GUI 개편 + T10:</strong> 교차 증거, 트리아지(종횡비 RMS 보정), Watchdog/PSI, 반사실 위상도·캘리브레이션, 정밀 계측 콘솔, 통합 가이드 완성.</li>
+      </ul>
+    </section>
+    <section id="sec-28-glossary" class="doc-sec">
+      <h2>28. 핵심 용어 사전 <span class="tag tag-design">[DESIGN]</span></h2>
+      <div class="table-wrap"><table>
+        <tr><th>용어</th><th>정의</th></tr>
+        <tr><td><code>escape</code></td><td>실제 결함(defect) 이미지를 <code>OK</code>로 오판한 비율(분모 = 결함 이미지 수 P)</td></tr>
+        <tr><td><code>false-NG</code></td><td>정상(good) 이미지를 <code>NG</code>로 과잉 판정한 비율(분모 = 정상 이미지 수 N)</td></tr>
+        <tr><td><code>observe-only</code></td><td>기계 판정(<code>OK/NG/REVIEW</code>)과 동결 설정을 절대 변경하지 않고 별도 기록·정렬·감시만 수행하는 원칙</td></tr>
+        <tr><td><code>Pivotal</code> 후보</td><td>해당 후보 하나만 제거(Leave-One-Out)해도 이미지 판정 등급(<code>NG→REVIEW/OK</code>)이 바뀌는 결정적 후보</td></tr>
+        <tr><td><code>PSI</code></td><td>Population Stability Index — 분포 이탈 지표(<code>&lt;0.10</code> 정상, <code>0.10–0.25</code> 주의, <code>&gt;=0.25</code> 드리프트 경보)</td></tr>
+      </table></div>
+    </section>
+    <section id="sec-29-references" class="doc-sec">
+      <h2>29. 공식 출처와 내부 문서 색인 <span class="tag tag-fact">[FACT]</span></h2>
+      <ul>
+        <li>KolektorSDD2 공식 페이지: <code>https://www.vicos.si/resources/kolektorsdd2/</code></li>
+        <li>원논문 (Božič et al., 2021, DOI 10.1016/j.compind.2021.103459): <code>https://prints.vicos.si/publications/385</code> · <code>https://arxiv.org/abs/2104.06064</code></li>
+        <li>내부 정본 설계 및 ADR: <code>docs/design/master-design.md</code>, <code>docs/decisions/0001~0008</code></li>
+        <li>핵심 실측 증거: <code>docs/evidence/T08_sealed_test.json</code>, <code>P2_triage_eval_2026-11-13.json</code>, <code>P3_watchdog_eval_2026-11-13.json</code>, <code>P4_counterfactual_eval_2026-11-13.json</code></li>
+        <li>실측 보고서: <code>docs/reports/T05_adopted_2026-11-11.md</code>, <code>T08_sealed_2026-11-13.md</code>, <code>T09_agent_2026-11-13.md</code>, <code>P2_agent_triage_2026-11-13.md</code>, <code>P3_agent_watchdog_2026-11-13.md</code>, <code>P4_counterfactual_calibration_2026-11-13.md</code></li>
+      </ul>
+    </section>
+    <section id="sec-30-changelog" class="doc-sec">
+      <h2>30. 버전 기록 <span class="tag tag-fact">[FACT]</span></h2>
+      <div class="table-wrap"><table>
+        <tr><th>버전</th><th>주요 내용</th></tr>
+        <tr><td>v1.0.0</td><td>30섹션 통합 HTML 가이드 — T01–T09, E트랙 게이트, Phase 0–4 실측 수치 및 4종 인라인 SVG 다이어그램(아키텍처·점수 눈금자·2D 등위선 위상도·2계층 에이전트+핫스팟) 통합, H7 증거 대조 및 브라우저 무결성 검증 통과</td></tr>
+        <tr><td>v1.0.1</td><td>Watchdog 템플릿 블록 위치 수정 및 다크 텔레메트리 테마(<code>#theme-toggle</code>) 반영</td></tr>
+        <tr><td>v1.0.1 (안정화)</td><td>API 앱 범위·평가 실행 범위 ONNX 레지스트리 주입(ADR 0008 정합), <code>nightly.yml</code>(<code>not data</code>) 추가, dirty fingerprint 내용 digest, API label/split 422 경계, dedup canonical 응답, ERROR 진단 로깅(<code>error_code</code>/<code>error_stage</code>), bounded upload 413, ONNX SHA lifecycle 캐시, bootstrap CI 2종(기존 Wilson 불변), append-only 트리거 8개+<code>records verify</code></td></tr>
+        <tr><td>v1.0.1 (보안 하드닝)</td><td>이미지 헤더 fail-closed·업로드 경계·Origin 검증, pickle 캐시 제거·경로탈출 차단, API/DB 손상 방어·동시성 락, YOLO ImportError 전파·SHA 캐시 락·전치 출력 가드·유니코드 경로 이미지 I/O(<code>io/imageio.py</code>)·트레이스 손상 이벤트 방어·fixed ROI 클램프·워커 OpenCV 스레드 상한. 알고리즘·동결 <code>a762ba63</code>·봉인 원장 불변</td></tr>
+        <tr><td>v1.0.1 (콘솔)</td><td>§6에 <code>/cinema</code>(대표 불량 #20117 프리셋, 동결 해시 run만 사용)·<code>/inspections/export.csv</code> 추가, §15에 전처리 3종 실측표(<code>project02_preprocess_comparison.json</code>) 추가</td></tr>
+      </table></div>
+    </section>
+  </main>
+</div>
+<script>
+(function () {
+  var search = document.getElementById("toc-search");
+  var toc = document.getElementById("guide-toc");
+  if (!search || !toc) return;
+  var links = Array.prototype.slice.call(toc.querySelectorAll("a"));
+  search.addEventListener("input", function () {
+    var q = (search.value || "").trim().toLowerCase();
+    links.forEach(function (a) {
+      var li = a.parentElement;
+      if (!li) return;
+      var txt = (a.textContent || "").toLowerCase();
+      li.style.display = (!q || txt.indexOf(q) !== -1) ? "" : "none";
+    });
+  });
+  if ("IntersectionObserver" in window) {
+    var byId = {};
+    links.forEach(function (a) {
+      var href = a.getAttribute("href") || "";
+      if (href.charAt(0) === "#") byId[href.slice(1)] = a;
+    });
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (ent) {
+        if (ent.isIntersecting && byId[ent.target.id]) {
+          links.forEach(function (l) { l.classList.remove("active"); });
+          byId[ent.target.id].classList.add("active");
+        }
+      });
+    }, { rootMargin: "-20% 0px -70% 0px" });
+    Object.keys(byId).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) obs.observe(el);
+    });
+  }
+})();
+</script>
+</body>
+</html>

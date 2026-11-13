@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}교차증거 DB 탐색기 — Surface Sentinel{% endblock %}
+{% block content %}
+<h1>교차증거 DB 탐색기</h1>
+<p class="meta">SQLite 검사 기록(<code>inspections</code> · <code>engine_observations</code> · <code>agent_assessments</code>)을 읽기 전용으로 탐색합니다. DB: <span class="hash">{{ db.path }}</span></p>
+
+{% if api_enabled %}
+<div class="card" style="margin:12px 0;border-color:#93c5fd">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+    <strong style="font-size:14px">실시간 이미지 검사 워크벤치 (POST /api/inspect)</strong>
+    <span class="mode-pill api-on">API 연결됨</span>
+  </div>
+  <form id="live-inspect-form" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+    <div style="flex:1;min-width:200px">
+      <label for="live-file" style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">이미지 파일 (.png/.jpg/.bmp/.tif)</label>
+      <input type="file" id="live-file" name="file" accept=".png,.jpg,.jpeg,.bmp,.tif,.tiff" required style="font-size:12px">
+    </div>
+    <div>
+      <label for="live-engine" style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">검사 엔진</label>
+      <select id="live-engine" name="engine" style="padding:5px 8px;border:1px solid var(--line);border-radius:4px;font-size:12px">
+        <option value="opencv">opencv</option>
+        <option value="yolo-det">yolo-det</option>
+        <option value="yolo-seg">yolo-seg</option>
+        <option value="combined">combined</option>
+      </select>
+    </div>
+    <div>
+      <label for="live-label" style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">라벨</label>
+      <select id="live-label" name="label" style="padding:5px 8px;border:1px solid var(--line);border-radius:4px;font-size:12px">
+        <option value="unknown">unknown</option>
+        <option value="defect">defect</option>
+        <option value="good">good</option>
+      </select>
+    </div>
+    <button type="submit" id="live-submit">즉시 검사 실행</button>
+  </form>
+  <div id="live-result" style="margin-top:10px"></div>
+</div>
+{% endif %}
+
+{% if not db.available %}
+<div class="notice">{{ db.message }}</div>
+{% else %}
+<div class="kpi-strip">
+  <div class="kpi"><div class="kpi-label">전체 기록</div><div class="kpi-val">{{ db.all_total }}</div></div>
+  <div class="kpi"><div class="kpi-label">OK (정상)</div><div class="kpi-val">{{ db.status_counts["OK"] }}</div></div>
+  <div class="kpi"><div class="kpi-label">NG (불량)</div><div class="kpi-val">{{ db.status_counts["NG"] }}</div></div>
+  <div class="kpi"><div class="kpi-label">REVIEW (보류)</div><div class="kpi-val">{{ db.status_counts["REVIEW"] }}</div></div>
+</div>
+
+<form method="get" action="/inspections" class="toolbar card">
+  <label style="font-size:12px;font-weight:700">상태:
+    <select name="status" style="width:auto">
+      <option value="">전체</option>
+      {% for st in ["OK", "NG", "REVIEW", "ERROR"] %}
+      <option value="{{ st }}" {% if db.status == st %}selected{% endif %}>{{ st }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label style="font-size:12px;font-weight:700">엔진:
+    <select name="engine" style="width:auto">
+      <option value="">전체</option>
+      {% for eng in db.engines %}
+      <option value="{{ eng }}" {% if db.engine == eng %}selected{% endif %}>{{ eng }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit">필터 적용</button>
+  <a href="/inspections" class="btn btn-ghost">초기화</a>
+  <span class="meta num" style="margin-left:auto">조회 {{ db["items"]|length }} / {{ db.total }}건</span>
+</form>
+
+{% if db["items"] %}
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>ID</th><th>샘플</th><th>엔진</th><th>판정</th><th>점수</th>
+      <th>우선순위</th><th>교차증거 플래그</th><th>지문 (Fingerprint)</th><th>신원</th><th>시각(UTC)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for it in db["items"] %}
+    <tr>
+      <td class="num"><a href="/inspections/{{ it.id }}">#{{ it.id }}</a></td>
+      <td class="num"><a href="/inspections/{{ it.id }}">{{ it.sample_id }}</a></td>
+      <td><code>{{ it.engine }}</code>{% if it.obs_count > 0 %}<span class="badge-note">({{ it.obs_count }}엔진)</span>{% endif %}</td>
+      <td><span class="badge b-{{ it.status }}">{{ it.status }}</span></td>
+      <td class="num">{{ "%.4f"|format(it.score) }}</td>
+      <td>
+        {% if it.review_priority %}<span class="prio p-{{ it.review_priority }}">{{ it.review_priority }}</span>{% else %}<span class="meta">-</span>{% endif %}
+      </td>
+      <td>
+        {% if it.flags %}
+          {% for f in it.flags %}<span class="flag-pill">{{ f }}</span>{% endfor %}
+        {% else %}<span class="meta">-</span>{% endif %}
+      </td>
+      <td class="hash" title="{{ it.fingerprint }}">{{ it.fingerprint[:12] ~ "..." if it.fingerprint else "-" }}</td>
+      <td>{% if it.provenance_complete %}<span class="badge b-PASS">완전</span>{% else %}<span class="badge b-REVISE">부분</span>{% endif %}</td>
+      <td class="meta num">{{ it.created_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="notice">조건에 맞는 검사 기록이 없습니다.</div>
+{% endif %}
+{% endif %}
+
+{% if api_enabled %}
+<script>
+(function () {
+  var form = document.getElementById("live-inspect-form");
+  var out = document.getElementById("live-result");
+  var btn = document.getElementById("live-submit");
+  if (!form || !out) { return; }
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var fileInput = document.getElementById("live-file");
+    if (!fileInput || !fileInput.files || !fileInput.files.length) { return; }
+    var engine = document.getElementById("live-engine").value;
+    var label = document.getElementById("live-label").value;
+    var fd = new FormData();
+    fd.append("file", fileInput.files[0]);
+    fd.append("label", label);
+    fd.append("split", "tune");
+    btn.disabled = true;
+    out.textContent = "검사 실행 중...";
+    fetch("/api/inspect?engine=" + encodeURIComponent(engine), { method: "POST", body: fd })
+      .then(function (resp) {
+        return resp.json().then(function (data) { return { ok: resp.ok, data: data }; });
+      })
+      .then(function (res) {
+        btn.disabled = false;
+        out.textContent = "";
+        if (!res.ok) {
+          var errBox = document.createElement("div");
+          errBox.className = "errbox";
+          errBox.textContent = (res.data && res.data.detail) ? String(res.data.detail) : "검사 요청 실패";
+          out.appendChild(errBox);
+          return;
+        }
+        var d = res.data;
+        var box = document.createElement("div");
+        box.className = "okbox";
+        var title = document.createElement("strong");
+        title.textContent = "검사 완료 (#" + d.inspection_id + "): " + d.status + " (점수 " + Number(d.score).toFixed(4) + ", 엔진 " + d.engine + ")";
+        box.appendChild(title);
+        if (d.deduplicated) {
+          var dedup = document.createElement("span");
+          dedup.className = "badge-note";
+          dedup.textContent = " · 기존 기록 재사용(중복제거)";
+          box.appendChild(dedup);
+        }
+        var link = document.createElement("a");
+        link.href = "/inspections/" + encodeURIComponent(d.inspection_id);
+        link.textContent = " 상세 및 교차증거 보기 →";
+        link.style.marginLeft = "10px";
+        link.style.fontWeight = "700";
+        box.appendChild(link);
+        out.appendChild(box);
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        out.textContent = "";
+        var errBox = document.createElement("div");
+        errBox.className = "errbox";
+        errBox.textContent = "네트워크/요청 오류: " + String(err);
+        out.appendChild(errBox);
+      });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

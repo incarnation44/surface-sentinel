@@ -5,7 +5,7 @@
 결정론 규칙:
 
 * 파일은 **이름 정렬 순**으로 처리한다(파일 시스템 순서에 의존하지 않는다).
-* 같은 ``sha256``은 한 번만 검사한다(DB UNIQUE 중복제거).
+* 같은 ``(image_sha256, inspection_fingerprint)`` 쌍은 한 번만 검사한다(DB UNIQUE 중복제거).
 * 검사가 ``ERROR``로 끝나면 ``max_retries``회까지 다시 시도하고 마지막 결과를
   ``ERROR``로 기록한다.
 * 처리/스킵/에러는 ``.work/worker_audit.jsonl``에 append-only로 남긴다.

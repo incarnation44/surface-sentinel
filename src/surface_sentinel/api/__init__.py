@@ -10,7 +10,9 @@ from __future__ import annotations
 
 from .app import create_inspection_app, engine_status_counts
 from .schemas import (
+    AgentAssessmentOut,
     EngineName,
+    EngineObservationOut,
     InspectionDetail,
     InspectionList,
     InspectResponse,
@@ -20,7 +22,9 @@ from .schemas import (
 )
 
 __all__ = [
+    "AgentAssessmentOut",
     "EngineName",
+    "EngineObservationOut",
     "InspectResponse",
     "InspectionDetail",
     "InspectionList",

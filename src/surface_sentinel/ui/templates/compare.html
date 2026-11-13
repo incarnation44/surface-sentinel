@@ -5,6 +5,7 @@
 <div class="navlinks">
   <a href="/">run 목록</a>
   <a href="/stats">검사 통계</a>
+  <a href="/watchdog">Watchdog 관제</a>
 </div>
 <p class="meta">
   두 run의 지표를 같은 정의로 나란히 비교합니다. 모든 비율에 분모가 함께 표시되고,
@@ -31,23 +32,32 @@
 
 {% if rows %}
 <h2>지표 비교</h2>
+<div class="table-wrap">
 <table>
   <thead>
-    <tr><th>지표</th><th>base: {{ base_view.run.run_id }}</th><th>target: {{ target_view.run.run_id }}</th><th>정의</th></tr>
+    <tr><th>지표</th><th>base: {{ base_view.run.run_id }}</th><th>target: {{ target_view.run.run_id }}</th><th>Δ (target - base)</th><th>정의</th></tr>
   </thead>
   <tbody>
     {% for row in rows %}
     <tr>
       <td><code>{{ row.name }}</code></td>
-      <td>{{ row.base.formatted() }}</td>
-      <td>{{ row.target.formatted() }}</td>
+      <td class="num">{{ row.base.formatted() }}</td>
+      <td class="num">{{ row.target.formatted() }}</td>
+      <td class="num">
+        {% if row.delta is not none %}
+        <span class="delta-{{ row.delta_cls }}">{{ "%+.4f"|format(row.delta) }}</span>
+        {% if row.delta_cls == "good" %}<span class="badge-note">(개선)</span>{% elif row.delta_cls == "bad" %}<span class="badge-note">(주의)</span>{% endif %}
+        {% else %}-{% endif %}
+      </td>
       <td class="meta">{{ row.definition }}</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
 
 <h2>혼동행렬 (기계 판정)</h2>
+<div class="table-wrap">
 <table>
   <thead>
     <tr>
@@ -59,19 +69,20 @@
     {% for view in [base_view, target_view] %}
     {% for label in ["good", "defect"] %}
     <tr>
-      <td class="meta">{{ view.run.run_id }}</td>
+      <td class="meta num">{{ view.run.run_id }}</td>
       <th>{{ label }}</th>
-      <td>{{ view.confusion.count(label, "OK") }}</td>
-      <td>{{ view.confusion.count(label, "NG") }}</td>
-      <td>{{ view.confusion.count(label, "REVIEW") }}</td>
-      <td>{{ view.confusion.count(label, "ERROR") }}</td>
-      <td>{{ view.confusion.total(label) }}</td>
-      <td>{{ view.confusion.evaluated(label) }}</td>
+      <td class="num">{{ view.confusion.count(label, "OK") }}</td>
+      <td class="num">{{ view.confusion.count(label, "NG") }}</td>
+      <td class="num">{{ view.confusion.count(label, "REVIEW") }}</td>
+      <td class="num">{{ view.confusion.count(label, "ERROR") }}</td>
+      <td class="num">{{ view.confusion.total(label) }}</td>
+      <td class="num">{{ view.confusion.evaluated(label) }}</td>
     </tr>
     {% endfor %}
     {% endfor %}
   </tbody>
 </table>
+</div>
 <p class="meta">
   base 전체 {{ base_view.total }}건 · target 전체 {{ target_view.total }}건.
   상세는 각 run의 <a href="/runs/{{ base_view.run.run_id }}/metrics">base 지표</a>,
