@@ -71,6 +71,27 @@ CREATE TABLE IF NOT EXISTS engine_observations (
     UNIQUE (inspection_id, engine)
 );
 
+-- 에이전트 교차 증거 평가 (Phase 1, 에이전트 확장 제안 §1.5). append-only.
+-- 기계 판정(inspections.status)은 건드리지 않는 별도 증거 기록이다.
+-- 같은 (inspection_id, assessment_hash) 는 한 번만 기록한다(중복제거).
+-- review_priority·stability 는 Phase 2 예약 컬럼 — Phase 1 에서는 NULL.
+CREATE TABLE IF NOT EXISTS agent_assessments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    inspection_id INTEGER NOT NULL,
+    assessment_hash TEXT NOT NULL,       -- 입력+정책+플래그+지표 canonical SHA256
+    policy_hash TEXT NOT NULL,           -- 교차 증거 임계값 정책 해시(evidence-v1)
+    flags_json TEXT NOT NULL DEFAULT '[]',  -- JSON 배열(EvidenceFlag)
+    review_priority TEXT,                -- Phase 2 예약(P0~P3), 지금은 NULL
+    stability TEXT,                      -- Phase 2 예약(민감도), 지금은 NULL
+    recommended_action TEXT NOT NULL,    -- NONE/INSPECT_EVIDENCE/HUMAN_REVIEW
+    diagnostics_json TEXT NOT NULL DEFAULT '{}',  -- JSON(매칭·지표·ROI 전체)
+    trace_path TEXT NOT NULL DEFAULT '', -- 에이전트 에피소드 트레이스(직접 기록은 '')
+    created_at TEXT NOT NULL,            -- ISO8601 UTC
+    FOREIGN KEY (inspection_id) REFERENCES inspections(id),
+    UNIQUE (inspection_id, assessment_hash)
+);
+
 CREATE INDEX IF NOT EXISTS idx_inspections_status ON inspections(status);
 CREATE INDEX IF NOT EXISTS idx_review_inspection ON review_decisions(inspection_id);
 CREATE INDEX IF NOT EXISTS idx_observations_inspection ON engine_observations(inspection_id);
+CREATE INDEX IF NOT EXISTS idx_assessments_inspection ON agent_assessments(inspection_id);

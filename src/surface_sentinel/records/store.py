@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from typing import Any
 
@@ -31,6 +32,9 @@ ENGINES: tuple[str, ...] = ("opencv", "yolo-det", "yolo-seg", "combined")
 
 #: 사람 판정 값. 기계 판정의 REVIEW/ERROR는 사람 판정 값이 아니다.
 DECISIONS: tuple[str, ...] = ("OK", "NG")
+
+#: 교차 증거 권장 행동(Phase 1, observe-only). 자동 채택 값은 존재하지 않는다.
+RECOMMENDED_ACTIONS: tuple[str, ...] = ("NONE", "INSPECT_EVIDENCE", "HUMAN_REVIEW")
 
 STATUS_ORDER: tuple[str, ...] = ("OK", "NG", "REVIEW", "ERROR")
 
@@ -339,6 +343,92 @@ def list_engine_observations(
     return [dict(row) for row in rows]
 
 
+def append_agent_assessment(
+    connection: sqlite3.Connection,
+    inspection_id: int,
+    *,
+    assessment_hash: str,
+    policy_hash: str,
+    flags: Sequence[str],
+    recommended_action: str,
+    diagnostics: Mapping[str, Any],
+    trace_path: str = "",
+) -> int:
+    """교차 증거 평가를 append-only로 남기고 행 ``id``를 돌려준다(Phase 1).
+
+    ``(inspection_id, assessment_hash)`` 쌍으로 중복제거 — 같은 평가는 기존
+    id 를 돌려주고 새 행을 만들지 않는다. 다른 해시는 새 행으로 쌓는다.
+    기계 판정(``inspections.status``)은 절대 바꾸지 않는다.
+    ``review_priority``·``stability`` 는 Phase 2 예약 컬럼이라 기록하지 않는다.
+    """
+
+    assessment_sha = normalize_sha256(assessment_hash)
+    policy_sha = normalize_sha256(policy_hash)
+    action = str(recommended_action).strip()
+    if action not in RECOMMENDED_ACTIONS:
+        raise RecordsError(
+            f"권장 행동은 {RECOMMENDED_ACTIONS}만 허용합니다: {recommended_action!r}"
+        )
+    row = connection.execute(
+        "SELECT id FROM inspections WHERE id = ?",
+        (int(inspection_id),),
+    ).fetchone()
+    if row is None:
+        raise RecordsError(f"검사 기록이 없습니다: inspection_id={inspection_id}")
+
+    existing = connection.execute(
+        "SELECT id FROM agent_assessments WHERE inspection_id = ? AND assessment_hash = ?",
+        (int(inspection_id), assessment_sha),
+    ).fetchone()
+    if existing is not None:
+        return int(existing["id"])
+
+    flags_json = json.dumps([str(flag) for flag in flags], ensure_ascii=False)
+    diagnostics_json = json.dumps(dict(diagnostics), ensure_ascii=False, sort_keys=True)
+    params = (
+        int(inspection_id),
+        assessment_sha,
+        policy_sha,
+        flags_json,
+        action,
+        diagnostics_json,
+        str(trace_path),
+        utc_now_iso(),
+    )
+    try:
+        with connection:
+            cursor = connection.execute(
+                "INSERT INTO agent_assessments ("
+                "inspection_id, assessment_hash, policy_hash, flags_json,"
+                " recommended_action, diagnostics_json, trace_path, created_at"
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                params,
+            )
+    except sqlite3.IntegrityError:
+        row = connection.execute(
+            "SELECT id FROM agent_assessments "
+            "WHERE inspection_id = ? AND assessment_hash = ?",
+            (int(inspection_id), assessment_sha),
+        ).fetchone()
+        if row is None:
+            raise
+        return int(row["id"])
+    return int(cursor.lastrowid or 0)
+
+
+def list_agent_assessments(
+    connection: sqlite3.Connection,
+    inspection_id: int,
+) -> list[dict[str, Any]]:
+    """검사 한 건의 교차 증거 평가를 ``id`` 오름차순으로 돌려준다(결정론적 순서)."""
+
+    rows = connection.execute(
+        "SELECT * FROM agent_assessments WHERE inspection_id = ? ORDER BY id ASC",
+        (int(inspection_id),),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def _scalar(connection: sqlite3.Connection, sql: str, params: tuple[Any, ...] = ()) -> int:
     row = connection.execute(sql, params).fetchone()
     return 0 if row is None else int(row[0])
@@ -413,13 +503,16 @@ def stats_payload(connection: sqlite3.Connection) -> dict[str, Any]:
 __all__ = [
     "DECISIONS",
     "ENGINES",
+    "RECOMMENDED_ACTIONS",
     "RecordsError",
     "STATUS_ORDER",
+    "append_agent_assessment",
     "append_review",
     "find_inspection_id",
     "get_inspection",
     "insert_engine_observation",
     "insert_inspection",
+    "list_agent_assessments",
     "list_engine_observations",
     "list_inspections",
     "normalize_sha256",

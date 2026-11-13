@@ -38,11 +38,13 @@ from ..records.db import connect, init_db
 from ..records.identity import EngineSpec, opencv_spec
 from ..records.store import (
     ENGINES,
+    append_agent_assessment,
     find_inspection_id,
     insert_engine_observation,
     insert_inspection,
     utc_now_iso,
 )
+from .evidence import assess_cross_evidence
 
 #: 감시 대상 확장자(소문자 비교).
 IMAGE_SUFFIXES: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")
@@ -368,6 +370,34 @@ def _process_one(
             task=observation.task,
             model_sha256="" if observation.engine == "opencv" else spec.model_sha256,
         )
+    if len(observations) >= 2:
+        # 교차 증거(Phase 1, observe-only): 엔진 관찰 둘을 비교해 별도 증거를
+        # append 한다. 기계 판정은 건드리지 않는다. 증거 실패는 검사 기록을
+        # 막지 않도록 격리하고 감사 로그로만 남긴다.
+        try:
+            assessment = assess_cross_evidence(observations[0], observations[1])
+            append_agent_assessment(
+                connection,
+                inspection_id,
+                assessment_hash=assessment.assessment_hash,
+                policy_hash=assessment.policy_hash,
+                flags=[flag.value for flag in assessment.flags],
+                recommended_action=assessment.recommended_action,
+                diagnostics=assessment.to_dict(),
+            )
+        except Exception as exc:  # noqa: BLE001 - 증거 실패는 검사 기록과 격리
+            _append_audit(
+                audit_path,
+                {
+                    "event": "evidence_error",
+                    "run_id": run_id,
+                    "sample_id": sample_id,
+                    "sha256": sha256,
+                    "path": str(path),
+                    "inspection_id": inspection_id,
+                    "message": str(exc),
+                },
+            )
     _append_audit(
         audit_path,
         {

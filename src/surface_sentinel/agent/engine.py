@@ -20,11 +20,12 @@ from enum import StrEnum
 from typing import Any
 
 from ..config import AppConfig
-from ..contracts import ErrorCode, SampleResult, Status
+from ..contracts import EngineObservation, ErrorCode, SampleResult, Status
 from .config import AgentConfig, PolicyConfig
+from .evidence import CrossEvidenceAssessment, EvidencePolicy, assess_cross_evidence
 from .trace import TraceWriter, hash_action, hash_args, hash_result, result_summary
 
-WORK_TOOLS = frozenset({"run_profile", "inspect_artifact", "compare"})
+WORK_TOOLS = frozenset({"run_profile", "inspect_artifact", "compare", "cross_evidence"})
 TERMINAL_TOOLS = frozenset({"escalate_review", "stop"})
 ALL_TOOLS = WORK_TOOLS | TERMINAL_TOOLS
 
@@ -173,6 +174,38 @@ def compare_terminal(status_a: Status, status_b: Status) -> Terminal:
     return Terminal(AgentState.REVIEW, Status.REVIEW, "PROFILE_MISMATCH")
 
 
+def choose_evidence_action(
+    results: Sequence[ProfileObservation],
+    policy: PolicyConfig,
+    *,
+    cross_evidence_done: bool,
+) -> Decision:
+    """Phase 1 observe-only 정책 표(교차 증거 에피소드 전용).
+
+    교차 증거 기록 → 결합 결과 확인 → 파이프라인 상태 그대로 종료.
+    2프로파일 재검사는 하지 않는다(민감도 검사는 Phase 2, 별도 승인).
+    판정은 항상 파이프라인(결합 결과) 소유이며 증거가 판정을 바꾸지 않는다.
+    """
+
+    if not cross_evidence_done:
+        return ToolCall("cross_evidence", {})
+    if not results:
+        return ToolCall("run_profile", {"profile_id": policy.base_profile})
+    first = results[0]
+    if first.status is Status.OK:
+        return ToolCall("stop", {})
+    if first.status is Status.NG:
+        return Terminal(AgentState.DONE, Status.NG, "PIPELINE_NG")
+    if first.status is Status.ERROR:
+        return Terminal(
+            AgentState.ERROR,
+            Status.ERROR,
+            first.error_code or ErrorCode.E_PROCESS_INTERNAL.value,
+        )
+    reason = first.reasons[0] if first.reasons else "EVIDENCE_IN_REVIEW_BAND"
+    return ToolCall("escalate_review", {"reason": reason})
+
+
 class AgentEngine:
     """제한된 도구만 실행하는 결정론 상태 머신.
 
@@ -190,6 +223,8 @@ class AgentEngine:
         clock: Callable[[], float] = time.perf_counter,
         trace: TraceWriter | None = None,
         profile_hashes: Mapping[str, str] | None = None,
+        observations: Sequence[EngineObservation] = (),
+        evidence_policy: EvidencePolicy | None = None,
     ) -> None:
         self._config = agent_config
         self._profiles = dict(profiles)
@@ -197,6 +232,12 @@ class AgentEngine:
         self._clock = clock
         self._trace = trace if trace is not None else TraceWriter(None)
         self._profile_hashes = dict(profile_hashes) if profile_hashes is not None else None
+        # 교차 증거 입력(결합 검사가 보존한 엔진별 관찰). 주입 시 observe-only
+        # 에피소드로 동작한다 — T09 기본 경로(미주입)는 그대로다.
+        self._observations = tuple(observations)
+        self._evidence_policy = evidence_policy
+        self._assessment: CrossEvidenceAssessment | None = None
+        self._cross_evidence_done = False
         self._state = AgentState.OBSERVE
         self._results: dict[str, ProfileObservation] = {}
         self._summaries: dict[str, dict[str, Any]] = {}
@@ -214,6 +255,12 @@ class AgentEngine:
     def state(self) -> AgentState:
         return self._state
 
+    @property
+    def assessment(self) -> CrossEvidenceAssessment | None:
+        """교차 증거 평가 산출물(없으면 None). 기계 판정과 분리된 별도 증거다."""
+
+        return self._assessment
+
     def run(
         self,
         *,
@@ -228,12 +275,17 @@ class AgentEngine:
             if self._profile_hashes is not None
             else {pid: cfg.config_hash for pid, cfg in sorted(self._profiles.items())}
         )
-        self._emit(
-            "episode_start",
-            agent_config=self._config.to_dict(),
-            image={"path": str(image_path), "label": label, "split": split},
-            profiles=profiles_payload,
-        )
+        start_payload: dict[str, Any] = {
+            "agent_config": self._config.to_dict(),
+            "image": {"path": str(image_path), "label": label, "split": split},
+            "profiles": profiles_payload,
+        }
+        if self._observations:
+            # replay 가 교차 증거를 재계산할 수 있도록 관찰 원본을 싣는다.
+            start_payload["engine_observations"] = [
+                observation.to_dict() for observation in self._observations
+            ]
+        self._emit("episode_start", **start_payload)
         pending: ToolCall | None = None
         tool_result: dict[str, Any] | None = None
         while self._state not in TERMINAL_STATES:
@@ -241,7 +293,14 @@ class AgentEngine:
                 self._emit("observe", results=[])
                 self._state = AgentState.PLAN
             elif self._state is AgentState.PLAN:
-                decision = choose_action(tuple(self._results.values()), self._config.policy)
+                if self._observations:
+                    decision = choose_evidence_action(
+                        tuple(self._results.values()),
+                        self._config.policy,
+                        cross_evidence_done=self._cross_evidence_done,
+                    )
+                else:
+                    decision = choose_action(tuple(self._results.values()), self._config.policy)
                 if isinstance(decision, Terminal):
                     self._emit(
                         "plan",
@@ -449,6 +508,20 @@ class AgentEngine:
                 "status_b": status_b,
                 "agree": status_a == status_b,
             }
+        if tool == "cross_evidence":
+            if len(self._observations) < 2:
+                raise ToolError(
+                    ErrorCode.E_TOOL_FAILED.value,
+                    "cross_evidence requires two engine observations",
+                )
+            assessment = assess_cross_evidence(
+                self._observations[0],
+                self._observations[1],
+                policy=self._evidence_policy,
+            )
+            self._assessment = assessment
+            self._cross_evidence_done = True
+            return assessment.to_dict()
         if tool == "escalate_review":
             return {"terminal": "REVIEW", "reason": str(call.args.get("reason", ""))}
         if tool == "stop":
@@ -498,6 +571,9 @@ class AgentEngine:
             return None
         if call.tool == "compare":
             return compare_terminal(Status(result["status_a"]), Status(result["status_b"]))
+        if call.tool == "cross_evidence":
+            # observe-only: 증거 기록은 종료 상태를 만들지 않는다(판정 불변).
+            return None
         if call.tool == "escalate_review":
             return Terminal(
                 AgentState.REVIEW, Status.REVIEW, str(result.get("reason") or "ESCALATED")
@@ -575,5 +651,6 @@ __all__ = [
     "ToolCall",
     "ToolError",
     "choose_action",
+    "choose_evidence_action",
     "compare_terminal",
 ]

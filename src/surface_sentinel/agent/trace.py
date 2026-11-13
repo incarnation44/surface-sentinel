@@ -15,7 +15,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..contracts import ErrorCode, QualityInfo, ReasonCode, RoiInfo, SampleResult, Status
+from ..contracts import (
+    RESULT_SCHEMA_VERSION,
+    ComponentFeature,
+    EngineObservation,
+    ErrorCode,
+    QualityInfo,
+    ReasonCode,
+    RoiInfo,
+    SampleResult,
+    Stage,
+    Status,
+)
 
 TRACE_SCHEMA_VERSION = "agent-trace-v1"
 TERMINAL_STATES = ("DONE", "REVIEW", "ERROR")
@@ -94,6 +105,65 @@ def rebuild_result(summary: Mapping[str, Any]) -> SampleResult:
         error_code=ErrorCode(summary["error_code"]) if summary["error_code"] else None,
         config_hash=str(summary["config_hash"]),
         input_sha256=str(summary["input_sha256"]),
+    )
+
+
+def rebuild_observation(payload: Mapping[str, Any]) -> EngineObservation:
+    """기록된 엔진 관찰 원본을 재구성한다(replay 전용, 컴포넌트 포함 전체 충실도).
+
+    ``rebuild_result`` 가 판정 요약만 복원하는 것과 달리, 교차 증거 재계산에
+    필요한 컴포넌트·ROI 까지 복원한다. 기록은 ``EngineObservation.to_dict()``
+    왕복이므로 해시가 보존된다.
+    """
+
+    data = dict(payload["result"])
+    quality = data.get("quality")
+    roi = data.get("roi")
+    result = SampleResult(
+        run_id=str(data["run_id"]),
+        sample_id=str(data["sample_id"]),
+        original_id=str(data["original_id"]),
+        split=str(data["split"]),
+        label=str(data["label"]),
+        status=Status(data["status"]),
+        score=float(data["score"]),
+        reasons=tuple(ReasonCode(value) for value in data.get("reasons", [])),
+        components=tuple(
+            ComponentFeature(**{**component, "bbox": tuple(component["bbox"])})
+            for component in data.get("components", [])
+        ),
+        quality=(
+            QualityInfo(
+                blur_variance=float(quality["blur_variance"]),
+                mean_gray=float(quality["mean_gray"]),
+                saturated_ratio=float(quality["saturated_ratio"]),
+                flags=tuple(ReasonCode(value) for value in quality.get("flags", [])),
+            )
+            if quality is not None
+            else None
+        ),
+        roi=(
+            RoiInfo(
+                mode=str(roi["mode"]),
+                bbox=tuple(roi["bbox"]),
+                area_px=int(roi["area_px"]),
+                area_ratio=float(roi["area_ratio"]),
+                uncertain=bool(roi["uncertain"]),
+            )
+            if roi is not None
+            else None
+        ),
+        timing_ms={str(key): float(value) for key, value in data.get("timing_ms", {}).items()},
+        error_code=ErrorCode(data["error_code"]) if data.get("error_code") else None,
+        error_stage=Stage(data["error_stage"]) if data.get("error_stage") else None,
+        input_sha256=str(data.get("input_sha256", "")),
+        mask_sha256=str(data.get("mask_sha256", "")),
+        overlay_path=str(data.get("overlay_path", "")),
+        config_hash=str(data.get("config_hash", "")),
+        schema_version=str(data.get("schema_version", RESULT_SCHEMA_VERSION)),
+    )
+    return EngineObservation(
+        engine=str(payload["engine"]), result=result, task=str(payload.get("task", ""))
     )
 
 
@@ -280,6 +350,9 @@ def replay_trace(events: Sequence[Mapping[str, Any]]) -> ReplayReport:
         )
     image = start.get("image", {})
     profile_hashes = dict(start.get("profiles", {}))
+    observations = tuple(
+        rebuild_observation(item) for item in start.get("engine_observations", [])
+    )
     recorded: dict[str, dict[str, Any]] = {}
     elapsed: list[float] = []
     for event in events:
@@ -303,6 +376,7 @@ def replay_trace(events: Sequence[Mapping[str, Any]]) -> ReplayReport:
         clock=_ReplayClock(elapsed),
         trace=writer,
         profile_hashes=profile_hashes,
+        observations=observations,
     )
     try:
         engine.run(
@@ -361,6 +435,7 @@ __all__ = [
     "hash_args",
     "hash_result",
     "load_trace",
+    "rebuild_observation",
     "rebuild_result",
     "replay_trace",
     "result_summary",

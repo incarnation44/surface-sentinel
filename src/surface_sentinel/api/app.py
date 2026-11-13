@@ -21,6 +21,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import json
+import logging
 import sqlite3
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -31,6 +32,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.concurrency import run_in_threadpool
 
+from ..agent.evidence import assess_cross_evidence
 from ..config import AppConfig, default_config, load_config
 from ..contracts import Status
 from ..pipeline import InspectionOutcome, inspect_image
@@ -40,6 +42,7 @@ from ..records.store import (
     ENGINES,
     STATUS_ORDER,
     RecordsError,
+    append_agent_assessment,
     append_review,
     find_inspection_id,
     get_inspection,
@@ -66,6 +69,8 @@ from .schemas import (
 
 #: 기본 DB 파일 이름(``runs_dir`` 아래). UI도 같은 이름을 쓴다.
 DEFAULT_DB_NAME = "records.db"
+
+_logger = logging.getLogger(__name__)
 
 #: 업로드 원본 보관 위치(``runs_dir`` 아래).
 UPLOAD_DIRNAME = "api_uploads"
@@ -408,6 +413,29 @@ def create_inspection_app(
                     task=observation.task,
                     model_sha256="" if observation.engine == "opencv" else spec.model_sha256,
                 )
+            if len(outcome.engine_observations) >= 2:
+                # 교차 증거(Phase 1, observe-only): 별도 증거만 append 한다.
+                # 기계 판정은 건드리지 않으며, 증거 실패는 검사 응답을 막지
+                # 않도록 격리한다(워커와 같은 계약).
+                try:
+                    assessment = assess_cross_evidence(
+                        outcome.engine_observations[0], outcome.engine_observations[1]
+                    )
+                    append_agent_assessment(
+                        connection,
+                        inspection_id,
+                        assessment_hash=assessment.assessment_hash,
+                        policy_hash=assessment.policy_hash,
+                        flags=[flag.value for flag in assessment.flags],
+                        recommended_action=assessment.recommended_action,
+                        diagnostics=assessment.to_dict(),
+                    )
+                except Exception:  # noqa: BLE001 - 증거 실패는 검사 기록과 격리
+                    _logger.warning(
+                        "교차 증거 기록 실패(검사 기록은 유지): inspection_id=%s",
+                        inspection_id,
+                        exc_info=True,
+                    )
             row = get_inspection(connection, inspection_id)
 
         overlay_url = None

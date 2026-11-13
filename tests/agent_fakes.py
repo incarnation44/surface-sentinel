@@ -6,11 +6,14 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import replace
 
 from surface_sentinel.agent.config import AgentConfig, default_agent_config
 from surface_sentinel.agent.engine import AgentEngine, ProfileObservation
 from surface_sentinel.config import AppConfig, default_config
 from surface_sentinel.contracts import (
+    ComponentFeature,
+    EngineObservation,
     ErrorCode,
     QualityInfo,
     ReasonCode,
@@ -84,6 +87,56 @@ def make_engine(
         trace=trace,
     )
     return engine, inspector
+
+
+def make_component(
+    index: int,
+    bbox: tuple[int, int, int, int],
+    *,
+    area_px: int | None = None,
+    evidence: float = 1.0,
+) -> ComponentFeature:
+    """교차 증거 테스트용 컴포넌트. bbox 는 (x, y, w, h) 계약이다."""
+
+    x, y, w, h = bbox
+    area = w * h if area_px is None else area_px
+    return ComponentFeature(
+        index=index,
+        area_px=area,
+        bbox=bbox,
+        area_ratio=0.01,
+        aspect_ratio=(w / h) if h else 0.0,
+        elongation=1.0,
+        solidity=1.0,
+        mean_contrast_gray=50.0,
+        max_contrast_gray=80.0,
+        integrated_contrast=area * 50.0,
+        border_distance_px=10.0,
+        touches_roi_border=False,
+        evidence=evidence,
+    )
+
+
+def make_observation(
+    engine: str,
+    status: Status,
+    *,
+    components: Sequence[ComponentFeature] = (),
+    score: float = 0.0,
+    reasons: Sequence[str] = (),
+    task: str = "",
+    roi: RoiInfo | None = None,
+    error_code: str | None = None,
+) -> EngineObservation:
+    """교차 증거 테스트용 엔진 관찰. 실제 검사 없이 계약 모양만 만든다."""
+
+    result = make_result(status, reasons=reasons, score=score, error_code=error_code)
+    result = replace(
+        result,
+        components=tuple(components),
+        roi=roi if roi is not None else result.roi,
+    )
+    return EngineObservation(engine=engine, result=result, task=task)
 
 
 def observation(
