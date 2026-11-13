@@ -1,0 +1,19 @@
+{
+  "access_count": 1,
+  "accesses": [
+    {
+      "code_sha": "eef2a0767b57a1adab2f5a93c909842aceb17f02",
+      "config_hash": "a762ba63944133ddfbc2f962342001e09d0dffd0f0ea14fd79095274865d8098",
+      "purpose": "T08 봉인 test 일회성 측정",
+      "timestamp": "2026-11-13T01:41:35.138Z"
+    }
+  ],
+  "code_sha": "eef2a0767b57a1adab2f5a93c909842aceb17f02",
+  "config_hash": "a762ba63944133ddfbc2f962342001e09d0dffd0f0ea14fd79095274865d8098",
+  "created": "2026-11-13T01:41:35.138Z",
+  "post_seal_config_change": false,
+  "purpose": "T08 봉인 test 일회성 측정",
+  "reuse": false,
+  "split": "test",
+  "split_sha256": "c467b8a71d616fc0bd9c093dad7eed20f28088e53480c1c1de81aa16d4614962"
+}

@@ -1,0 +1,14 @@
+{
+  "gate": "H6",
+  "description": "clean clone 설치와 테스트 (설계 §7 하드 게이트)",
+  "remote": "https://github.com/incarnation44/surface-sentinel.git",
+  "clone_head": "eef2a0767b57a1adab2f5a93c909842aceb17f02",
+  "python": "CPython 3.11.16",
+  "install": "uv sync — 33 packages, surface-sentinel 0.1.0 빌드",
+  "cli_version": "surface-sentinel 0.1.0",
+  "ruff": "All checks passed",
+  "pytest_command": "uv run pytest -m \"not data and not browser\"",
+  "pytest_result": "557 passed, 9 deselected in 32.21s",
+  "note": "실제 KSDD2 데이터셋은 git 제외(보안 예외)라 clean clone에 없다. data/browser 마커 9건 deselect. 비데이터 557건(기준 537 + 신규 봉인 20) 전부 통과. 임시 클론은 검증 후 정리했다.",
+  "pass": true
+}
