@@ -1,0 +1,307 @@
+{
+  "analysis_elapsed_sec": 0.11,
+  "bootstrap": {
+    "alpha": 0.05,
+    "b": 2000,
+    "seed": 20261111
+  },
+  "config_hash": "a762ba63944133ddfbc2f962342001e09d0dffd0f0ea14fd79095274865d8098",
+  "consistency": {
+    "inference_mismatch": [],
+    "label_mismatch": []
+  },
+  "defect": 43,
+  "degraded": 0,
+  "engines": {
+    "combined": {
+      "bootstrap": {
+        "escape": {
+          "alpha": 0.05,
+          "b": 2000,
+          "ci_high": 0.18604651162790697,
+          "ci_low": 0.023255813953488372,
+          "denominator": 43.0,
+          "n": 43,
+          "numerator": 4.0,
+          "seed": 20261111,
+          "value": 0.09302325581395349
+        },
+        "false_ng": {
+          "alpha": 0.05,
+          "b": 2000,
+          "ci_high": 0.09243697478991597,
+          "ci_low": 0.0392156862745098,
+          "denominator": 357.0,
+          "n": 357,
+          "numerator": 23.0,
+          "seed": 20261111,
+          "value": 0.06442577030812324
+        },
+        "review": {
+          "alpha": 0.05,
+          "b": 2000,
+          "ci_high": 0.3825,
+          "ci_low": 0.2925,
+          "denominator": 400.0,
+          "n": 400,
+          "numerator": 135.0,
+          "seed": 20261111,
+          "value": 0.3375
+        }
+      },
+      "error_count": 0,
+      "escape": {
+        "ci95_high": 0.21602703641253587,
+        "ci95_low": 0.03677164063171276,
+        "definition": "OK_on_defect / P",
+        "denominator": 43,
+        "numerator": 4,
+        "value": 0.09302325581395349
+      },
+      "false_ng": {
+        "ci95_high": 0.09481512174469227,
+        "ci95_low": 0.04331052208677465,
+        "definition": "NG_on_good / N",
+        "denominator": 357,
+        "numerator": 23,
+        "value": 0.06442577030812324
+      },
+      "review": {
+        "ci95_high": 0.38518985793734206,
+        "ci95_low": 0.2929016377213044,
+        "definition": "REVIEW / T",
+        "denominator": 400,
+        "numerator": 135,
+        "value": 0.3375
+      },
+      "status_counts": {
+        "ERROR": 0,
+        "NG": 55,
+        "OK": 210,
+        "REVIEW": 135
+      }
+    },
+    "opencv_r20": {
+      "bootstrap": {
+        "escape": {
+          "alpha": 0.05,
+          "b": 2000,
+          "ci_high": 0.18604651162790697,
+          "ci_low": 0.023255813953488372,
+          "denominator": 43.0,
+          "n": 43,
+          "numerator": 4.0,
+          "seed": 20261111,
+          "value": 0.09302325581395349
+        },
+        "false_ng": {
+          "alpha": 0.05,
+          "b": 2000,
+          "ci_high": 0.09243697478991597,
+          "ci_low": 0.0392156862745098,
+          "denominator": 357.0,
+          "n": 357,
+          "numerator": 23.0,
+          "seed": 20261111,
+          "value": 0.06442577030812324
+        },
+        "review": {
+          "alpha": 0.05,
+          "b": 2000,
+          "ci_high": 0.3825,
+          "ci_low": 0.2925,
+          "denominator": 400.0,
+          "n": 400,
+          "numerator": 135.0,
+          "seed": 20261111,
+          "value": 0.3375
+        }
+      },
+      "error_count": 0,
+      "escape": {
+        "ci95_high": 0.21602703641253587,
+        "ci95_low": 0.03677164063171276,
+        "definition": "OK_on_defect / P",
+        "denominator": 43,
+        "numerator": 4,
+        "value": 0.09302325581395349
+      },
+      "false_ng": {
+        "ci95_high": 0.09481512174469227,
+        "ci95_low": 0.04331052208677465,
+        "definition": "NG_on_good / N",
+        "denominator": 357,
+        "numerator": 23,
+        "value": 0.06442577030812324
+      },
+      "review": {
+        "ci95_high": 0.38518985793734206,
+        "ci95_low": 0.2929016377213044,
+        "definition": "REVIEW / T",
+        "denominator": 400,
+        "numerator": 135,
+        "value": 0.3375
+      },
+      "status_counts": {
+        "ERROR": 0,
+        "NG": 54,
+        "OK": 211,
+        "REVIEW": 135
+      }
+    },
+    "yolo_seg": {
+      "bootstrap": {
+        "escape": {
+          "alpha": 0.05,
+          "b": 2000,
+          "ci_high": 0.5581395348837209,
+          "ci_low": 0.2558139534883721,
+          "denominator": 43.0,
+          "n": 43,
+          "numerator": 17.0,
+          "seed": 20261111,
+          "value": 0.3953488372093023
+        },
+        "false_ng": {
+          "alpha": 0.05,
+          "b": 2000,
+          "ci_high": 0.0,
+          "ci_low": 0.0,
+          "denominator": 357.0,
+          "n": 357,
+          "numerator": 0.0,
+          "seed": 20261111,
+          "value": 0.0
+        },
+        "review": {
+          "alpha": 0.05,
+          "b": 2000,
+          "ci_high": 0.0475,
+          "ci_low": 0.015,
+          "denominator": 400.0,
+          "n": 400,
+          "numerator": 12.0,
+          "seed": 20261111,
+          "value": 0.03
+        }
+      },
+      "error_count": 0,
+      "escape": {
+        "ci95_high": 0.5442093693712609,
+        "ci95_low": 0.2636531475829744,
+        "definition": "OK_on_defect / P",
+        "denominator": 43,
+        "numerator": 17,
+        "value": 0.3953488372093023
+      },
+      "false_ng": {
+        "ci95_high": 0.010645835523580971,
+        "ci95_low": 0.0,
+        "definition": "NG_on_good / N",
+        "denominator": 357,
+        "numerator": 0,
+        "value": 0.0
+      },
+      "review": {
+        "ci95_high": 0.05169853570909567,
+        "ci95_low": 0.017243020965143054,
+        "definition": "REVIEW / T",
+        "denominator": 400,
+        "numerator": 12,
+        "value": 0.03
+      },
+      "status_counts": {
+        "ERROR": 0,
+        "NG": 16,
+        "OK": 372,
+        "REVIEW": 12
+      }
+    }
+  },
+  "gates": {
+    "G1_escape": {
+      "ci_high": 0.21602703641253587,
+      "pass": false,
+      "rule": "escape <= 0.15 AND Wilson 상한 <= 0.2",
+      "value": 0.09302325581395349
+    },
+    "G2_false_ng": {
+      "pass": true,
+      "rule": "false-NG <= 0.2",
+      "value": 0.06442577030812324
+    },
+    "G3_review": {
+      "pass": true,
+      "rule": "review <= 0.4",
+      "value": 0.3375
+    },
+    "G4_recall_010": {
+      "pass": true,
+      "rule": "recall@0.10 >= 0.5",
+      "value": 0.62
+    },
+    "G5_paired_escape": {
+      "ci_high": 0.0,
+      "ci_low": 0.0,
+      "delta": 0.0,
+      "pass": false,
+      "rule": "짝 차이(combined-r20) 점추정 < 0 AND 부트스트랩 CI 상한 <= 0"
+    },
+    "G6_error": {
+      "degraded": 0,
+      "pass": true,
+      "rule": "combined ERROR 0건",
+      "value": 0
+    }
+  },
+  "generated": "2026-11-13",
+  "good": 357,
+  "groups": 400,
+  "onnx": "data\\derived\\yolo\\models\\seg\\weights\\best.onnx",
+  "paired_delta_combined_minus_r20": {
+    "escape": {
+      "a_value": 0.09302325581395349,
+      "alpha": 0.05,
+      "b": 2000,
+      "b_value": 0.09302325581395349,
+      "ci_high": 0.0,
+      "ci_low": 0.0,
+      "delta": 0.0,
+      "n": 43,
+      "seed": 20261111
+    },
+    "false_ng": {
+      "a_value": 0.06442577030812324,
+      "alpha": 0.05,
+      "b": 2000,
+      "b_value": 0.06442577030812324,
+      "ci_high": 0.0,
+      "ci_low": 0.0,
+      "delta": 0.0,
+      "n": 357,
+      "seed": 20261111
+    },
+    "review": {
+      "a_value": 0.3375,
+      "alpha": 0.05,
+      "b": 2000,
+      "b_value": 0.3375,
+      "ci_high": 0.007500000000000007,
+      "ci_low": -0.007500000000000007,
+      "delta": 0.0,
+      "n": 400,
+      "seed": 20261111
+    }
+  },
+  "policy": {
+    "ng_conf": 0.5,
+    "review_lo": 0.25
+  },
+  "recall_at": {
+    "iou0.10": 0.62,
+    "iou0.50": 0.56
+  },
+  "samples": 400,
+  "split": "val",
+  "verdict": "채택 보류 — r20 유지 (미통과 게이트 존재)"
+}
