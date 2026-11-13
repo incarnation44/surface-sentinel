@@ -9,7 +9,10 @@
 -- 불변 규칙:
 --   * inspections.status 는 기계 판정이며 UPDATE 하지 않는다.
 --   * 사람 판정은 review_decisions 에 append-only 로만 쌓는다.
---   * image_sha256 UNIQUE 가 중복제거 키다(같은 이미지는 한 행만 갖는다).
+--   * 중복제거 키는 (image_sha256, inspection_fingerprint) 쌍이다(P0-2).
+--     같은 이미지라도 엔진·task·모델·설정·정책·코드 버전이 다르면 다른 검사로 기록한다.
+--   * inspection_fingerprint 는 이미지 SHA 를 제외한 검사 신원의 canonical SHA256
+--     (records/fingerprint.py). provenance_complete=0 은 신원이 불완전한 과거 행.
 --
 -- PostgreSQL 이식 시 추가: CREATE EXTENSION IF NOT EXISTS pgcrypto;
 --   그리고 REAL → DOUBLE PRECISION, AUTOINCREMENT → GENERATED ALWAYS AS IDENTITY.
@@ -18,18 +21,23 @@ CREATE TABLE IF NOT EXISTS inspections (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     run_id TEXT NOT NULL,
     sample_id TEXT NOT NULL,
-    image_sha256 TEXT NOT NULL UNIQUE,   -- 중복제거 키
+    image_sha256 TEXT NOT NULL,
+    inspection_fingerprint TEXT NOT NULL DEFAULT '',  -- 중복제거 키(이미지와 쌍)
     label TEXT NOT NULL,
     split TEXT NOT NULL,
     status TEXT NOT NULL,                -- OK/NG/REVIEW/ERROR (기계 판정, 불변)
     score REAL NOT NULL,
     reasons TEXT NOT NULL,               -- JSON 배열
     engine TEXT NOT NULL,                -- opencv/yolo-det/yolo-seg/combined
+    task TEXT NOT NULL DEFAULT '',       -- det/seg (opencv 는 '')
     config_hash TEXT NOT NULL,
+    model_sha256 TEXT NOT NULL DEFAULT '',  -- 실제 ONNX 파일 SHA(opencv 는 '')
     model_version TEXT NOT NULL DEFAULT '',
+    provenance_complete INTEGER NOT NULL DEFAULT 0,  -- 1=신원 완전, 0=과거/불완전
     overlay_path TEXT NOT NULL DEFAULT '',
     timing_ms TEXT NOT NULL DEFAULT '{}',
-    created_at TEXT NOT NULL             -- ISO8601 UTC
+    created_at TEXT NOT NULL,            -- ISO8601 UTC
+    UNIQUE (image_sha256, inspection_fingerprint)
 );
 
 CREATE TABLE IF NOT EXISTS review_decisions (
@@ -42,5 +50,27 @@ CREATE TABLE IF NOT EXISTS review_decisions (
     FOREIGN KEY (inspection_id) REFERENCES inspections(id)
 );
 
+-- 결합(combined) 검사의 엔진별 원본 관찰 (P0-3). 기계 판정은 불변이며,
+-- 결합 결과가 점수·성분을 덮어써도 엔진별 증거가 소실되지 않도록 보존한다.
+-- 한 검사당 엔진 하나씩 1행(UNIQUE). 단일 엔진 검사는 기록하지 않는다.
+CREATE TABLE IF NOT EXISTS engine_observations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    inspection_id INTEGER NOT NULL,
+    engine TEXT NOT NULL,                -- opencv/yolo-det/yolo-seg (실제 엔진)
+    task TEXT NOT NULL DEFAULT '',       -- det/seg (opencv 는 '')
+    status TEXT NOT NULL,                -- 엔진별 기계 판정(불변)
+    score REAL NOT NULL,
+    reasons TEXT NOT NULL,               -- JSON 배열
+    components TEXT NOT NULL DEFAULT '[]',  -- JSON 배열(ComponentFeature)
+    model_sha256 TEXT NOT NULL DEFAULT '',
+    overlay_path TEXT NOT NULL DEFAULT '',
+    error_code TEXT NOT NULL DEFAULT '',
+    timing_ms TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (inspection_id) REFERENCES inspections(id),
+    UNIQUE (inspection_id, engine)
+);
+
 CREATE INDEX IF NOT EXISTS idx_inspections_status ON inspections(status);
 CREATE INDEX IF NOT EXISTS idx_review_inspection ON review_decisions(inspection_id);
+CREATE INDEX IF NOT EXISTS idx_observations_inspection ON engine_observations(inspection_id);

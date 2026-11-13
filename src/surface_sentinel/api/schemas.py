@@ -77,6 +77,14 @@ class InspectResponse(BaseModel):
     model_version: str
     overlay_url: str | None
     deduplicated: bool
+    #: 검사 신원 provenance (P0-2/P0-3). opencv 는 task·model_sha256 이 비어 있다.
+    task: str = ""
+    model_sha256: str = ""
+    inspection_fingerprint: str = ""
+    provenance_complete: bool = False
+    #: 앱 생성 시 1회 계산한 코드 신원(P0-2 주입).
+    code_sha: str = ""
+    code_dirty: bool = False
 
 
 class InspectionItem(BaseModel):
@@ -123,6 +131,11 @@ class InspectionDetail(InspectionItem):
     overlay_path: str
     timing_ms: dict[str, float]
     reviews: list[ReviewItem]
+    #: 검사 신원 provenance (P0-2/P0-3).
+    task: str = ""
+    model_sha256: str = ""
+    inspection_fingerprint: str = ""
+    provenance_complete: bool = False
 
 
 class ReviewRequest(BaseModel):

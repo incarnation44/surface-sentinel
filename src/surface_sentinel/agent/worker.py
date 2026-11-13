@@ -10,8 +10,9 @@
   ``ERROR``로 기록한다.
 * 처리/스킵/에러는 ``.work/worker_audit.jsonl``에 append-only로 남긴다.
 
-금지: 네트워크/셸/subprocess. 판정 소유권은 파이프라인에 있으며 이 모듈은
-판정을 바꾸지 않는다. 봉인 분할(test/official_test)은 절대 열지 않는다
+금지: 네트워크/셸/핫패스 subprocess. 판정 소유권은 파이프라인에 있으며 이
+모듈은 판정을 바꾸지 않는다. 코드 신원(git)은 ``run_worker`` 시작 시 1회만
+계산한다(이미지별 재계산 금지). 봉인 분할(test/official_test)은 절대 열지 않는다
 (항상 ``split="tune"``).
 """
 
@@ -34,7 +35,14 @@ from ..contracts import SampleResult, Status
 from ..pipeline import InspectionOutcome, inspect_image
 from ..pipeline.evidence import sanitize_sample_id
 from ..records.db import connect, init_db
-from ..records.store import ENGINES, find_inspection_id, insert_inspection, utc_now_iso
+from ..records.identity import EngineSpec, opencv_spec
+from ..records.store import (
+    ENGINES,
+    find_inspection_id,
+    insert_engine_observation,
+    insert_inspection,
+    utc_now_iso,
+)
 
 #: 감시 대상 확장자(소문자 비교).
 IMAGE_SUFFIXES: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")
@@ -156,6 +164,42 @@ def _model_version(engine: str) -> str:
     return engine
 
 
+def _resolve_spec(
+    engine: str,
+    config: AppConfig,
+    *,
+    code_sha: str = "",
+    code_dirty: bool = False,
+) -> EngineSpec:
+    """검사 신원 EngineSpec 을 진입점에서 1회 계산한다(P0-2/P0-3).
+
+    opencv 는 기준선 신원. YOLO 계열은 ``yolo.inspect.inspection_identity`` 로
+    실제 모델 SHA·정책 해시를 계산한다(API·평가와 같은 정의). 워커 핫패스가 아니라
+    ``run_worker`` 시작 시 1회만 호출한다. ``code_sha``/``code_dirty`` 는
+    ``run_worker`` 가 시작 시 1회 계산해 주입한다(핫패스 subprocess 금지).
+    모델 부재·combined task 미설정은 명확한 오류로 멈춘다.
+    """
+
+    if engine == "opencv":
+        return opencv_spec(config.config_hash, code_sha=code_sha, code_dirty=code_dirty)
+    try:
+        module = importlib.import_module("surface_sentinel.yolo.inspect")
+    except ImportError as exc:  # pragma: no cover - yolo 레인 의존
+        raise WorkerError(
+            f"{engine} 엔진 경로가 없습니다(surface_sentinel.yolo.inspect 미구현). "
+            "opencv 엔진으로 실행하세요."
+        ) from exc
+    identity = getattr(module, "inspection_identity", None)
+    if not callable(identity):  # pragma: no cover - yolo 레인 의존
+        raise WorkerError(f"{engine} 엔진 신원 진입점(inspection_identity)을 찾지 못했습니다.")
+    try:
+        return identity(engine, config, code_sha=code_sha, code_dirty=code_dirty)
+    except FileNotFoundError as exc:
+        raise WorkerError(f"{engine} 엔진 모델 파일이 없습니다: {exc}") from exc
+    except ValueError as exc:
+        raise WorkerError(f"{engine} 엔진 설정 오류: {exc}") from exc
+
+
 def _inspect(
     image_path: Path,
     config: AppConfig,
@@ -163,6 +207,7 @@ def _inspect(
     engine: str,
     output_dir: Path,
     yolo_entry: Callable[..., InspectionOutcome] | None,
+    registry: Any = None,
 ) -> InspectionOutcome:
     """엔진에 따라 한 장을 검사한다(opencv는 실제 구현, YOLO는 지연 분기)."""
 
@@ -181,6 +226,7 @@ def _inspect(
         engine=engine,
         output_dir=output_dir,
         split=WORKER_SPLIT,
+        registry=registry,
     )
 
 
@@ -228,6 +274,8 @@ def _process_one(
     ok_sample_rate: int,
     yolo_entry: Callable[..., InspectionOutcome] | None,
     model_version: str,
+    spec: EngineSpec,
+    registry: Any = None,
 ) -> str:
     """파일 한 장을 처리한다. 반환값은 ``processed``/``skip``/``error``."""
 
@@ -248,7 +296,7 @@ def _process_one(
         )
         return "error"
 
-    if find_inspection_id(connection, sha256) is not None:
+    if find_inspection_id(connection, sha256, spec.fingerprint) is not None:
         _append_audit(
             audit_path,
             {
@@ -265,6 +313,7 @@ def _process_one(
     attempts = max(1, max_retries)
     target = overlay_dir(db_path, run_id)
     result: SampleResult | None = None
+    observations: tuple[Any, ...] = ()
     for attempt in range(1, attempts + 1):
         outcome = _inspect(
             path,
@@ -272,8 +321,10 @@ def _process_one(
             engine=engine,
             output_dir=target,
             yolo_entry=yolo_entry,
+            registry=registry,
         )
         result = outcome.result
+        observations = outcome.engine_observations
         if result.status is not Status.ERROR:
             break
         code = result.error_code.value if result.error_code is not None else "E_PROCESS_INTERNAL"
@@ -303,7 +354,20 @@ def _process_one(
         engine=engine,
         image_sha256=sha256,
         model_version=model_version,
+        fingerprint=spec.fingerprint,
+        task=spec.task,
+        model_sha256=spec.model_sha256,
+        provenance_complete=1 if spec.provenance_complete else 0,
     )
+    for observation in observations:
+        insert_engine_observation(
+            connection,
+            inspection_id,
+            observation.result,
+            engine=observation.engine,
+            task=observation.task,
+            model_sha256="" if observation.engine == "opencv" else spec.model_sha256,
+        )
     _append_audit(
         audit_path,
         {
@@ -337,7 +401,8 @@ def run_worker(
     ``once=False``면 ``poll_seconds`` 간격으로 무한 감시한다. 처리 중인 파일은
     ``(이름, 크기, mtime)`` 지문으로 기억해 같은 프로세스에서 다시 검사하지 않는다.
 
-    네트워크/셸/subprocess를 쓰지 않는다. 판정은 파이프라인이 소유한다.
+    네트워크/셸을 쓰지 않는다. 코드 신원(git)은 시작 시 1회만 계산한다
+    (핫패스 subprocess 금지). 판정은 파이프라인이 소유한다.
     """
 
     incoming_path = Path(incoming)
@@ -352,8 +417,19 @@ def run_worker(
     )
     incoming_path.mkdir(parents=True, exist_ok=True)
 
+    # 코드 신원은 진입점 1회 계산(이미지별 재계산·핫패스 subprocess 금지).
+    from ..evaluation import recalibration  # noqa: PLC0415 - 진입점 1회 계산
+
+    code_sha, code_dirty = recalibration.git_code_identity()
+
     yolo_entry = _resolve_yolo_entry(engine) if engine != "opencv" else None
     model_version = _model_version(engine)
+    spec = _resolve_spec(engine, config, code_sha=code_sha, code_dirty=code_dirty)
+    registry: Any = None
+    if engine != "opencv":
+        from ..yolo.runtime import YoloEngineRegistry  # noqa: PLC0415 - yolo 레인 지연 import
+
+        registry = YoloEngineRegistry()
     run_id = new_run_id(config)
     audit_path = audit_log_path(db_file)
     seen: set[tuple[str, int, int]] = set()
@@ -384,6 +460,8 @@ def run_worker(
                     ok_sample_rate=ok_sample_rate,
                     yolo_entry=yolo_entry,
                     model_version=model_version,
+                    spec=spec,
+                    registry=registry,
                 )
                 handled += 1
             if once:

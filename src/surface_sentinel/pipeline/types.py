@@ -12,6 +12,7 @@ import numpy as np
 
 from ..contracts import (
     ComponentFeature,
+    EngineObservation,
     QualityInfo,
     ReasonCode,
     RoiInfo,
@@ -145,10 +146,15 @@ class PipelineDebug:
 
 @dataclass(frozen=True, eq=False)
 class InspectionOutcome:
-    """검사 결과와 선택적 중간 산출물."""
+    """검사 결과와 선택적 중간 산출물.
+
+    ``engine_observations`` 는 결합(combined) 검사에서 엔진별 원본 결과를
+    보존한다(P0-3). 단일 엔진 검사는 비어 있다(결과 행 자체가 관찰이다).
+    """
 
     result: SampleResult
     debug: PipelineDebug | None = None
+    engine_observations: tuple[EngineObservation, ...] = ()
 
 
 __all__ = [

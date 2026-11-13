@@ -55,6 +55,7 @@ from ..evaluation.metrics import (
 )
 from ..io.manifest import ManifestError, ManifestRow, read_png
 from ..pipeline import inspect_image
+from ..records.fingerprint import file_sha256
 from .adapter import YoloDecisionPolicy, decide_from_detections
 from .combine import combine
 from .inference import Detection, YoloOnnxEngine
@@ -204,6 +205,11 @@ class EngineReport:
     recall_050: Ratio
     pixels: PixelCounts
     notes: tuple[str, ...] = ()
+    #: 실제 ONNX 모델 바이트 SHA(P0-3 서빙 동일성 — 서빙 EngineSpec 과 같은 신원).
+    model_sha256: str = ""
+    #: 진입점 주입 코드 신원(P0-2 — 서빙 EngineSpec 과 짝).
+    code_sha: str = ""
+    code_dirty: bool = False
 
     @property
     def measured(self) -> bool:
@@ -223,6 +229,9 @@ class EngineReport:
             "split": self.split,
             "onnx": self.onnx,
             "config_hash": self.config_hash,
+            "model_sha256": self.model_sha256,
+            "code_sha": self.code_sha,
+            "code_dirty": self.code_dirty,
             "combine": self.combine,
             "policy": dict(self.policy),
             "measured": self.measured,
@@ -419,6 +428,9 @@ def summarise_engine(
     combine: bool = False,
     policy: YoloDecisionPolicy | None = None,
     notes: Sequence[str] = (),
+    model_sha256: str = "",
+    code_sha: str = "",
+    code_dirty: bool = False,
 ) -> EngineReport:
     """이미지별 결과를 이미지 지표·영역 지표로 집계한다."""
 
@@ -460,6 +472,9 @@ def summarise_engine(
         recall_050=recall_at(matches, IOU_MATCH_FULL),
         pixels=pixels,
         notes=tuple(notes),
+        model_sha256=model_sha256,
+        code_sha=code_sha,
+        code_dirty=code_dirty,
     )
 
 
@@ -594,6 +609,9 @@ def evaluate_rows(
     policy: YoloDecisionPolicy | None = None,
     evidence_dir: str | Path | None = None,
     progress: Callable[[int, int, str], None] | None = None,
+    model_sha256: str = "",
+    code_sha: str = "",
+    code_dirty: bool = False,
 ) -> EngineReport:
     """행 목록을 순서대로 평가한다(결정론: ``ManifestRow`` 순서, RNG 없음)."""
 
@@ -635,6 +653,9 @@ def evaluate_rows(
         combine=combine_opencv,
         policy=policy,
         notes=notes,
+        model_sha256=model_sha256,
+        code_sha=code_sha,
+        code_dirty=code_dirty,
     )
 
 
@@ -985,7 +1006,11 @@ def run_yolo_evaluation(
         raise YoloEvalError(f"task는 {list(TASKS)} 중 하나입니다: {task!r}")
 
     # 봉인 CSV를 열지 않기 위해 tune만 읽고 val은 그 안에서 만든다.
+    from ..evaluation import recalibration  # noqa: PLC0415 - 진입점 1회 계산
     from ..evaluation.runner import load_split_rows
+
+    # 코드 신원은 평가 진입점 1회 계산(서빙 API·워커와 같은 헬퍼·같은 규칙).
+    code_sha, code_dirty = recalibration.git_code_identity()
 
     tune_rows = load_split_rows("tune", splits_dir=splits_dir)
     rows = resolve_split_rows(tune_rows, split)
@@ -1013,6 +1038,9 @@ def run_yolo_evaluation(
         policy=policy,
         evidence_dir=evidence_dir,
         progress=_stderr_progress(f"{task}/{split}"),
+        model_sha256=file_sha256(onnx_path),
+        code_sha=code_sha,
+        code_dirty=code_dirty,
     )
     json_path, jsonl_path = write_engine_artifacts(report, directory)
 

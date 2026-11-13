@@ -1,0 +1,95 @@
+{
+  "code_dirty": true,
+  "code_sha": "2027979b69c493ad6caf02fad8bec66a04facdf5",
+  "config_hash": "a762ba63944133ddfbc2f962342001e09d0dffd0f0ea14fd79095274865d8098",
+  "defect": 43,
+  "elapsed_sec": 113.77,
+  "generated": "2026-11-13",
+  "good": 357,
+  "groups": 400,
+  "onnxruntime_version": "1.31.1",
+  "purpose": "P0-3 평가·서빙 짝 실측(같은 val 이미지·같은 ONNX 바이트·같은 정책)",
+  "samples": 400,
+  "score_tolerance": 1e-09,
+  "serving_split_metadata": "tune(워커 관례 — 판정은 split·label 무관)",
+  "split": "val",
+  "tasks": [
+    {
+      "engine": "yolo-det",
+      "eval_elapsed_sec": 24.49,
+      "eval_fingerprint": "a8bd26ca200027fc74424f7dba27ed392eab562a7b96543e6883d29bfe370063",
+      "identity_fields": {
+        "code_dirty_match": true,
+        "code_sha_match": true,
+        "config_hash_match": true,
+        "fingerprint_match": true,
+        "model_sha256_match": true,
+        "policy_match": true
+      },
+      "identity_match": true,
+      "model_bytes": 12649223,
+      "model_sha256": "293f9945075b693b2a0981b4b9cd7363da3f47f2fb2a3deb9aceb7fbf72bb4e6",
+      "onnx": "data\\derived\\yolo\\models\\det\\weights\\best.onnx",
+      "samples": 400,
+      "score_max_abs_delta": 0.0,
+      "score_mismatch": [],
+      "serving_cold_starts": 1,
+      "serving_elapsed_sec": 27.36,
+      "serving_fingerprint": "a8bd26ca200027fc74424f7dba27ed392eab562a7b96543e6883d29bfe370063",
+      "serving_mean_infer_ms": 64.6,
+      "serving_sessions": 1,
+      "status_counts_eval": {
+        "ERROR": 0,
+        "NG": 5,
+        "OK": 381,
+        "REVIEW": 14
+      },
+      "status_counts_serving": {
+        "ERROR": 0,
+        "NG": 5,
+        "OK": 381,
+        "REVIEW": 14
+      },
+      "status_mismatch": []
+    },
+    {
+      "engine": "yolo-seg",
+      "eval_elapsed_sec": 28.63,
+      "eval_fingerprint": "227fadce143009db41bdaae9db5069ab7c59817624543190dea98a1160b3995a",
+      "identity_fields": {
+        "code_dirty_match": true,
+        "code_sha_match": true,
+        "config_hash_match": true,
+        "fingerprint_match": true,
+        "model_sha256_match": true,
+        "policy_match": true
+      },
+      "identity_match": true,
+      "model_bytes": 13667278,
+      "model_sha256": "992c0e46cf0e4f351bffa7e4f7d3cbc13948a10d77e35f01440407dbeb1de6a9",
+      "onnx": "data\\derived\\yolo\\models\\seg\\weights\\best.onnx",
+      "samples": 400,
+      "score_max_abs_delta": 0.0,
+      "score_mismatch": [],
+      "serving_cold_starts": 1,
+      "serving_elapsed_sec": 32.88,
+      "serving_fingerprint": "227fadce143009db41bdaae9db5069ab7c59817624543190dea98a1160b3995a",
+      "serving_mean_infer_ms": 78.51,
+      "serving_sessions": 1,
+      "status_counts_eval": {
+        "ERROR": 0,
+        "NG": 16,
+        "OK": 372,
+        "REVIEW": 12
+      },
+      "status_counts_serving": {
+        "ERROR": 0,
+        "NG": 16,
+        "OK": 372,
+        "REVIEW": 12
+      },
+      "status_mismatch": []
+    }
+  ],
+  "verdict": "짝 일치 확인"
+}

@@ -76,6 +76,37 @@ def git_head() -> str:
     return completed.stdout.strip() if completed.returncode == 0 else ""
 
 
+def git_code_identity() -> tuple[str, bool]:
+    """코드 신원 ``(code_sha, code_dirty)``. 진입점에서 1회만 계산해 주입한다.
+
+    API 생성·워커 시작·평가 CLI 시작 시 1회 호출한다(이미지별 핫패스 금지).
+    git 이 없거나 실패하면 ``("", False)`` — 검사를 막지 않는다. 더러운 트리는
+    ``code_dirty=True`` 로 fingerprint 가 달라져 커밋 전 결과와 섞이지 않는다.
+    """
+
+    try:
+        head = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+        if head.returncode != 0:
+            return "", False
+        status = subprocess.run(
+            ["git", "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return "", False
+    dirty = status.returncode == 0 and bool(status.stdout.strip())
+    return head.stdout.strip(), dirty
+
+
 @dataclass(frozen=True)
 class RecalibrationRow:
     """재보정 후보 하나의 결과."""

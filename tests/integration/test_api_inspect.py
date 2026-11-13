@@ -37,6 +37,18 @@ def synthetic_png(seed: int = 0, size: int = 96) -> bytes:
     return buffer.tobytes()
 
 
+@pytest.fixture(autouse=True)
+def _stable_code_identity(monkeypatch: pytest.MonkeyPatch) -> None:
+    """테스트가 실제 git 상태에 의존하지 않게 코드 신원을 빈 값으로 고정한다.
+
+    실제 주입 경로(진입점 1회 계산)는 전용 테스트가 스텁으로 검증한다.
+    """
+
+    from surface_sentinel.evaluation import recalibration
+
+    monkeypatch.setattr(recalibration, "git_code_identity", lambda: ("", False))
+
+
 @pytest.fixture()
 def runs_dir(tmp_path: Path) -> Path:
     path = tmp_path / "runs"
@@ -65,6 +77,33 @@ def upload(
         data={"label": label, "split": split},
         params=params,
     )
+
+
+def test_code_identity_computed_once_at_creation(
+    runs_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """code_sha 는 앱 생성 시 1회 계산 — 요청마다 재계산하지 않는다(P0-2 주입)."""
+
+    from surface_sentinel.evaluation import recalibration
+
+    calls: list[int] = []
+
+    def fake_identity() -> tuple[str, bool]:
+        calls.append(1)
+        return ("d" * 40, False)
+
+    monkeypatch.setattr(recalibration, "git_code_identity", fake_identity)
+    client = TestClient(create_inspection_app(runs_dir=runs_dir))
+    assert len(calls) == 1
+
+    first = upload(client, synthetic_png(1), name="a.png")
+    second = upload(client, synthetic_png(2), name="b.png")
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert len(calls) == 1  # 요청 2건이어도 생성 시 1회
+    body = first.json()
+    assert body["code_sha"] == "d" * 40
+    assert body["code_dirty"] is False
 
 
 def seed_row(

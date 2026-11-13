@@ -35,6 +35,7 @@ from ..config import AppConfig, default_config, load_config
 from ..contracts import Status
 from ..pipeline import InspectionOutcome, inspect_image
 from ..records.db import DatabaseError, connect, init_db
+from ..records.identity import EngineSpec, opencv_spec
 from ..records.store import (
     ENGINES,
     STATUS_ORDER,
@@ -42,6 +43,7 @@ from ..records.store import (
     append_review,
     find_inspection_id,
     get_inspection,
+    insert_engine_observation,
     insert_inspection,
     list_inspections,
     stats_payload,
@@ -187,6 +189,36 @@ def _model_version(engine: str) -> str:
     return engine
 
 
+def _inspection_spec(
+    engine: str,
+    config: AppConfig,
+    *,
+    code_sha: str = "",
+    code_dirty: bool = False,
+) -> EngineSpec:
+    """검사 신원 EngineSpec 을 계산한다(P0-2/P0-3, 평가·워커와 같은 정의).
+
+    opencv 는 모델 파일이 없는 기준선 신원. YOLO 계열은 ``yolo.inspect`` 의
+    ``inspection_identity`` 로 실제 모델 SHA·정책 해시를 계산한다. ``code_sha``/
+    ``code_dirty`` 는 앱 생성 시 1회 계산한 값을 주입한다(요청별 재계산 금지).
+    진입점이 없는 스텁 환경(테스트)에서는 신원 불완전 최소 spec 으로 폴백한다
+    (조용히 opencv 로 판정을 바꾸지는 않는다 — 판정은 이미 파이프라인이 확정했다).
+    """
+
+    if engine == EngineName.OPENCV.value:
+        return opencv_spec(config.config_hash, code_sha=code_sha, code_dirty=code_dirty)
+    module = importlib.import_module("surface_sentinel.yolo.inspect")
+    identity = getattr(module, "inspection_identity", None)
+    if callable(identity):
+        return identity(engine, config, code_sha=code_sha, code_dirty=code_dirty)
+    return EngineSpec(
+        engine=engine,
+        config_hash=config.config_hash,
+        code_sha=code_sha,
+        code_dirty=code_dirty,
+    )
+
+
 def _inspect(
     image_path: Path,
     config: AppConfig,
@@ -229,6 +261,9 @@ def _inspect(
             status_code=503,
             detail=f"{engine.value} 엔진 모델 파일이 없습니다: {exc}",
         ) from exc
+    except ValueError as exc:
+        # combined task 미설정 등 설정 오류(P0-3): 조용히 폴백하지 않고 명시 오류.
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 def _store_upload(upload_dir: Path, payload: bytes, sha256: str, suffix: str) -> Path:
@@ -265,6 +300,11 @@ def create_inspection_app(
     directory.mkdir(parents=True, exist_ok=True)
     db_file = Path(db_path) if db_path is not None else directory / DEFAULT_DB_NAME
     config = load_config(config_path) if config_path is not None else default_config()
+
+    # 코드 신원은 앱 생성 시 1회 계산(요청별 재계산 금지 — 워커와 같은 규칙).
+    from ..evaluation import recalibration  # noqa: PLC0415 - 진입점 1회 계산
+
+    code_sha, code_dirty = recalibration.git_code_identity()
 
     try:
         connection = connect(db_file)
@@ -342,16 +382,32 @@ def create_inspection_app(
         )
         result = outcome.result
         model_version = _model_version(engine.value)
+        spec = await run_in_threadpool(
+            _inspection_spec, engine.value, config, code_sha=code_sha, code_dirty=code_dirty
+        )
 
         with open_db() as connection:
-            deduplicated = find_inspection_id(connection, sha256) is not None
+            deduplicated = find_inspection_id(connection, sha256, spec.fingerprint) is not None
             inspection_id = insert_inspection(
                 connection,
                 result,
                 engine=engine.value,
                 image_sha256=sha256,
                 model_version=model_version,
+                fingerprint=spec.fingerprint,
+                task=spec.task,
+                model_sha256=spec.model_sha256,
+                provenance_complete=1 if spec.provenance_complete else 0,
             )
+            for observation in outcome.engine_observations:
+                insert_engine_observation(
+                    connection,
+                    inspection_id,
+                    observation.result,
+                    engine=observation.engine,
+                    task=observation.task,
+                    model_sha256="" if observation.engine == "opencv" else spec.model_sha256,
+                )
             row = get_inspection(connection, inspection_id)
 
         overlay_url = None
@@ -370,6 +426,12 @@ def create_inspection_app(
             model_version=model_version,
             overlay_url=overlay_url,
             deduplicated=deduplicated,
+            task=spec.task,
+            model_sha256=spec.model_sha256,
+            inspection_fingerprint=spec.fingerprint,
+            provenance_complete=spec.provenance_complete,
+            code_sha=spec.code_sha,
+            code_dirty=spec.code_dirty,
         )
 
     @app.get("/api/inspections", response_model=InspectionList)
@@ -418,6 +480,10 @@ def create_inspection_app(
                     for key, value in json.loads(str(row["timing_ms"]) or "{}").items()
                 },
                 reviews=_reviews(connection, inspection_id),
+                task=str(row["task"]),
+                model_sha256=str(row["model_sha256"]),
+                inspection_fingerprint=str(row["inspection_fingerprint"]),
+                provenance_complete=bool(row["provenance_complete"]),
             )
 
     @app.post(

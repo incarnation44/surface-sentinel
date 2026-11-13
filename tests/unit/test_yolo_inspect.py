@@ -16,6 +16,7 @@ import synthetic
 from surface_sentinel.config import load_config
 from surface_sentinel.contracts import ReasonCode, SampleResult, Status
 from surface_sentinel.pipeline import inspect_image
+from surface_sentinel.records.fingerprint import file_sha256, policy_hash
 from surface_sentinel.yolo import inspect as yolo_inspect
 from surface_sentinel.yolo.adapter import YoloDecisionPolicy
 from surface_sentinel.yolo.inference import Detection
@@ -28,6 +29,7 @@ from surface_sentinel.yolo.inspect import (
     inspect_with_yolo,
     resolve_onnx_path,
 )
+from surface_sentinel.yolo.runtime import YoloEngineRegistry
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BASE_CONFIG = load_config(REPO_ROOT / "configs" / "base.toml")
@@ -99,9 +101,11 @@ def test_default_model_root_is_data_derived() -> None:
     assert engine_task("yolo-seg") == "seg"
 
 
-def test_engine_task_combined_defaults_to_det(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_engine_task_combined_requires_explicit_task(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(COMBINED_TASK_ENV, raising=False)
-    assert engine_task("combined") == "det"  # [DESIGN] combined 기본 모델은 det
+    # P0-3: 숨은 det 기본값 제거 — task 미설정 시 설정 오류.
+    with pytest.raises(ValueError, match="combined"):
+        engine_task("combined")
 
 
 def test_engine_task_combined_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -356,6 +360,7 @@ def test_combined_runs_both_engines_and_merges(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     model = _model(tmp_path)
+    monkeypatch.setenv(COMBINED_TASK_ENV, "det")
     engines = _install_stub(monkeypatch, [_det(0.8)])
     image = synthetic.write_png(tmp_path / "good_a.png", synthetic.good_image())
     output_dir = tmp_path / "overlays"
@@ -385,6 +390,7 @@ def test_combined_opencv_error_stays_error(
     """opencv ERROR + YOLO OK → ERROR, 오류 코드/단계는 보존한다."""
 
     model = _model(tmp_path)
+    monkeypatch.setenv(COMBINED_TASK_ENV, "det")
     _install_stub(monkeypatch, [])
     uniform = synthetic.write_png(
         tmp_path / "uniform.png", np.full((200, 200, 3), 128, np.uint8)
@@ -407,6 +413,7 @@ def test_combined_opencv_error_does_not_mask_yolo_ng(
     """opencv ERROR + YOLO NG → NG(보수적 결합: ERROR 가 결함 판정을 묻지 않는다)."""
 
     model = _model(tmp_path)
+    monkeypatch.setenv(COMBINED_TASK_ENV, "det")
     _install_stub(monkeypatch, [_det(0.8)])
     uniform = synthetic.write_png(
         tmp_path / "uniform.png", np.full((200, 200, 3), 128, np.uint8)
@@ -423,6 +430,7 @@ def test_combined_without_opencv_artifacts_collision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     model = _model(tmp_path)
+    monkeypatch.setenv(COMBINED_TASK_ENV, "det")
     _install_stub(monkeypatch, [])
     image = synthetic.write_png(tmp_path / "good_b.png", synthetic.good_image())
 
@@ -501,3 +509,110 @@ def test_merge_combined_dedups_reasons() -> None:
         _result(Status.OK, reasons=(ReasonCode.NO_DEFECT_EVIDENCE,), score=0.0),
     )
     assert merged.reasons == (ReasonCode.NO_DEFECT_EVIDENCE,)
+
+
+# ------------------------------------------------ 신원·세션 재사용·엔진별 관찰 (P0-2/P0-3)
+
+
+def test_inspection_identity_builds_spec(tmp_path: Path) -> None:
+    model = tmp_path / "m.onnx"
+    model.write_bytes(b"model-bytes")
+    spec = yolo_inspect.inspection_identity("yolo-seg", BASE_CONFIG, onnx_path=model)
+    assert spec.engine == "yolo-seg"
+    assert spec.task == "seg"
+    assert spec.model_sha256 == file_sha256(model)
+    assert spec.config_hash == BASE_CONFIG.config_hash
+    assert spec.yolo_policy_hash == policy_hash(0.5, 0.25)
+    assert spec.combine_policy_hash == ""
+    assert spec.provenance_complete is True
+
+
+def test_inspection_identity_combined_has_combine_hash(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(COMBINED_TASK_ENV, "seg")
+    model = tmp_path / "m.onnx"
+    model.write_bytes(b"x")
+    spec = yolo_inspect.inspection_identity("combined", BASE_CONFIG, onnx_path=model)
+    assert spec.task == "seg"
+    assert spec.combine_policy_hash != ""
+
+
+def test_inspection_identity_policy_and_code_change_fingerprint(tmp_path: Path) -> None:
+    model = tmp_path / "m.onnx"
+    model.write_bytes(b"x")
+    base = yolo_inspect.inspection_identity("yolo-det", BASE_CONFIG, onnx_path=model)
+    strict = yolo_inspect.inspection_identity(
+        "yolo-det",
+        BASE_CONFIG,
+        onnx_path=model,
+        policy=YoloDecisionPolicy(ng_conf=0.9, review_lo=0.5),
+    )
+    coded = yolo_inspect.inspection_identity(
+        "yolo-det", BASE_CONFIG, onnx_path=model, code_sha="f" * 40
+    )
+    assert len({base.fingerprint, strict.fingerprint, coded.fingerprint}) == 3
+
+
+def test_registry_reuses_session_across_images(
+    tmp_path: Path, image: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    model = _model(tmp_path)
+    created: list[object] = []
+
+    class _RegStub:
+        def __init__(self, path: str | Path, *, task: str = "det", **_kw: object) -> None:
+            self.task = task
+            created.append(self)
+
+        def infer(self, bgr: np.ndarray, **_kw: object) -> list[Detection]:
+            return [_det(0.8)]
+
+    registry = YoloEngineRegistry(engine_factory=_RegStub)
+    other = synthetic.write_png(tmp_path / "sample_b.png", synthetic.good_image())
+
+    first = inspect_with_yolo(
+        image, BASE_CONFIG, engine="yolo-det", onnx_path=model, registry=registry
+    )
+    second = inspect_with_yolo(
+        other, BASE_CONFIG, engine="yolo-det", onnx_path=model, registry=registry
+    )
+
+    assert len(created) == 1
+    assert registry.size == 1
+    assert registry.cold_starts == 1
+    assert first.result.status is Status.NG
+    assert second.result.status is Status.NG
+    assert second.result.timing_ms["session_create_ms"] == 0.0
+
+
+def test_combined_preserves_engine_observations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    model = _model(tmp_path)
+    monkeypatch.setenv(COMBINED_TASK_ENV, "det")
+    _install_stub(monkeypatch, [_det(0.8)])
+    image = synthetic.write_png(tmp_path / "good_obs.png", synthetic.good_image())
+
+    outcome = inspect_with_yolo(image, BASE_CONFIG, engine="combined", onnx_path=model)
+
+    observations = outcome.engine_observations
+    assert len(observations) == 2
+    assert observations[0].engine == "opencv"
+    assert observations[1].engine == "yolo-det"
+    assert observations[1].task == "det"
+    assert observations[0].result.status is Status.OK
+    assert observations[1].result.status is Status.NG
+    assert observations[1].result.score == pytest.approx(0.8)
+    # 결합 결과는 NG 이지만 엔진별 원본 점수·성분이 보존된다.
+    assert outcome.result.status is Status.NG
+    assert observations[1].result.components
+
+
+def test_single_engine_has_no_observations(
+    tmp_path: Path, image: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    model = _model(tmp_path)
+    _install_stub(monkeypatch, [_det(0.8)])
+    outcome = inspect_with_yolo(image, BASE_CONFIG, engine="yolo-det", onnx_path=model)
+    assert outcome.engine_observations == ()

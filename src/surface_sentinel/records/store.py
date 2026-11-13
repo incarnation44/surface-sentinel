@@ -24,6 +24,7 @@ from typing import Any
 
 from ..contracts import SampleResult, Status
 from ..evaluation.metrics import Ratio, ratio
+from .fingerprint import inspection_fingerprint
 
 #: 허용 엔진 이름. DB CHECK 제약 대신 애플리케이션에서 검증한다(PG 이식 대비).
 ENGINES: tuple[str, ...] = ("opencv", "yolo-det", "yolo-seg", "combined")
@@ -84,11 +85,20 @@ def insert_inspection(
     engine: str,
     image_sha256: str,
     model_version: str = "",
+    fingerprint: str | None = None,
+    task: str = "",
+    model_sha256: str = "",
+    provenance_complete: int | None = None,
 ) -> int:
     """검사 결과 한 건을 기록하고 행 ``id``를 돌려준다.
 
-    ``image_sha256``이 이미 있으면 새 행을 만들지 않고 **기존 행의 id**를
-    돌려준다(중복제거). 기존 행은 덮어쓰지 않는다.
+    중복제거 키는 ``(image_sha256, inspection_fingerprint)`` 쌍이다(P0-2).
+    같은 이미지+같은 신원이면 새 행을 만들지 않고 **기존 행의 id**를 돌려준다.
+    같은 이미지라도 엔진·모델·설정 등이 다르면 별도 행으로 기록한다.
+    기존 행은 덮어쓰지 않는다.
+
+    ``fingerprint``를 주지 않으면 engine·config_hash 등으로 기본 신원을 계산한다
+    (code_sha 미포함 — 진입점에서 전체 신원을 계산해 주입하는 것을 권장).
     """
 
     sha = normalize_sha256(image_sha256)
@@ -96,10 +106,19 @@ def insert_inspection(
     if engine_name not in ENGINES:
         raise RecordsError(f"알 수 없는 엔진입니다: {engine!r} (가능: {ENGINES})")
     status = _status_value(result.status)
+    if fingerprint is None:
+        fingerprint = inspection_fingerprint(
+            engine=engine_name,
+            task=str(task),
+            model_sha256=str(model_sha256),
+            config_hash=str(result.config_hash),
+        )
+    if provenance_complete is None:
+        provenance_complete = 1 if (engine_name == "opencv" or model_sha256) else 0
 
     existing = connection.execute(
-        "SELECT id FROM inspections WHERE image_sha256 = ?",
-        (sha,),
+        "SELECT id FROM inspections WHERE image_sha256 = ? AND inspection_fingerprint = ?",
+        (sha, fingerprint),
     ).fetchone()
     if existing is not None:
         return int(existing["id"])
@@ -108,14 +127,18 @@ def insert_inspection(
         str(result.run_id),
         str(result.sample_id),
         sha,
+        str(fingerprint),
         str(result.label),
         str(result.split),
         status,
         float(result.score),
         _reasons_json(result),
         engine_name,
+        str(task),
         str(result.config_hash),
+        str(model_sha256),
         str(model_version),
+        int(provenance_complete),
         str(result.overlay_path),
         _timing_json(result),
         utc_now_iso(),
@@ -124,16 +147,17 @@ def insert_inspection(
         with connection:
             cursor = connection.execute(
                 "INSERT INTO inspections ("
-                "run_id, sample_id, image_sha256, label, split, status, score, reasons,"
-                " engine, config_hash, model_version, overlay_path, timing_ms, created_at"
-                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "run_id, sample_id, image_sha256, inspection_fingerprint, label, split,"
+                " status, score, reasons, engine, task, config_hash, model_sha256,"
+                " model_version, provenance_complete, overlay_path, timing_ms, created_at"
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 params,
             )
     except sqlite3.IntegrityError:
         # 동시 삽입으로 UNIQUE가 걸린 경우에도 중복제거 계약을 지킨다.
         row = connection.execute(
-            "SELECT id FROM inspections WHERE image_sha256 = ?",
-            (sha,),
+            "SELECT id FROM inspections WHERE image_sha256 = ? AND inspection_fingerprint = ?",
+            (sha, fingerprint),
         ).fetchone()
         if row is None:
             raise
@@ -180,13 +204,25 @@ def append_review(
 def find_inspection_id(
     connection: sqlite3.Connection,
     image_sha256: str,
+    fingerprint: str | None = None,
 ) -> int | None:
-    """sha256으로 기존 행 ``id``를 찾는다. 없으면 ``None``."""
+    """ ``(image_sha256, fingerprint)`` 쌍으로 기존 행 ``id``를 찾는다. 없으면 ``None``.
 
-    row = connection.execute(
-        "SELECT id FROM inspections WHERE image_sha256 = ?",
-        (normalize_sha256(image_sha256),),
-    ).fetchone()
+    ``fingerprint``가 ``None``이면 이미지 SHA 로만 찾는다(과거 호출 호환).
+    같은 이미지에 여러 신원 행이 있으면 가장 작은 id 를 돌려준다.
+    """
+
+    sha = normalize_sha256(image_sha256)
+    if fingerprint is None:
+        row = connection.execute(
+            "SELECT id FROM inspections WHERE image_sha256 = ? ORDER BY id ASC LIMIT 1",
+            (sha,),
+        ).fetchone()
+    else:
+        row = connection.execute(
+            "SELECT id FROM inspections WHERE image_sha256 = ? AND inspection_fingerprint = ?",
+            (sha, fingerprint),
+        ).fetchone()
     return None if row is None else int(row["id"])
 
 
@@ -222,6 +258,85 @@ def get_inspection(
         (int(inspection_id),),
     ).fetchone()
     return None if row is None else dict(row)
+
+
+def insert_engine_observation(
+    connection: sqlite3.Connection,
+    inspection_id: int,
+    result: SampleResult,
+    *,
+    engine: str,
+    task: str = "",
+    model_sha256: str = "",
+) -> int:
+    """엔진별 원본 관찰 한 건을 기록하고 행 ``id``를 돌려준다(P0-3).
+
+    ``(inspection_id, engine)`` 쌍으로 중복제거 — 이미 있으면 기존 id 를 돌려준다.
+    기계 판정(``status``)·점수·성분·타이밍을 원본 그대로 보존하며 UPDATE 하지 않는다.
+    결합(combined) 검사가 엔진별 증거를 소실시키지 않도록 별도 기록용이다.
+    """
+
+    engine_name = str(engine).strip()
+    if engine_name not in ENGINES:
+        raise RecordsError(f"알 수 없는 엔진입니다: {engine!r} (가능: {ENGINES})")
+    status = _status_value(result.status)
+
+    existing = connection.execute(
+        "SELECT id FROM engine_observations WHERE inspection_id = ? AND engine = ?",
+        (int(inspection_id), engine_name),
+    ).fetchone()
+    if existing is not None:
+        return int(existing["id"])
+
+    components_json = json.dumps(
+        [component.to_dict() for component in result.components], ensure_ascii=False
+    )
+    error_code = result.error_code.value if result.error_code is not None else ""
+    params = (
+        int(inspection_id),
+        engine_name,
+        str(task),
+        status,
+        float(result.score),
+        _reasons_json(result),
+        components_json,
+        str(model_sha256),
+        str(result.overlay_path),
+        error_code,
+        _timing_json(result),
+        utc_now_iso(),
+    )
+    try:
+        with connection:
+            cursor = connection.execute(
+                "INSERT INTO engine_observations ("
+                "inspection_id, engine, task, status, score, reasons, components,"
+                " model_sha256, overlay_path, error_code, timing_ms, created_at"
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                params,
+            )
+    except sqlite3.IntegrityError:
+        row = connection.execute(
+            "SELECT id FROM engine_observations WHERE inspection_id = ? AND engine = ?",
+            (int(inspection_id), engine_name),
+        ).fetchone()
+        if row is None:
+            raise
+        return int(row["id"])
+    return int(cursor.lastrowid or 0)
+
+
+def list_engine_observations(
+    connection: sqlite3.Connection,
+    inspection_id: int,
+) -> list[dict[str, Any]]:
+    """검사 한 건의 엔진별 관찰을 ``id`` 오름차순으로 돌려준다(결정론적 순서)."""
+
+    rows = connection.execute(
+        "SELECT * FROM engine_observations WHERE inspection_id = ? ORDER BY id ASC",
+        (int(inspection_id),),
+    ).fetchall()
+    return [dict(row) for row in rows]
 
 
 def _scalar(connection: sqlite3.Connection, sql: str, params: tuple[Any, ...] = ()) -> int:
@@ -303,7 +418,9 @@ __all__ = [
     "append_review",
     "find_inspection_id",
     "get_inspection",
+    "insert_engine_observation",
     "insert_inspection",
+    "list_engine_observations",
     "list_inspections",
     "normalize_sha256",
     "stats",

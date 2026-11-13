@@ -154,6 +154,23 @@ class SampleResult:
         return _jsonable(self)
 
 
+@dataclass(frozen=True)
+class EngineObservation:
+    """결합(combined) 검사에서 엔진 하나의 원본 결과.
+
+    기계 판정(``SampleResult.status``)은 그대로 보존하며, 결합 결과가 점수·성분을
+    덮어써도 엔진별 증거가 소실되지 않도록 별도 기록용이다(P0-3). ``engine`` 은
+    ``opencv``/``yolo-det``/``yolo-seg`` 같은 실제 엔진 이름이다.
+    """
+
+    engine: str
+    result: SampleResult
+    task: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return _jsonable(self)
+
+
 def _jsonable(value: Any) -> Any:
     if isinstance(value, Enum):
         return value.value
@@ -168,6 +185,7 @@ def _jsonable(value: Any) -> Any:
 
 __all__ = [
     "ComponentFeature",
+    "EngineObservation",
     "ErrorCode",
     "QualityInfo",
     "RESULT_SCHEMA_VERSION",

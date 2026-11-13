@@ -11,6 +11,8 @@ import sqlite3
 from importlib import resources
 from pathlib import Path
 
+from .fingerprint import inspection_fingerprint
+
 SCHEMA_PACKAGE = "surface_sentinel.records"
 SCHEMA_RESOURCE = "schema.sql"
 
@@ -47,10 +49,91 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
     return connection
 
 
+def _schema_table_block(table: str) -> str:
+    """``schema.sql`` 에서 테이블 하나의 CREATE 블록을 추출한다(DDL 정본 단일화)."""
+
+    sql = load_schema_sql()
+    marker = f"CREATE TABLE IF NOT EXISTS {table}"
+    start = sql.index(marker)
+    end = sql.index(");", start) + 2
+    return sql[start:end]
+
+
+def _inspections_v2_ddl() -> str:
+    """``schema.sql``의 inspections 정의를 inspections_v2 로 이름만 바꿔 돌려준다.
+
+    DDL 을 파이썬에 중복하지 않고 스키마 정본에서 추출한다(마이그레이션용).
+    """
+
+    return _schema_table_block("inspections").replace(
+        "CREATE TABLE IF NOT EXISTS inspections", "CREATE TABLE inspections_v2", 1
+    )
+
+
+def migrate_to_fingerprint(connection: sqlite3.Connection) -> bool:
+    """v1(이미지 단독 UNIQUE) → v2(이미지+fingerprint UNIQUE) 마이그레이션 (P0-2).
+
+    기존 ``inspections``·``review_decisions`` 의 id 를 그대로 보존한다. 과거 행은
+    실제 모델 SHA 를 알 수 없으므로 ``provenance_complete=0`` 으로 backfill 하고
+    모델 SHA 를 추측해 채우지 않는다. 이미 v2 이거나 테이블이 없으면 no-op.
+    무결성(``integrity_check``)·외래키(``foreign_key_check``) 검증 실패 시 예외.
+    """
+
+    columns = {row[1] for row in connection.execute("PRAGMA table_info(inspections)")}
+    if not columns or "inspection_fingerprint" in columns:
+        return False
+
+    connection.execute("PRAGMA foreign_keys=OFF")
+    try:
+        with connection:
+            connection.execute(_inspections_v2_ddl())
+            connection.execute(
+                "INSERT INTO inspections_v2 ("
+                "id, run_id, sample_id, image_sha256, inspection_fingerprint, label, split,"
+                " status, score, reasons, engine, task, config_hash, model_sha256,"
+                " model_version, provenance_complete, overlay_path, timing_ms, created_at"
+                ") SELECT id, run_id, sample_id, image_sha256, '', label, split,"
+                " status, score, reasons, engine, '', config_hash, '',"
+                " model_version, 0, overlay_path, timing_ms, created_at FROM inspections"
+            )
+            for row in connection.execute(
+                "SELECT id, engine, config_hash FROM inspections_v2"
+            ).fetchall():
+                fingerprint = inspection_fingerprint(
+                    engine=str(row["engine"]), config_hash=str(row["config_hash"])
+                )
+                connection.execute(
+                    "UPDATE inspections_v2 SET inspection_fingerprint = ? WHERE id = ?",
+                    (fingerprint, int(row["id"])),
+                )
+            connection.execute("DROP TABLE inspections")
+            connection.execute("ALTER TABLE inspections_v2 RENAME TO inspections")
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_inspections_status ON inspections(status)"
+            )
+            # 엔진별 관찰 테이블도 보장한다(P0-3, 과거 행은 관찰 없음 → 빈 테이블).
+            connection.execute(_schema_table_block("engine_observations"))
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_observations_inspection "
+                "ON engine_observations(inspection_id)"
+            )
+        integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
+        violations = connection.execute("PRAGMA foreign_key_check").fetchall()
+        if integrity != "ok" or violations:
+            raise DatabaseError(
+                "마이그레이션 검증 실패: "
+                f"integrity={integrity}, foreign_key_violations={len(violations)}"
+            )
+    finally:
+        connection.execute("PRAGMA foreign_keys=ON")
+    return True
+
+
 def init_db(connection: sqlite3.Connection) -> None:
-    """``schema.sql``을 실행한다. 여러 번 호출해도 안전하다(IF NOT EXISTS)."""
+    """``schema.sql``을 실행하고 v1→v2 마이그레이션을 적용한다(여러 번 호출 안전)."""
 
     connection.executescript(load_schema_sql())
+    migrate_to_fingerprint(connection)
     connection.commit()
 
 
@@ -61,4 +144,5 @@ __all__ = [
     "connect",
     "init_db",
     "load_schema_sql",
+    "migrate_to_fingerprint",
 ]

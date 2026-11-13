@@ -29,6 +29,18 @@ BASE_CONFIG = load_config(REPO_ROOT / "configs" / "base.toml")
 RUN_ID_PATTERN = re.compile(r"^\d{8}T\d{6}Z-[0-9a-f]{8}$")
 
 
+@pytest.fixture(autouse=True)
+def _stable_code_identity(monkeypatch: pytest.MonkeyPatch) -> None:
+    """테스트가 실제 git 상태에 의존하지 않게 코드 신원을 빈 값으로 고정한다.
+
+    실제 주입 경로(시작 시 1회 계산)는 전용 테스트가 스텁으로 검증한다.
+    """
+
+    from surface_sentinel.evaluation import recalibration
+
+    monkeypatch.setattr(recalibration, "git_code_identity", lambda: ("", False))
+
+
 def _write_incoming(incoming: Path) -> dict[str, Path]:
     """정상 1장과 결함 1장을 결정론적으로 만든다."""
 
@@ -56,6 +68,43 @@ def _rows(db_path: Path) -> list[dict[str, object]]:
         return list_inspections(connection, limit=100, offset=0)
     finally:
         connection.close()
+
+
+def test_code_identity_computed_once_and_injected(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """code_sha 는 워커 시작 시 1회만 계산해 모든 행의 fingerprint 에 주입한다."""
+
+    from surface_sentinel.evaluation import recalibration
+    from surface_sentinel.records.identity import opencv_spec
+
+    calls: list[int] = []
+
+    def fake_identity() -> tuple[str, bool]:
+        calls.append(1)
+        return ("f" * 40, True)
+
+    monkeypatch.setattr(recalibration, "git_code_identity", fake_identity)
+
+    incoming = tmp_path / "incoming"
+    incoming.mkdir()
+    _write_incoming(incoming)
+    db_path = tmp_path / "records.db"
+    run_worker(incoming=incoming, db_path=db_path, config=BASE_CONFIG, once=True)
+
+    assert len(calls) == 1  # 이미지 2장이어도 진입점 1회 — 핫패스 subprocess 금지
+    expected = opencv_spec(
+        BASE_CONFIG.config_hash, code_sha="f" * 40, code_dirty=True
+    ).fingerprint
+    connection = connect(db_path)
+    try:
+        fingerprints = [
+            row[0] for row in connection.execute("SELECT inspection_fingerprint FROM inspections")
+        ]
+    finally:
+        connection.close()
+    assert len(fingerprints) == 2
+    assert all(value == expected for value in fingerprints)
 
 
 def test_once_processes_two_images(tmp_path: Path) -> None:
@@ -287,6 +336,7 @@ def test_worker_records_yolo_engine_path(
 
     from surface_sentinel.pipeline import InspectionOutcome
     from surface_sentinel.pipeline.evidence import sanitize_sample_id
+    from surface_sentinel.records.identity import EngineSpec
     from surface_sentinel.yolo import inspect as yolo_inspect
     from surface_sentinel.yolo.adapter import to_sample_result
     from surface_sentinel.yolo.inference import Detection
@@ -333,6 +383,23 @@ def test_worker_records_yolo_engine_path(
         return InspectionOutcome(result=replace(result, overlay_path=overlay_path))
 
     monkeypatch.setattr(yolo_inspect, "inspect_with_yolo", stub_entry)
+    # 신원 헬퍼도 스텁(모델 파일 없이 워커 기록 경로만 검증). 실제 모델 SHA 는
+    # 통합 테스트에서 실측 ONNX 로 확인한다. code_sha 주입은 진입점 헬퍼 스텁으로 검증.
+    from surface_sentinel.evaluation import recalibration
+
+    monkeypatch.setattr(recalibration, "git_code_identity", lambda: ("a" * 40, False))
+    monkeypatch.setattr(
+        yolo_inspect,
+        "inspection_identity",
+        lambda engine, config, **kw: EngineSpec(
+            engine=engine,
+            task="det",
+            model_sha256="e" * 64,
+            config_hash=config.config_hash,
+            code_sha=kw.get("code_sha", ""),
+            code_dirty=kw.get("code_dirty", False),
+        ),
+    )
 
     run_worker(
         incoming=incoming,
@@ -357,6 +424,14 @@ def test_worker_records_yolo_engine_path(
         overlay = Path(str(row["overlay_path"]))
         assert overlay.is_file()
         assert overlay.name == f"{row['sample_id']}_yolo.png"
+    expected_fp = EngineSpec(
+        engine="yolo-det",
+        task="det",
+        model_sha256="e" * 64,
+        config_hash=BASE_CONFIG.config_hash,
+        code_sha="a" * 40,
+    ).fingerprint
+    assert all(row["inspection_fingerprint"] == expected_fp for row in rows)
 
 
 def test_cli_worker_run_once(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
