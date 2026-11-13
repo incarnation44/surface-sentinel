@@ -149,6 +149,7 @@ def cached_samples(
     overlays: bool = False,
     use_cache: bool = True,
     label: str = "cache",
+    allow_sealed: bool = False,
 ) -> tuple[CachedSample, ...]:
     """샘플 캐시를 읽거나 만든다. 키는 (버전, config hash, 분할, 표본 id)다."""
 
@@ -169,6 +170,7 @@ def cached_samples(
         raw_root=raw_root,
         overlay_dir=OVERLAY_DIR if overlays else None,
         progress=_progress(label),
+        allow_sealed=allow_sealed,
     )
     elapsed = time.perf_counter() - started
     save_cache(samples, meta, path)

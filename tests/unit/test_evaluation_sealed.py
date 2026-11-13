@@ -320,3 +320,103 @@ def test_cli_eval_tune_unaffected_by_flag(tmp_path: Path) -> None:
     plan = build_sample_plan(rows, split="tune")
     assert plan.split == "tune"
     assert config.config_hash
+
+
+# ------------------------------------------- 파이프라인 봉인 경계 (T08 회귀)
+
+
+def _defect_row(dataset):
+    rows = load_manifest(dataset.tune_csv)
+    return next(row for row in rows if row.label == "defect")
+
+
+def test_validate_input_default_rejects_sealed_split(tmp_path: Path) -> None:
+    from surface_sentinel.contracts import ErrorCode
+    from surface_sentinel.pipeline.errors import PipelineError
+    from surface_sentinel.pipeline.stages import validate_input
+
+    dataset = _sealed_dataset(tmp_path, "test", good=1, defect=1)
+    row = _defect_row(dataset)
+    config = load_config(BASE_CONFIG)
+    with pytest.raises(PipelineError) as exc:
+        validate_input(
+            dataset.raw / row.image_path,
+            mask_path=dataset.raw / row.mask_path,
+            label=row.label,
+            split="test",
+            config=config,
+        )
+    assert exc.value.error_code == ErrorCode.E_SEALED_DENIED
+
+
+def test_validate_input_allow_sealed_reads(tmp_path: Path) -> None:
+    from surface_sentinel.pipeline.stages import validate_input
+
+    dataset = _sealed_dataset(tmp_path, "test", good=1, defect=1)
+    row = _defect_row(dataset)
+    config = load_config(BASE_CONFIG)
+    metadata, decoded = validate_input(
+        dataset.raw / row.image_path,
+        mask_path=dataset.raw / row.mask_path,
+        label=row.label,
+        split="test",
+        config=config,
+        allow_sealed=True,
+    )
+    assert metadata.image_sha256
+    assert decoded is not None
+
+
+def test_inspect_image_default_sealed_returns_error(tmp_path: Path) -> None:
+    from surface_sentinel.contracts import ErrorCode, Status
+    from surface_sentinel.pipeline import inspect_image
+
+    dataset = _sealed_dataset(tmp_path, "test", good=1, defect=1)
+    row = _defect_row(dataset)
+    config = load_config(BASE_CONFIG)
+    outcome = inspect_image(
+        dataset.raw / row.image_path,
+        config,
+        mask_path=dataset.raw / row.mask_path,
+        label=row.label,
+        split="test",
+        output_dir=tmp_path / "out",
+        save_stages=False,
+    )
+    assert outcome.result.status == Status.ERROR
+    assert outcome.result.error_code == ErrorCode.E_SEALED_DENIED
+
+
+def test_inspect_image_allow_sealed_runs(tmp_path: Path) -> None:
+    from surface_sentinel.contracts import Status
+    from surface_sentinel.pipeline import inspect_image
+
+    dataset = _sealed_dataset(tmp_path, "test", good=1, defect=1)
+    row = _defect_row(dataset)
+    config = load_config(BASE_CONFIG)
+    outcome = inspect_image(
+        dataset.raw / row.image_path,
+        config,
+        mask_path=dataset.raw / row.mask_path,
+        label=row.label,
+        split="test",
+        output_dir=tmp_path / "out",
+        save_stages=False,
+        allow_sealed=True,
+    )
+    assert outcome.result.status != Status.ERROR
+    assert not outcome.result.error_code
+
+
+def test_run_sealed_measurement_actually_measures(tmp_path: Path) -> None:
+    """회귀: 1차 개봉에서 전 샘플 E_SEALED_DENIED(분모 0)였던 버그.
+
+    승인된 봉인 측정은 실제 판정을 내야 한다. 분모가 0이면 측정 무효다.
+    """
+
+    dataset = _sealed_dataset(tmp_path, "test", good=2, defect=2)
+    payload = run_sealed_measurement(split="test", **_run_kwargs(tmp_path, dataset))
+    image = payload["variants"]["P"]["report"]["image_metrics"]
+    assert image["defect_escape_rate"]["denominator"] == 2
+    assert image["good_false_ng_rate"]["denominator"] == 2
+    assert payload["failure_selection"]["category_counts"].get("error", 0) == 0

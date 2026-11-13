@@ -405,6 +405,7 @@ def run_sealed_measurement(
         overlays=overlays,
         use_cache=use_cache,
         label="P",
+        allow_sealed=True,
     )
 
     reports: dict[str, VariantReport] = {

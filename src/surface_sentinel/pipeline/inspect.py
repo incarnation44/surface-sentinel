@@ -99,6 +99,7 @@ def inspect_image(
     split: str = "tune",
     output_dir: str | Path | None = None,
     save_stages: bool | None = None,
+    allow_sealed: bool = False,
 ) -> InspectionOutcome:
     """한 이미지를 고정 10단계로 검사하고 결과와 디버그 산출물을 돌려준다."""
 
@@ -142,6 +143,7 @@ def inspect_image(
                 label=label,
                 split=split,
                 config=config,
+                allow_sealed=allow_sealed,
             ),
         )
         loaded = execute(Stage.LOAD_IMAGE, lambda: load_image(decoded, metadata))

@@ -135,17 +135,19 @@ def validate_input(
     label: str,
     split: str,
     config: AppConfig,
+    allow_sealed: bool = False,
 ) -> tuple[InputMetadata, np.ndarray]:
     """입력 계약을 검사하고 디코드된 원본 배열을 돌려준다.
 
-    봉인 split 거부는 파일을 읽기 전에 수행한다.
+    봉인 split 거부는 파일을 읽기 전에 수행한다. ``allow_sealed=True``는
+    T08 봉인 측정 경로가 승인했을 때만 전달한다(기본 False = 거부 유지).
     """
 
     if label not in VALID_LABELS:
         raise ValueError(f"알 수 없는 label입니다: {label!r}")
     if split not in VALID_SPLITS:
         raise ValueError(f"알 수 없는 split입니다: {split!r}")
-    if split in SEALED_SPLITS:
+    if split in SEALED_SPLITS and not allow_sealed:
         raise PipelineError(
             ErrorCode.E_SEALED_DENIED,
             Stage.VALIDATE_INPUT,

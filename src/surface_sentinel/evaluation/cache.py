@@ -259,6 +259,7 @@ def inspect_once(
     raw_root: str | Path,
     split: str,
     overlay_dir: str | Path | None,
+    allow_sealed: bool = False,
 ) -> CachedSample:
     """한 샘플을 10단계로 한 번 검사하고 재계산 재료를 남긴다."""
 
@@ -272,6 +273,7 @@ def inspect_once(
             label=row.label,
             split=split,
             config=config,
+            allow_sealed=allow_sealed,
         )
         loaded = load_image(decoded, metadata)
         roi = prepare_roi(loaded.gray, config)
@@ -374,6 +376,7 @@ def build_cache(
     raw_root: str | Path = DEFAULT_RAW_ROOT,
     overlay_dir: str | Path | None = None,
     progress: Any = None,
+    allow_sealed: bool = False,
 ) -> tuple[CachedSample, ...]:
     """표본 전체를 순서대로 검사한다. 순서는 표본 순서 그대로(결정론)."""
 
@@ -387,6 +390,7 @@ def build_cache(
                 raw_root=raw_root,
                 split=plan.split,
                 overlay_dir=overlay_dir,
+                allow_sealed=allow_sealed,
             )
         )
         if progress is not None:

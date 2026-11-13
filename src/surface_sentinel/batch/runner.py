@@ -383,6 +383,7 @@ def run_batch(
                     split=split,
                     output_dir=overlays_dir,
                     save_stages=False,
+                    allow_sealed=allow_sealed,
                 )
                 result = outcome.result
                 safe_id = sanitize_sample_id(row.sample_id)
