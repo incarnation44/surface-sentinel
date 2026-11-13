@@ -1,0 +1,566 @@
+{
+  "bootstrap": {
+    "alpha": 0.05,
+    "b": 2000,
+    "seed": 20261111
+  },
+  "code_sha": "a6671e42a855dc889d7cefe19aa2e674b21329df",
+  "config_hash": "a762ba63944133ddfbc2f962342001e09d0dffd0f0ea14fd79095274865d8098",
+  "config_path": "configs/base.toml",
+  "failure_selection": {
+    "boundary_cases": [
+      {
+        "best_iou": 0.0,
+        "category": "false_ng",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20797_overlay.png",
+        "reason_code": "DEFECT_EVIDENCE_STRONG",
+        "sample_id": "20797",
+        "score": 0.500341,
+        "status": "NG"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "false_ng",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20365_overlay.png",
+        "reason_code": "DEFECT_EVIDENCE_STRONG",
+        "sample_id": "20365",
+        "score": 0.500965,
+        "status": "NG"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "false_ng",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20445_overlay.png",
+        "reason_code": "DEFECT_EVIDENCE_STRONG",
+        "sample_id": "20445",
+        "score": 0.501192,
+        "status": "NG"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "false_ng",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20044_overlay.png",
+        "reason_code": "DEFECT_EVIDENCE_STRONG",
+        "sample_id": "20044",
+        "score": 0.502381,
+        "status": "NG"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "false_ng",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20341_overlay.png",
+        "reason_code": "DEFECT_EVIDENCE_STRONG",
+        "sample_id": "20341",
+        "score": 0.50255,
+        "status": "NG"
+      }
+    ],
+    "category_counts": {
+      "defect_review": 29,
+      "escape": 12,
+      "false_ng": 72,
+      "good_review": 350
+    },
+    "high_score_escape_top2": [
+      {
+        "best_iou": 0.0,
+        "category": "escape",
+        "label": "defect",
+        "overlay": "data/derived/t05_overlays/20139_overlay.png",
+        "reason_code": "NO_DEFECT_EVIDENCE",
+        "sample_id": "20139",
+        "score": 0.0,
+        "status": "OK"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "escape",
+        "label": "defect",
+        "overlay": "data/derived/t05_overlays/20159_overlay.png",
+        "reason_code": "NO_DEFECT_EVIDENCE",
+        "sample_id": "20159",
+        "score": 0.0,
+        "status": "OK"
+      }
+    ],
+    "high_score_false_ng_top2": [
+      {
+        "best_iou": 0.0,
+        "category": "false_ng",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20462_overlay.png",
+        "reason_code": "DEFECT_EVIDENCE_STRONG",
+        "sample_id": "20462",
+        "score": 1.207011,
+        "status": "NG"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "false_ng",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20756_overlay.png",
+        "reason_code": "DEFECT_EVIDENCE_STRONG",
+        "sample_id": "20756",
+        "score": 1.139901,
+        "status": "NG"
+      }
+    ],
+    "largest_review_cluster": [
+      {
+        "best_iou": 0.0,
+        "category": "good_review",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20469_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20469",
+        "score": 0.496465,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "good_review",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20955_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20955",
+        "score": 0.494688,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "good_review",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20473_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20473",
+        "score": 0.493019,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "good_review",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20815_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20815",
+        "score": 0.488039,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "good_review",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20656_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20656",
+        "score": 0.487573,
+        "status": "REVIEW"
+      }
+    ],
+    "largest_review_cluster_reason": "MULTIPLE_WEAK_CANDIDATES",
+    "largest_review_cluster_size": 262,
+    "partial_location_cases": [
+      {
+        "best_iou": 0.00227,
+        "category": "defect_review",
+        "label": "defect",
+        "overlay": "data/derived/t05_overlays/20884_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20884",
+        "score": 0.367423,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.005151,
+        "category": "defect_review",
+        "label": "defect",
+        "overlay": "data/derived/t05_overlays/20158_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20158",
+        "score": 0.410792,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.00622,
+        "category": "defect_review",
+        "label": "defect",
+        "overlay": "data/derived/t05_overlays/20403_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20403",
+        "score": 0.417582,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.008273,
+        "category": "defect_review",
+        "label": "defect",
+        "overlay": "data/derived/t05_overlays/20881_overlay.png",
+        "reason_code": "EVIDENCE_IN_REVIEW_BAND",
+        "sample_id": "20881",
+        "score": 0.364863,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.008928,
+        "category": "defect_review",
+        "label": "defect",
+        "overlay": "data/derived/t05_overlays/20439_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20439",
+        "score": 0.431699,
+        "status": "REVIEW"
+      }
+    ],
+    "quality_flag_cases": [],
+    "reason_counts": {
+      "DEFECT_EVIDENCE_STRONG": 72,
+      "EVIDENCE_IN_REVIEW_BAND": 117,
+      "MULTIPLE_WEAK_CANDIDATES": 262,
+      "NO_DEFECT_EVIDENCE": 12
+    },
+    "reason_distribution": {
+      "defect_review": {
+        "EVIDENCE_IN_REVIEW_BAND": 14,
+        "MULTIPLE_WEAK_CANDIDATES": 15
+      },
+      "escape": {
+        "NO_DEFECT_EVIDENCE": 12
+      },
+      "false_ng": {
+        "DEFECT_EVIDENCE_STRONG": 72
+      },
+      "good_review": {
+        "EVIDENCE_IN_REVIEW_BAND": 103,
+        "MULTIPLE_WEAK_CANDIDATES": 247
+      }
+    }
+  },
+  "generated_at": "2026-11-13T02:07:40.427Z",
+  "goals": {
+    "escape Wilson 상한": {
+      "metric": "defect_escape_rate_ci_high",
+      "op": "<=",
+      "pass": true,
+      "target": 0.2,
+      "value": 0.18104883134757863
+    },
+    "escape 점추정": {
+      "metric": "defect_escape_rate",
+      "op": "<=",
+      "pass": true,
+      "target": 0.15,
+      "value": 0.10909090909090909
+    },
+    "false-NG": {
+      "metric": "good_false_ng_rate",
+      "op": "<=",
+      "pass": true,
+      "target": 0.2,
+      "value": 0.08053691275167785
+    },
+    "recall@IoU0.10": {
+      "metric": "localization_recall_iou0.10",
+      "op": ">=",
+      "pass": true,
+      "target": 0.5,
+      "value": 0.5462184873949579
+    },
+    "review": {
+      "metric": "review_rate",
+      "op": "<=",
+      "pass": true,
+      "target": 0.4,
+      "value": 0.37749003984063745
+    }
+  },
+  "lock": {
+    "access_count": 1,
+    "accesses": [
+      {
+        "code_sha": "a6671e42a855dc889d7cefe19aa2e674b21329df",
+        "config_hash": "a762ba63944133ddfbc2f962342001e09d0dffd0f0ea14fd79095274865d8098",
+        "purpose": "T08 봉인 test 일회성 측정",
+        "timestamp": "2026-11-13T02:05:56.767Z"
+      }
+    ],
+    "code_sha": "a6671e42a855dc889d7cefe19aa2e674b21329df",
+    "config_hash": "a762ba63944133ddfbc2f962342001e09d0dffd0f0ea14fd79095274865d8098",
+    "created": "2026-11-13T02:05:56.767Z",
+    "post_seal_config_change": false,
+    "purpose": "T08 봉인 test 일회성 측정",
+    "reuse": false,
+    "split": "official_test",
+    "split_sha256": "060bd376189cefb296e07e4b2874d5719ba13fe27ac9fc80f47a1db5e1fbc7a8"
+  },
+  "paths": {
+    "evidence": "docs/evidence/T08_sealed_official_test.json",
+    "failure_index": "docs/evidence/failure_cases/T08_official_test_failure_index.csv",
+    "failure_selection": "docs/evidence/failure_cases/T08_official_test_failure_selection.json",
+    "lock": "data/splits/official_test.lock.json",
+    "report": "docs/reports/T08_sealed_official_test_2026-11-13.md"
+  },
+  "purpose": "T08 봉인 test 일회성 측정",
+  "sample_plan": {
+    "defect_mode": "census",
+    "defect_population": 110,
+    "defect_taken": 110,
+    "good_population": 894,
+    "good_requested": 894,
+    "good_taken": 894,
+    "rule": "defect=전수(분모=tune 결함), good=source_split 층화 500장(비례 배분+최대 나머지, sha256(seed:id) 정렬)",
+    "seed": "t05-2026-11-10",
+    "split": "official_test",
+    "strata": [
+      {
+        "fraction": 1.0,
+        "population": 894,
+        "requested": 894,
+        "stratum": "test"
+      }
+    ],
+    "total": 1004
+  },
+  "split": "official_test",
+  "variants": {
+    "P": {
+      "bootstrap_ci": {
+        "escape": {
+          "alpha": 0.05,
+          "b": 2000,
+          "ci_high": 0.17272727272727273,
+          "ci_low": 0.05454545454545454,
+          "denominator": 110.0,
+          "n": 110,
+          "numerator": 12.0,
+          "seed": 20261111,
+          "value": 0.10909090909090909
+        },
+        "false_ng": {
+          "alpha": 0.05,
+          "b": 2000,
+          "ci_high": 0.09955257270693513,
+          "ci_low": 0.06487695749440715,
+          "denominator": 894.0,
+          "n": 894,
+          "numerator": 72.0,
+          "seed": 20261111,
+          "value": 0.08053691275167785
+        },
+        "recall_iou0.10": {
+          "alpha": 0.05,
+          "b": 2000,
+          "ci_high": 0.6293338887279049,
+          "ci_low": 0.452991452991453,
+          "denominator": 119.0,
+          "n": 110,
+          "numerator": 65.0,
+          "seed": 20261111,
+          "value": 0.5462184873949579
+        },
+        "recall_iou0.50": {
+          "alpha": 0.05,
+          "b": 2000,
+          "ci_high": 0.2892767017853762,
+          "ci_low": 0.1391304347826087,
+          "denominator": 119.0,
+          "n": 110,
+          "numerator": 25.0,
+          "seed": 20261111,
+          "value": 0.21008403361344538
+        },
+        "review": {
+          "alpha": 0.05,
+          "b": 2000,
+          "ci_high": 0.40836653386454186,
+          "ci_low": 0.34760956175298807,
+          "denominator": 1004.0,
+          "n": 1004,
+          "numerator": 379.0,
+          "seed": 20261111,
+          "value": 0.37749003984063745
+        }
+      },
+      "report": {
+        "config_hash": "a762ba63944133ddfbc2f962342001e09d0dffd0f0ea14fd79095274865d8098",
+        "confusion": {
+          "defect": {
+            "evaluated": 110,
+            "status": {
+              "ERROR": 0,
+              "NG": 69,
+              "OK": 12,
+              "REVIEW": 29
+            },
+            "total": 110
+          },
+          "good": {
+            "evaluated": 894,
+            "status": {
+              "ERROR": 0,
+              "NG": 72,
+              "OK": 472,
+              "REVIEW": 350
+            },
+            "total": 894
+          }
+        },
+        "counts": {
+          "defect": 110,
+          "defect_evaluated": 110,
+          "good": 894,
+          "good_evaluated": 894,
+          "gt_components": 119,
+          "predicted_components": 2312,
+          "samples": 1004,
+          "status": {
+            "NG": 141,
+            "OK": 484,
+            "REVIEW": 379
+          }
+        },
+        "image_metrics": {
+          "automation_rate": {
+            "ci95_high": 0.6519746603216847,
+            "ci95_low": 0.5921113492852748,
+            "definition": "(OK+NG) / T",
+            "denominator": 1004,
+            "numerator": 625,
+            "value": 0.6225099601593626
+          },
+          "balanced_accuracy": {
+            "ci95_high": 0.636201467384093,
+            "ci95_low": 0.5146211368015321,
+            "definition": "(NG_defect/P + OK_good/N) / 2 — 단일 분모 없음, 구간은 두 성분 Wilson 구간의 평균(보수적 근사)",
+            "denominator": null,
+            "numerator": null,
+            "value": 0.5776184665446411
+          },
+          "decided_accuracy": {
+            "ci95_high": 0.8901185199777226,
+            "ci95_low": 0.8366147346283603,
+            "definition": "(NG_defect+OK_good) / (OK+NG)",
+            "denominator": 625,
+            "numerator": 541,
+            "value": 0.8656
+          },
+          "defect_escape_rate": {
+            "ci95_high": 0.18104883134757863,
+            "ci95_low": 0.06351460897644062,
+            "definition": "OK_on_defect / P (P=결함 이미지 수)",
+            "denominator": 110,
+            "numerator": 12,
+            "value": 0.10909090909090909
+          },
+          "defect_ng_rate": {
+            "ci95_high": 0.7119040371263794,
+            "ci95_low": 0.5340520520704517,
+            "definition": "NG_on_defect / P",
+            "denominator": 110,
+            "numerator": 69,
+            "value": 0.6272727272727273
+          },
+          "defect_review_rate": {
+            "ci95_high": 0.35294116124664643,
+            "ci95_low": 0.19028324453066747,
+            "definition": "REVIEW_on_defect / P",
+            "denominator": 110,
+            "numerator": 29,
+            "value": 0.2636363636363636
+          },
+          "good_false_ng_rate": {
+            "ci95_high": 0.10022156325745565,
+            "ci95_low": 0.06444164912625672,
+            "definition": "NG_on_good / N (N=정상 이미지 수)",
+            "denominator": 894,
+            "numerator": 72,
+            "value": 0.08053691275167785
+          },
+          "good_review_rate": {
+            "ci95_high": 0.4238924622009282,
+            "ci95_low": 0.36003375540232535,
+            "definition": "REVIEW_on_good / N",
+            "denominator": 894,
+            "numerator": 350,
+            "value": 0.39149888143176736
+          },
+          "review_rate": {
+            "ci95_high": 0.4078886507147253,
+            "ci95_low": 0.3480253396783152,
+            "definition": "(REVIEW_defect+REVIEW_good) / T",
+            "denominator": 1004,
+            "numerator": 379,
+            "value": 0.37749003984063745
+          }
+        },
+        "localization_metrics": {
+          "localization_recall_iou0.10": {
+            "ci95_high": 0.63282546074798,
+            "ci95_low": 0.45672085452377353,
+            "definition": "matched_GT(IoU>=0.10) / 전체 GT",
+            "denominator": 119,
+            "numerator": 65,
+            "value": 0.5462184873949579
+          },
+          "localization_recall_iou0.10_decided": {
+            "ci95_high": 0.7004111645761588,
+            "ci95_low": 0.5180855693317341,
+            "definition": "matched_GT(IoU>=0.10) / NG·REVIEW 판정 이미지 안 GT",
+            "denominator": 106,
+            "numerator": 65,
+            "value": 0.6132075471698113
+          },
+          "localization_recall_iou0.30": {
+            "ci95_high": 0.4335763682482301,
+            "ci95_low": 0.26522238947405374,
+            "definition": "matched_GT(IoU>=0.30) / 전체 GT",
+            "denominator": 119,
+            "numerator": 41,
+            "value": 0.3445378151260504
+          },
+          "localization_recall_iou0.30_decided": {
+            "ci95_high": 0.4819144306682659,
+            "ci95_low": 0.29958883542384107,
+            "definition": "matched_GT(IoU>=0.30) / NG·REVIEW 판정 이미지 안 GT",
+            "denominator": 106,
+            "numerator": 41,
+            "value": 0.3867924528301887
+          },
+          "mean_iou_matched": {
+            "ci95_high": null,
+            "ci95_low": null,
+            "definition": "matched(IoU>=0.10) 쌍의 평균 IoU — 비율이 아니므로 분모는 쌍 수",
+            "denominator": 65,
+            "numerator": null,
+            "value": 0.4205231422784611
+          },
+          "pixel_precision": {
+            "ci95_high": 0.8441642745195096,
+            "ci95_low": 0.8397879137699945,
+            "definition": "TP_pixels / predicted_pixels",
+            "denominator": 106739,
+            "numerator": 89873,
+            "value": 0.8419884016151548
+          },
+          "pixel_recall": {
+            "ci95_high": 0.18584169853703256,
+            "ci95_low": 0.18366052678264974,
+            "definition": "TP_pixels / GT_pixels",
+            "denominator": 486461,
+            "numerator": 89873,
+            "value": 0.18474862321953867
+          }
+        },
+        "name": "P",
+        "notes": [
+          "제안 파이프라인. 동결 config, 캐시된 컴포넌트 위에서 재채점."
+        ],
+        "overrides": {}
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+遊됱씤 ?쒕낯(test): defect 142/142 (?꾩닔), good 1192/1192 (?꾩닔)
+  P: 100/1334 (12301)
+  P: 200/1334 (10184)
+  P: 300/1334 (10490)
+  P: 400/1334 (10772)
+  P: 500/1334 (11068)
+  P: 600/1334 (11323)
+  P: 700/1334 (11623)
+  P: 800/1334 (11900)
+  P: 900/1334 (12199)
+  P: 1000/1334 (20126)
+  P: 1100/1334 (20368)
+  P: 1200/1334 (20644)
+  P: 1300/1334 (20906)
+  P: 1334/1334 (20997)
+  罹먯떆 ?앹꽦: data\derived\t05_cache\t05-cache-v1-test-a762ba639441-87b038c7c8e9.pkl (164.0s)
+遊됱씤 利앷굅: docs/evidence/T08_sealed_test.json
+遊됱씤 蹂닿퀬?? docs/reports/T08_sealed_test_2026-11-13.md
+遊됱씤 遺꾪븷: test (access_count=2, reuse=true)
+?쒕낯: defect 142 (?꾩닔) + good 1192 (?꾩닔)
+P defect_escape_rate: 0.1479 (遺꾨え 142)
+P good_false_ng_rate: 0.0721 (遺꾨え 1192)
+P review_rate: 0.3471 (遺꾨え 1334)
+紐⑺몴 escape ?먯텛?? PASS
+紐⑺몴 escape Wilson ?곹븳: FAIL
+紐⑺몴 false-NG: PASS
+紐⑺몴 review: PASS
+紐⑺몴 recall@IoU0.10: PASS
+evidence: docs/evidence/T08_sealed_test.json
+report: docs/reports/T08_sealed_test_2026-11-13.md
+failure_index: docs/evidence/failure_cases/T08_test_failure_index.csv
+failure_selection: docs/evidence/failure_cases/T08_test_failure_selection.json
+lock: data/splits/test.lock.json

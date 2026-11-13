@@ -1,0 +1,13 @@
+{
+  "gate": "H6",
+  "description": "clean clone 설치와 테스트 — 최종 측정 코드 재검증 (설계 §7 하드 게이트)",
+  "remote": "https://github.com/incarnation44/surface-sentinel.git",
+  "clone_head": "a6671e42a855dc889d7cefe19aa2e674b21329df",
+  "install": "uv sync — surface-sentinel 0.1.0 빌드 성공",
+  "cli_version": "surface-sentinel 0.1.0",
+  "ruff": "All checks passed!",
+  "pytest_command": "uv run pytest -m \"not data and not browser\"",
+  "pytest_result": "562 passed, 9 deselected in 29.79s",
+  "note": "개봉 전 H6은 eef2a07에서 통과(557 passed / 9 deselected, T08_h6_cleanclone.json). 개봉 후 수정 c24804a(회귀 테스트 5건)를 포함한 최종 코드 a6671e4 재검증: 562 = 557 + 5. 실제 KSDD2 데이터셋은 git 제외(보안 예외)라 clean clone에 없으며 data/browser 마커 9건 deselect. 임시 클론은 승인된 Temp 경로(ss_cleanclone2)에 보존 — 가드레일이 재귀 삭제를 차단해 우회하지 않음.",
+  "pass": true
+}

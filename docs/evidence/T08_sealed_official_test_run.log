@@ -1,0 +1,30 @@
+遊됱씤 ?쒕낯(official_test): defect 110/110 (?꾩닔), good 894/894 (?꾩닔)
+  P: 100/1004 (20892)
+  P: 200/1004 (20093)
+  P: 300/1004 (20214)
+  P: 400/1004 (20326)
+  P: 500/1004 (20433)
+  P: 600/1004 (20547)
+  P: 700/1004 (20657)
+  P: 800/1004 (20771)
+  P: 900/1004 (20887)
+  P: 1000/1004 (20999)
+  P: 1004/1004 (21003)
+  罹먯떆 ?앹꽦: data\derived\t05_cache\t05-cache-v1-official_test-a762ba639441-1a7a2d92443b.pkl (103.5s)
+遊됱씤 利앷굅: docs/evidence/T08_sealed_official_test.json
+遊됱씤 蹂닿퀬?? docs/reports/T08_sealed_official_test_2026-11-13.md
+遊됱씤 遺꾪븷: official_test (access_count=1, reuse=false)
+?쒕낯: defect 110 (?꾩닔) + good 894 (?꾩닔)
+P defect_escape_rate: 0.1091 (遺꾨え 110)
+P good_false_ng_rate: 0.0805 (遺꾨え 894)
+P review_rate: 0.3775 (遺꾨え 1004)
+紐⑺몴 escape ?먯텛?? PASS
+紐⑺몴 escape Wilson ?곹븳: PASS
+紐⑺몴 false-NG: PASS
+紐⑺몴 review: PASS
+紐⑺몴 recall@IoU0.10: PASS
+evidence: docs/evidence/T08_sealed_official_test.json
+report: docs/reports/T08_sealed_official_test_2026-11-13.md
+failure_index: docs/evidence/failure_cases/T08_official_test_failure_index.csv
+failure_selection: docs/evidence/failure_cases/T08_official_test_failure_selection.json
+lock: data/splits/official_test.lock.json

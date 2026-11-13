@@ -1,0 +1,226 @@
+{
+  "gate": "H7",
+  "description": "문서 수치 = 증거 자동 대조 (T08 최종 보고서 vs 증거 JSON)",
+  "report": "docs/reports/T08_sealed_2026-11-13.md",
+  "total": 54,
+  "failed": 0,
+  "pass": true,
+  "checks": [
+    {
+      "check": "test B0 defect_escape_rate",
+      "pass": true
+    },
+    {
+      "check": "test B0 defect_ng_rate",
+      "pass": true
+    },
+    {
+      "check": "test B0 defect_review_rate",
+      "pass": true
+    },
+    {
+      "check": "test B0 good_false_ng_rate",
+      "pass": true
+    },
+    {
+      "check": "test B0 good_review_rate",
+      "pass": true
+    },
+    {
+      "check": "test B0 review_rate",
+      "pass": true
+    },
+    {
+      "check": "test B0 localization_recall_iou0.10",
+      "pass": true
+    },
+    {
+      "check": "test B0 localization_recall_iou0.30",
+      "pass": true
+    },
+    {
+      "check": "test B1 defect_escape_rate",
+      "pass": true
+    },
+    {
+      "check": "test B1 defect_ng_rate",
+      "pass": true
+    },
+    {
+      "check": "test B1 defect_review_rate",
+      "pass": true
+    },
+    {
+      "check": "test B1 good_false_ng_rate",
+      "pass": true
+    },
+    {
+      "check": "test B1 good_review_rate",
+      "pass": true
+    },
+    {
+      "check": "test B1 review_rate",
+      "pass": true
+    },
+    {
+      "check": "test B1 localization_recall_iou0.10",
+      "pass": true
+    },
+    {
+      "check": "test B1 localization_recall_iou0.30",
+      "pass": true
+    },
+    {
+      "check": "test P defect_escape_rate",
+      "pass": true
+    },
+    {
+      "check": "test P defect_ng_rate",
+      "pass": true
+    },
+    {
+      "check": "test P defect_review_rate",
+      "pass": true
+    },
+    {
+      "check": "test P good_false_ng_rate",
+      "pass": true
+    },
+    {
+      "check": "test P good_review_rate",
+      "pass": true
+    },
+    {
+      "check": "test P review_rate",
+      "pass": true
+    },
+    {
+      "check": "test P localization_recall_iou0.10",
+      "pass": true
+    },
+    {
+      "check": "test P localization_recall_iou0.30",
+      "pass": true
+    },
+    {
+      "check": "official P defect_escape_rate",
+      "pass": true
+    },
+    {
+      "check": "official P good_false_ng_rate",
+      "pass": true
+    },
+    {
+      "check": "official P review_rate",
+      "pass": true
+    },
+    {
+      "check": "official P localization_recall_iou0.10",
+      "pass": true
+    },
+    {
+      "check": "test goal escape Wilson 상한",
+      "pass": true
+    },
+    {
+      "check": "test goal escape 점추정",
+      "pass": true
+    },
+    {
+      "check": "test goal false-NG",
+      "pass": true
+    },
+    {
+      "check": "test goal recall@IoU0.10",
+      "pass": true
+    },
+    {
+      "check": "test goal review",
+      "pass": true
+    },
+    {
+      "check": "official goal escape Wilson 상한",
+      "pass": true
+    },
+    {
+      "check": "official goal escape 점추정",
+      "pass": true
+    },
+    {
+      "check": "official goal false-NG",
+      "pass": true
+    },
+    {
+      "check": "official goal recall@IoU0.10",
+      "pass": true
+    },
+    {
+      "check": "official goal review",
+      "pass": true
+    },
+    {
+      "check": "test boot escape",
+      "pass": true
+    },
+    {
+      "check": "test boot false_ng",
+      "pass": true
+    },
+    {
+      "check": "test boot recall_iou0.10",
+      "pass": true
+    },
+    {
+      "check": "test boot recall_iou0.50",
+      "pass": true
+    },
+    {
+      "check": "test boot review",
+      "pass": true
+    },
+    {
+      "check": "official boot escape",
+      "pass": true
+    },
+    {
+      "check": "official boot review",
+      "pass": true
+    },
+    {
+      "check": "config_hash full",
+      "pass": true
+    },
+    {
+      "check": "code_sha full",
+      "pass": true
+    },
+    {
+      "check": "test access_count=2",
+      "pass": true
+    },
+    {
+      "check": "official access_count=1",
+      "pass": true
+    },
+    {
+      "check": "post_seal false",
+      "pass": true
+    },
+    {
+      "check": "test split sha",
+      "pass": true
+    },
+    {
+      "check": "test Wilson FAIL verdict",
+      "pass": true
+    },
+    {
+      "check": "official all PASS",
+      "pass": true
+    },
+    {
+      "check": "test 4 PASS 1 FAIL",
+      "pass": true
+    }
+  ]
+}

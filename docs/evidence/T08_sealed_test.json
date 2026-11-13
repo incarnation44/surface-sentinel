@@ -4,76 +4,296 @@
     "b": 2000,
     "seed": 20261111
   },
-  "code_sha": "eef2a0767b57a1adab2f5a93c909842aceb17f02",
+  "code_sha": "a6671e42a855dc889d7cefe19aa2e674b21329df",
   "config_hash": "a762ba63944133ddfbc2f962342001e09d0dffd0f0ea14fd79095274865d8098",
   "config_path": "configs/base.toml",
   "failure_selection": {
-    "boundary_cases": [],
+    "boundary_cases": [
+      {
+        "best_iou": 0.0,
+        "category": "false_ng",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20797_overlay.png",
+        "reason_code": "DEFECT_EVIDENCE_STRONG",
+        "sample_id": "20797",
+        "score": 0.500341,
+        "status": "NG"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "false_ng",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20365_overlay.png",
+        "reason_code": "DEFECT_EVIDENCE_STRONG",
+        "sample_id": "20365",
+        "score": 0.500965,
+        "status": "NG"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "good_review",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/12319_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "12319",
+        "score": 0.49795,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "good_review",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20469_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20469",
+        "score": 0.496465,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "good_review",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20955_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20955",
+        "score": 0.494688,
+        "status": "REVIEW"
+      }
+    ],
     "category_counts": {
-      "error": 1334
+      "defect_review": 31,
+      "escape": 21,
+      "false_ng": 86,
+      "good_review": 432
     },
-    "high_score_escape_top2": [],
-    "high_score_false_ng_top2": [],
-    "largest_review_cluster": [],
-    "largest_review_cluster_reason": "",
-    "largest_review_cluster_size": 0,
-    "partial_location_cases": [],
+    "high_score_escape_top2": [
+      {
+        "best_iou": 0.0,
+        "category": "escape",
+        "label": "defect",
+        "overlay": "data/derived/t05_overlays/10028_overlay.png",
+        "reason_code": "NO_DEFECT_EVIDENCE",
+        "sample_id": "10028",
+        "score": 0.0,
+        "status": "OK"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "escape",
+        "label": "defect",
+        "overlay": "data/derived/t05_overlays/10065_overlay.png",
+        "reason_code": "NO_DEFECT_EVIDENCE",
+        "sample_id": "10065",
+        "score": 0.0,
+        "status": "OK"
+      }
+    ],
+    "high_score_false_ng_top2": [
+      {
+        "best_iou": 0.0,
+        "category": "false_ng",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20462_overlay.png",
+        "reason_code": "DEFECT_EVIDENCE_STRONG",
+        "sample_id": "20462",
+        "score": 1.207011,
+        "status": "NG"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "false_ng",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/12205_overlay.png",
+        "reason_code": "DEFECT_EVIDENCE_STRONG",
+        "sample_id": "12205",
+        "score": 1.129159,
+        "status": "NG"
+      }
+    ],
+    "largest_review_cluster": [
+      {
+        "best_iou": 0.0,
+        "category": "good_review",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/12319_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "12319",
+        "score": 0.49795,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "good_review",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20469_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20469",
+        "score": 0.496465,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "good_review",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20955_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20955",
+        "score": 0.494688,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "good_review",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/12064_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "12064",
+        "score": 0.493941,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.0,
+        "category": "good_review",
+        "label": "good",
+        "overlay": "data/derived/t05_overlays/20473_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20473",
+        "score": 0.493019,
+        "status": "REVIEW"
+      }
+    ],
+    "largest_review_cluster_reason": "MULTIPLE_WEAK_CANDIDATES",
+    "largest_review_cluster_size": 331,
+    "partial_location_cases": [
+      {
+        "best_iou": 0.00227,
+        "category": "defect_review",
+        "label": "defect",
+        "overlay": "data/derived/t05_overlays/20884_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20884",
+        "score": 0.367423,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.005151,
+        "category": "defect_review",
+        "label": "defect",
+        "overlay": "data/derived/t05_overlays/20158_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20158",
+        "score": 0.410792,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.00622,
+        "category": "defect_review",
+        "label": "defect",
+        "overlay": "data/derived/t05_overlays/20403_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "20403",
+        "score": 0.417582,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.011085,
+        "category": "defect_review",
+        "label": "defect",
+        "overlay": "data/derived/t05_overlays/10206_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "10206",
+        "score": 0.415673,
+        "status": "REVIEW"
+      },
+      {
+        "best_iou": 0.011763,
+        "category": "defect_review",
+        "label": "defect",
+        "overlay": "data/derived/t05_overlays/10585_overlay.png",
+        "reason_code": "MULTIPLE_WEAK_CANDIDATES",
+        "sample_id": "10585",
+        "score": 0.443706,
+        "status": "REVIEW"
+      }
+    ],
     "quality_flag_cases": [],
     "reason_counts": {
-      "": 1334
+      "BORDER_TOUCHING_CANDIDATE": 1,
+      "DEFECT_EVIDENCE_STRONG": 86,
+      "EVIDENCE_IN_REVIEW_BAND": 131,
+      "MULTIPLE_WEAK_CANDIDATES": 331,
+      "NO_DEFECT_EVIDENCE": 21
     },
     "reason_distribution": {
-      "error": {
-        "": 1334
+      "defect_review": {
+        "BORDER_TOUCHING_CANDIDATE": 1,
+        "EVIDENCE_IN_REVIEW_BAND": 12,
+        "MULTIPLE_WEAK_CANDIDATES": 18
+      },
+      "escape": {
+        "NO_DEFECT_EVIDENCE": 21
+      },
+      "false_ng": {
+        "DEFECT_EVIDENCE_STRONG": 86
+      },
+      "good_review": {
+        "EVIDENCE_IN_REVIEW_BAND": 119,
+        "MULTIPLE_WEAK_CANDIDATES": 313
       }
     }
   },
-  "generated_at": "2026-11-13T01:42:18.186Z",
+  "generated_at": "2026-11-13T02:05:30.533Z",
   "goals": {
     "escape Wilson 상한": {
       "metric": "defect_escape_rate_ci_high",
       "op": "<=",
-      "pass": null,
+      "pass": false,
       "target": 0.2,
-      "value": null
+      "value": 0.21551685002937132
     },
     "escape 점추정": {
       "metric": "defect_escape_rate",
       "op": "<=",
-      "pass": null,
+      "pass": true,
       "target": 0.15,
-      "value": null
+      "value": 0.14788732394366197
     },
     "false-NG": {
       "metric": "good_false_ng_rate",
       "op": "<=",
-      "pass": null,
+      "pass": true,
       "target": 0.2,
-      "value": null
+      "value": 0.07214765100671142
     },
     "recall@IoU0.10": {
       "metric": "localization_recall_iou0.10",
       "op": ">=",
-      "pass": null,
+      "pass": true,
       "target": 0.5,
-      "value": null
+      "value": 0.5789473684210527
     },
     "review": {
       "metric": "review_rate",
       "op": "<=",
-      "pass": null,
+      "pass": true,
       "target": 0.4,
-      "value": null
+      "value": 0.34707646176911544
     }
   },
   "lock": {
-    "access_count": 1,
+    "access_count": 2,
     "accesses": [
       {
         "code_sha": "eef2a0767b57a1adab2f5a93c909842aceb17f02",
         "config_hash": "a762ba63944133ddfbc2f962342001e09d0dffd0f0ea14fd79095274865d8098",
         "purpose": "T08 봉인 test 일회성 측정",
         "timestamp": "2026-11-13T01:41:35.138Z"
+      },
+      {
+        "code_sha": "a6671e42a855dc889d7cefe19aa2e674b21329df",
+        "config_hash": "a762ba63944133ddfbc2f962342001e09d0dffd0f0ea14fd79095274865d8098",
+        "purpose": "T08 봉인 test 일회성 측정",
+        "timestamp": "2026-11-13T02:02:12.855Z"
       }
     ],
     "code_sha": "eef2a0767b57a1adab2f5a93c909842aceb17f02",
@@ -81,7 +301,7 @@
     "created": "2026-11-13T01:41:35.138Z",
     "post_seal_config_change": false,
     "purpose": "T08 봉인 test 일회성 측정",
-    "reuse": false,
+    "reuse": true,
     "split": "test",
     "split_sha256": "c467b8a71d616fc0bd9c093dad7eed20f28088e53480c1c1de81aa16d4614962"
   },
@@ -126,57 +346,57 @@
         "escape": {
           "alpha": 0.05,
           "b": 2000,
-          "ci_high": null,
-          "ci_low": null,
-          "denominator": 0.0,
-          "n": 0,
-          "numerator": 0.0,
+          "ci_high": 1.0,
+          "ci_low": 1.0,
+          "denominator": 142.0,
+          "n": 142,
+          "numerator": 142.0,
           "seed": 20261111,
-          "value": null
+          "value": 1.0
         },
         "false_ng": {
           "alpha": 0.05,
           "b": 2000,
-          "ci_high": null,
-          "ci_low": null,
-          "denominator": 0.0,
-          "n": 0,
+          "ci_high": 0.0,
+          "ci_low": 0.0,
+          "denominator": 1192.0,
+          "n": 1192,
           "numerator": 0.0,
           "seed": 20261111,
-          "value": null
+          "value": 0.0
         },
         "recall_iou0.10": {
           "alpha": 0.05,
           "b": 2000,
-          "ci_high": null,
-          "ci_low": null,
-          "denominator": 0.0,
-          "n": 0,
+          "ci_high": 0.0,
+          "ci_low": 0.0,
+          "denominator": 152.0,
+          "n": 142,
           "numerator": 0.0,
           "seed": 20261111,
-          "value": null
+          "value": 0.0
         },
         "recall_iou0.50": {
           "alpha": 0.05,
           "b": 2000,
-          "ci_high": null,
-          "ci_low": null,
-          "denominator": 0.0,
-          "n": 0,
+          "ci_high": 0.0,
+          "ci_low": 0.0,
+          "denominator": 152.0,
+          "n": 142,
           "numerator": 0.0,
           "seed": 20261111,
-          "value": null
+          "value": 0.0
         },
         "review": {
           "alpha": 0.05,
           "b": 2000,
-          "ci_high": null,
-          "ci_low": null,
-          "denominator": 0.0,
-          "n": 0,
+          "ci_high": 0.0,
+          "ci_low": 0.0,
+          "denominator": 1334.0,
+          "n": 1334,
           "numerator": 0.0,
           "seed": 20261111,
-          "value": null
+          "value": 0.0
         }
       },
       "report": {
@@ -208,7 +428,7 @@
           "defect_evaluated": 142,
           "good": 1192,
           "good_evaluated": 1192,
-          "gt_components": 0,
+          "gt_components": 152,
           "predicted_components": 0,
           "samples": 1334,
           "status": {
@@ -291,12 +511,12 @@
         },
         "localization_metrics": {
           "localization_recall_iou0.10": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.024649787352889047,
+            "ci95_low": 0.0,
             "definition": "matched_GT(IoU>=0.10) / 전체 GT",
-            "denominator": 0,
+            "denominator": 152,
             "numerator": 0,
-            "value": null
+            "value": 0.0
           },
           "localization_recall_iou0.10_decided": {
             "ci95_high": null,
@@ -307,12 +527,12 @@
             "value": null
           },
           "localization_recall_iou0.30": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.024649787352889047,
+            "ci95_low": 0.0,
             "definition": "matched_GT(IoU>=0.30) / 전체 GT",
-            "denominator": 0,
+            "denominator": 152,
             "numerator": 0,
-            "value": null
+            "value": 0.0
           },
           "localization_recall_iou0.30_decided": {
             "ci95_high": null,
@@ -339,12 +559,12 @@
             "value": null
           },
           "pixel_recall": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 6.847863897596571e-06,
+            "ci95_low": 0.0,
             "definition": "TP_pixels / GT_pixels",
-            "denominator": 0,
+            "denominator": 560968,
             "numerator": 0,
-            "value": null
+            "value": 0.0
           }
         },
         "name": "B0",
@@ -365,57 +585,57 @@
         "escape": {
           "alpha": 0.05,
           "b": 2000,
-          "ci_high": null,
-          "ci_low": null,
-          "denominator": 0.0,
-          "n": 0,
+          "ci_high": 0.0,
+          "ci_low": 0.0,
+          "denominator": 142.0,
+          "n": 142,
           "numerator": 0.0,
           "seed": 20261111,
-          "value": null
+          "value": 0.0
         },
         "false_ng": {
           "alpha": 0.05,
           "b": 2000,
-          "ci_high": null,
-          "ci_low": null,
-          "denominator": 0.0,
-          "n": 0,
-          "numerator": 0.0,
+          "ci_high": 1.0,
+          "ci_low": 1.0,
+          "denominator": 1192.0,
+          "n": 1192,
+          "numerator": 1192.0,
           "seed": 20261111,
-          "value": null
+          "value": 1.0
         },
         "recall_iou0.10": {
           "alpha": 0.05,
           "b": 2000,
-          "ci_high": null,
-          "ci_low": null,
-          "denominator": 0.0,
-          "n": 0,
-          "numerator": 0.0,
+          "ci_high": 0.2662337662337662,
+          "ci_low": 0.1438344972692273,
+          "denominator": 152.0,
+          "n": 142,
+          "numerator": 31.0,
           "seed": 20261111,
-          "value": null
+          "value": 0.20394736842105263
         },
         "recall_iou0.50": {
           "alpha": 0.05,
           "b": 2000,
-          "ci_high": null,
-          "ci_low": null,
-          "denominator": 0.0,
-          "n": 0,
-          "numerator": 0.0,
+          "ci_high": 0.09870054897176708,
+          "ci_low": 0.02531645569620253,
+          "denominator": 152.0,
+          "n": 142,
+          "numerator": 9.0,
           "seed": 20261111,
-          "value": null
+          "value": 0.05921052631578947
         },
         "review": {
           "alpha": 0.05,
           "b": 2000,
-          "ci_high": null,
-          "ci_low": null,
-          "denominator": 0.0,
-          "n": 0,
+          "ci_high": 0.0,
+          "ci_low": 0.0,
+          "denominator": 1334.0,
+          "n": 1334,
           "numerator": 0.0,
           "seed": 20261111,
-          "value": null
+          "value": 0.0
         }
       },
       "report": {
@@ -447,7 +667,7 @@
           "defect_evaluated": 142,
           "good": 1192,
           "good_evaluated": 1192,
-          "gt_components": 0,
+          "gt_components": 152,
           "predicted_components": 152976,
           "samples": 1334,
           "status": {
@@ -530,60 +750,60 @@
         },
         "localization_metrics": {
           "localization_recall_iou0.10": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.27492559983088427,
+            "ci95_low": 0.14756440583858949,
             "definition": "matched_GT(IoU>=0.10) / 전체 GT",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 152,
+            "numerator": 31,
+            "value": 0.20394736842105263
           },
           "localization_recall_iou0.10_decided": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.27492559983088427,
+            "ci95_low": 0.14756440583858949,
             "definition": "matched_GT(IoU>=0.10) / NG·REVIEW 판정 이미지 안 GT",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 152,
+            "numerator": 31,
+            "value": 0.20394736842105263
           },
           "localization_recall_iou0.30": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.1249318695895122,
+            "ci95_low": 0.0408870274886166,
             "definition": "matched_GT(IoU>=0.30) / 전체 GT",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 152,
+            "numerator": 11,
+            "value": 0.07236842105263158
           },
           "localization_recall_iou0.30_decided": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.1249318695895122,
+            "ci95_low": 0.0408870274886166,
             "definition": "matched_GT(IoU>=0.30) / NG·REVIEW 판정 이미지 안 GT",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 152,
+            "numerator": 11,
+            "value": 0.07236842105263158
           },
           "mean_iou_matched": {
             "ci95_high": null,
             "ci95_low": null,
             "definition": "matched(IoU>=0.10) 쌍의 평균 IoU — 비율이 아니므로 분모는 쌍 수",
-            "denominator": 0,
+            "denominator": 31,
             "numerator": null,
-            "value": null
+            "value": 0.3274398125781555
           },
           "pixel_precision": {
-            "ci95_high": 3.945727899578852e-07,
-            "ci95_low": 2.6469779601696886e-23,
+            "ci95_high": 0.029246621576315128,
+            "ci95_low": 0.029035310165395664,
             "definition": "TP_pixels / predicted_pixels",
             "denominator": 9735738,
-            "numerator": 0,
-            "value": 0.0
+            "numerator": 283707,
+            "value": 0.029140780082619316
           },
           "pixel_recall": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.5070537212123603,
+            "ci95_low": 0.5044370516279253,
             "definition": "TP_pixels / GT_pixels",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 560968,
+            "numerator": 283707,
+            "value": 0.5057454257640365
           }
         },
         "name": "B1",
@@ -605,225 +825,227 @@
         "escape": {
           "alpha": 0.05,
           "b": 2000,
-          "ci_high": null,
-          "ci_low": null,
-          "denominator": 0.0,
-          "n": 0,
-          "numerator": 0.0,
+          "ci_high": 0.2112676056338028,
+          "ci_low": 0.09841549295774649,
+          "denominator": 142.0,
+          "n": 142,
+          "numerator": 21.0,
           "seed": 20261111,
-          "value": null
+          "value": 0.14788732394366197
         },
         "false_ng": {
           "alpha": 0.05,
           "b": 2000,
-          "ci_high": null,
-          "ci_low": null,
-          "denominator": 0.0,
-          "n": 0,
-          "numerator": 0.0,
+          "ci_high": 0.08640939597315436,
+          "ci_low": 0.057885906040268456,
+          "denominator": 1192.0,
+          "n": 1192,
+          "numerator": 86.0,
           "seed": 20261111,
-          "value": null
+          "value": 0.07214765100671142
         },
         "recall_iou0.10": {
           "alpha": 0.05,
           "b": 2000,
-          "ci_high": null,
-          "ci_low": null,
-          "denominator": 0.0,
-          "n": 0,
-          "numerator": 0.0,
+          "ci_high": 0.657940423976608,
+          "ci_low": 0.49673094403324247,
+          "denominator": 152.0,
+          "n": 142,
+          "numerator": 88.0,
           "seed": 20261111,
-          "value": null
+          "value": 0.5789473684210527
         },
         "recall_iou0.50": {
           "alpha": 0.05,
           "b": 2000,
-          "ci_high": null,
-          "ci_low": null,
-          "denominator": 0.0,
-          "n": 0,
-          "numerator": 0.0,
+          "ci_high": 0.2692434210526315,
+          "ci_low": 0.13998101265822785,
+          "denominator": 152.0,
+          "n": 142,
+          "numerator": 31.0,
           "seed": 20261111,
-          "value": null
+          "value": 0.20394736842105263
         },
         "review": {
           "alpha": 0.05,
           "b": 2000,
-          "ci_high": null,
-          "ci_low": null,
-          "denominator": 0.0,
-          "n": 0,
-          "numerator": 0.0,
+          "ci_high": 0.3740629685157421,
+          "ci_low": 0.32158920539730135,
+          "denominator": 1334.0,
+          "n": 1334,
+          "numerator": 463.0,
           "seed": 20261111,
-          "value": null
+          "value": 0.34707646176911544
         }
       },
       "report": {
         "config_hash": "a762ba63944133ddfbc2f962342001e09d0dffd0f0ea14fd79095274865d8098",
         "confusion": {
           "defect": {
-            "evaluated": 0,
+            "evaluated": 142,
             "status": {
-              "ERROR": 142,
-              "NG": 0,
-              "OK": 0,
-              "REVIEW": 0
+              "ERROR": 0,
+              "NG": 90,
+              "OK": 21,
+              "REVIEW": 31
             },
             "total": 142
           },
           "good": {
-            "evaluated": 0,
+            "evaluated": 1192,
             "status": {
-              "ERROR": 1192,
-              "NG": 0,
-              "OK": 0,
-              "REVIEW": 0
+              "ERROR": 0,
+              "NG": 86,
+              "OK": 674,
+              "REVIEW": 432
             },
             "total": 1192
           }
         },
         "counts": {
           "defect": 142,
-          "defect_evaluated": 0,
+          "defect_evaluated": 142,
           "good": 1192,
-          "good_evaluated": 0,
-          "gt_components": 0,
-          "predicted_components": 0,
+          "good_evaluated": 1192,
+          "gt_components": 152,
+          "predicted_components": 2879,
           "samples": 1334,
           "status": {
-            "ERROR": 1334
+            "NG": 176,
+            "OK": 695,
+            "REVIEW": 463
           }
         },
         "image_metrics": {
           "automation_rate": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.677996984287882,
+            "ci95_low": 0.626971887255127,
             "definition": "(OK+NG) / T",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 1334,
+            "numerator": 871,
+            "value": 0.6529235382308846
           },
           "balanced_accuracy": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.6509340478664895,
+            "ci95_low": 0.5445704452489837,
             "definition": "(NG_defect/P + OK_good/N) / 2 — 단일 분모 없음, 구간은 두 성분 Wilson 구간의 평균(보수적 근사)",
             "denominator": null,
             "numerator": null,
-            "value": null
+            "value": 0.5996195292560733
           },
           "decided_accuracy": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.8973117911331024,
+            "ci95_low": 0.8536814241240377,
             "definition": "(NG_defect+OK_good) / (OK+NG)",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 871,
+            "numerator": 764,
+            "value": 0.8771526980482205
           },
           "defect_escape_rate": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.21551685002937132,
+            "ci95_low": 0.09880706850091608,
             "definition": "OK_on_defect / P (P=결함 이미지 수)",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 142,
+            "numerator": 21,
+            "value": 0.14788732394366197
           },
           "defect_ng_rate": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.7085462184191812,
+            "ci95_low": 0.5520106925393097,
             "definition": "NG_on_defect / P",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 142,
+            "numerator": 90,
+            "value": 0.6338028169014085
           },
           "defect_review_rate": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.2931831402224405,
+            "ci95_low": 0.1582759946017894,
             "definition": "REVIEW_on_defect / P",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 142,
+            "numerator": 31,
+            "value": 0.21830985915492956
           },
           "good_false_ng_rate": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.08825064535838474,
+            "ci95_low": 0.05879347786017648,
             "definition": "NG_on_good / N (N=정상 이미지 수)",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 1192,
+            "numerator": 86,
+            "value": 0.07214765100671142
           },
           "good_review_rate": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.39010646418616957,
+            "ci95_low": 0.33560968524097556,
             "definition": "REVIEW_on_good / N",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 1192,
+            "numerator": 432,
+            "value": 0.3624161073825503
           },
           "review_rate": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.373028112744873,
+            "ci95_low": 0.322003015712118,
             "definition": "(REVIEW_defect+REVIEW_good) / T",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 1334,
+            "numerator": 463,
+            "value": 0.34707646176911544
           }
         },
         "localization_metrics": {
           "localization_recall_iou0.10": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.6545422861762462,
+            "ci95_low": 0.4994603789785607,
             "definition": "matched_GT(IoU>=0.10) / 전체 GT",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 152,
+            "numerator": 88,
+            "value": 0.5789473684210527
           },
           "localization_recall_iou0.10_decided": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.7512350715479341,
+            "ci95_low": 0.5924551452601903,
             "definition": "matched_GT(IoU>=0.10) / NG·REVIEW 판정 이미지 안 GT",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 130,
+            "numerator": 88,
+            "value": 0.676923076923077
           },
           "localization_recall_iou0.30": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.4340558411514238,
+            "ci95_low": 0.28360593939809664,
             "definition": "matched_GT(IoU>=0.30) / 전체 GT",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 152,
+            "numerator": 54,
+            "value": 0.35526315789473684
           },
           "localization_recall_iou0.30_decided": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.5013344157969789,
+            "ci95_low": 0.3342920022513095,
             "definition": "matched_GT(IoU>=0.30) / NG·REVIEW 판정 이미지 안 GT",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 130,
+            "numerator": 54,
+            "value": 0.4153846153846154
           },
           "mean_iou_matched": {
             "ci95_high": null,
             "ci95_low": null,
             "definition": "matched(IoU>=0.10) 쌍의 평균 IoU — 비율이 아니므로 분모는 쌍 수",
-            "denominator": 0,
+            "denominator": 88,
             "numerator": null,
-            "value": null
+            "value": 0.3962075462888918
           },
           "pixel_precision": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.7991088200155992,
+            "ci95_low": 0.7944297222770028,
             "definition": "TP_pixels / predicted_pixels",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 113640,
+            "numerator": 90546,
+            "value": 0.796779303062302
           },
           "pixel_recall": {
-            "ci95_high": null,
-            "ci95_low": null,
+            "ci95_high": 0.16237535766555672,
+            "ci95_low": 0.1604498326111542,
             "definition": "TP_pixels / GT_pixels",
-            "denominator": 0,
-            "numerator": 0,
-            "value": null
+            "denominator": 560968,
+            "numerator": 90546,
+            "value": 0.16141027652201195
           }
         },
         "name": "P",
