@@ -1,0 +1,20 @@
+# T09 제한된 에이전트 설정 (설계 §6).
+# 동결 configs/base.toml 과는 별개 파일이며 base 를 변경하지 않는다.
+schema_version = "1.0"
+
+[budget]
+max_actions = 3
+max_profiles = 2
+extra_latency_ms = 5000.0
+
+[policy]
+base_profile = "base"
+quality_low_profile = "denoise_strong"
+roi_uncertain_profile = "roi_fixed"
+
+[comparison]
+subset_size = 120
+seed = 20261113
+review_drop_pp_min = 5.0
+escape_increase_pp_max = 1.0
+extra_p95_ms_max = 1500.0

@@ -59,6 +59,7 @@ EXIT_INPUT = 3
 EXIT_ERROR = 4
 EXIT_STORAGE = 5
 EXIT_SEALED = 6
+EXIT_GATE = 7
 
 INPUT_ERROR_CODES = frozenset(
     {
@@ -1647,6 +1648,136 @@ def _run_worker_command(args: argparse.Namespace) -> int:
     return EXIT_USAGE
 
 
+def _add_agent_parser(subparsers: Any) -> None:
+    agent_parser = subparsers.add_parser(
+        "agent",
+        help="제한된 결정론 에이전트를 실행/리플레이합니다 (T09, 설계 §6).",
+        description=(
+            "네트워크·셸·파일 쓰기·설정 변경 도구 없이 결정론적 정책 엔진으로 "
+            "검사를 보조합니다. 판정은 항상 파이프라인이 소유하며 예산(행동 3회, "
+            "프로파일 2개, 추가 지연 5,000ms) 소진은 REVIEW로 끝납니다. 봉인 분할은 "
+            "열지 않습니다."
+        ),
+    )
+    agent_subparsers = agent_parser.add_subparsers(dest="agent_command")
+    run = agent_subparsers.add_parser(
+        "run",
+        help="이미지 하나에 에이전트 에피소드를 실행합니다.",
+        description="에이전트 에피소드를 실행하고 agent_trace.jsonl을 남깁니다.",
+    )
+    run.add_argument("--image", type=Path, required=True, help="검사할 이미지 경로.")
+    run.add_argument("--mask", type=Path, default=None, help="GT 마스크 경로(선택).")
+    run.add_argument("--label", default="unknown", help="라벨 (기본 unknown).")
+    run.add_argument("--split", default="tune", help="분할 (기본 tune, 봉인 분할 거부).")
+    run.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/base.toml"),
+        help="base 설정 TOML 경로 (기본 configs/base.toml).",
+    )
+    run.add_argument(
+        "--agent-config",
+        type=Path,
+        default=Path("configs/agent.toml"),
+        help="에이전트 설정 TOML 경로 (기본 configs/agent.toml).",
+    )
+    run.add_argument(
+        "--profiles-dir",
+        type=Path,
+        default=Path("configs/profiles"),
+        help="프로파일 디렉터리 (기본 configs/profiles).",
+    )
+    run.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("runs/agent"),
+        help="run 디렉터리 부모 (기본 runs/agent).",
+    )
+    replay = agent_subparsers.add_parser(
+        "replay",
+        help="agent_trace.jsonl을 결정론 리플레이합니다.",
+        description="기록된 결과만으로 정책을 재실행해 동일 행동/판정을 검증합니다.",
+    )
+    replay.add_argument("--trace", type=Path, required=True, help="agent_trace.jsonl 경로.")
+
+
+def _cmd_agent_run(args: argparse.Namespace) -> int:
+    from .agent.config import load_agent_config
+    from .agent.run import AgentRunError, load_profiles, run_agent_episode
+
+    try:
+        agent_config = load_agent_config(args.agent_config)
+        profiles = load_profiles(args.config, args.profiles_dir)
+    except ConfigError as exc:
+        _print_error(f"설정을 불러오지 못했습니다: {exc}")
+        return EXIT_USAGE
+
+    try:
+        outcome = run_agent_episode(
+            args.image,
+            agent_config=agent_config,
+            profiles=profiles,
+            output_dir=args.output_dir,
+            label=args.label,
+            split=args.split,
+            mask_path=args.mask,
+        )
+    except AgentRunError as exc:
+        _print_error(str(exc))
+        if exc.code == "E_SEALED_DENIED":
+            return EXIT_SEALED
+        if exc.code == "E_INPUT_MISSING":
+            return EXIT_INPUT
+        return EXIT_USAGE
+    except OSError as exc:
+        _print_error(f"run 디렉터리를 저장하지 못했습니다: {exc}")
+        return EXIT_STORAGE
+
+    episode = outcome.episode
+    print(
+        json.dumps(
+            {
+                "run_id": outcome.run_id,
+                "terminal_state": episode.terminal_state.value,
+                "final_status": episode.final_status.value,
+                "reason": episode.reason,
+                "actions_used": episode.actions_used,
+                "profiles_used": episode.profiles_used,
+                "base_latency_ms": episode.base_latency_ms,
+                "extra_latency_ms": episode.extra_latency_ms,
+                "rejections": len(episode.rejections),
+                "trace_path": str(outcome.trace_path),
+                "result_path": str(outcome.result_path),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return EXIT_ERROR if episode.final_status is Status.ERROR else EXIT_OK
+
+
+def _cmd_agent_replay(args: argparse.Namespace) -> int:
+    from .agent.trace import TraceError, load_trace, replay_trace
+
+    try:
+        events = load_trace(args.trace)
+    except TraceError as exc:
+        _print_error(str(exc))
+        return EXIT_INPUT
+    report = replay_trace(events)
+    print(json.dumps(report.to_dict(), ensure_ascii=False, indent=2))
+    return EXIT_OK if report.deterministic else EXIT_GATE
+
+
+def _run_agent_command(args: argparse.Namespace) -> int:
+    if args.agent_command == "run":
+        return _cmd_agent_run(args)
+    if args.agent_command == "replay":
+        return _cmd_agent_replay(args)
+    print("agent 하위 명령이 필요합니다: run, replay", file=sys.stderr)
+    return EXIT_USAGE
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="surface-sentinel",
@@ -1667,6 +1798,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_yolo_parser(subparsers)
     _add_records_parser(subparsers)
     _add_worker_parser(subparsers)
+    _add_agent_parser(subparsers)
     return parser
 
 
@@ -1963,6 +2095,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_records(args)
     if args.command == "worker":
         return _run_worker_command(args)
+    if args.command == "agent":
+        return _run_agent_command(args)
     parser.print_help(sys.stdout)
     return EXIT_USAGE
 
