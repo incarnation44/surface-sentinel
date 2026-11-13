@@ -195,13 +195,15 @@ def _validate_request(
     split: str,
     limit: int | None,
     run_id: str | None,
+    allow_sealed: bool = False,
 ) -> None:
-    if split in SEALED_SPLITS:
+    sealed_allowed = allow_sealed and split in SEALED_SPLITS
+    if split in SEALED_SPLITS and not sealed_allowed:
         raise SealedSplitError(
             f"봉인된 split은 batch에서 열 수 없습니다: {split}. "
             "test/official_test 접근은 거부됩니다."
         )
-    if split not in BATCH_SPLITS:
+    if split not in BATCH_SPLITS and not sealed_allowed:
         raise BatchUsageError(
             f"batch는 {', '.join(BATCH_SPLITS)} split만 실행합니다: {split!r}"
         )
@@ -304,16 +306,32 @@ def run_batch(
     output_dir: str | Path = DEFAULT_OUTPUT_DIR,
     limit: int | None = None,
     run_id: str | None = None,
+    allow_sealed: bool = False,
 ) -> BatchOutcome:
     """tune split을 순차 실행하고 run 디렉터리를 원자적으로 만든다."""
 
-    _validate_request(split=split, limit=limit, run_id=run_id)
+    _validate_request(
+        split=split, limit=limit, run_id=run_id, allow_sealed=allow_sealed
+    )
 
     config_file = Path(config_path)
     try:
         config = load_config(config_file)
     except ConfigError as exc:
         raise BatchUsageError(f"설정을 불러오지 못했습니다: {exc}") from exc
+
+    if allow_sealed and split in SEALED_SPLITS:
+        from ..evaluation.recalibration import git_head
+        from ..evaluation.sealed import ensure_sealed_access
+
+        ensure_sealed_access(
+            split,
+            splits_dir=splits_dir,
+            allow_sealed=True,
+            config_hash=config.config_hash,
+            code_sha=git_head(),
+            purpose="T08 봉인 batch 일회성 측정",
+        )
 
     manifest_file = Path(manifest_path)
     splits_path = Path(splits_dir)

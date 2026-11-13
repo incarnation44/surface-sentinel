@@ -99,18 +99,24 @@ def load_split_rows(
     split: str = "tune",
     *,
     splits_dir: str | Path = DEFAULT_SPLITS_DIR,
+    allow_sealed: bool = False,
 ) -> list[ManifestRow]:
-    """평가용 분할 CSV를 읽는다. 봉인 분할은 파일을 열기 전에 거부한다."""
+    """평가용 분할 CSV를 읽는다. 봉인 분할은 파일을 열기 전에 거부한다.
 
-    if split in SEALED_SPLITS:
+    ``allow_sealed=True`` 일 때만 봉인 분할(test/official_test)을 읽는다(T08).
+    기본값 False 면 기존 거부 동작을 그대로 유지한다.
+    """
+
+    sealed_allowed = allow_sealed and split in SEALED_SPLITS
+    if split in SEALED_SPLITS and not sealed_allowed:
         raise SealedSplitAccess(
             f"봉인된 split은 평가에서 열 수 없습니다: {split}. "
             "T05는 tune에서만 실행합니다."
         )
-    if split not in EVAL_SPLITS:
+    if split not in EVAL_SPLITS and not sealed_allowed:
         raise EvalError(f"T05는 {list(EVAL_SPLITS)}만 실행합니다: {split!r}")
     path = Path(splits_dir) / f"{split}.csv"
-    if path.name in {f"{name}.csv" for name in SEALED_SPLITS}:
+    if path.name in {f"{name}.csv" for name in SEALED_SPLITS} and not sealed_allowed:
         raise SealedSplitAccess(f"봉인된 분할 파일은 열지 않습니다: {path}")
     if not path.is_file():
         raise EvalError(f"분할 CSV를 찾을 수 없습니다: {path}")

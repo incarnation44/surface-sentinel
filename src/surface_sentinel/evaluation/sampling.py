@@ -138,12 +138,18 @@ def build_sample_plan(
     split: str = "tune",
     good_target: int = GOOD_TARGET,
     seed: str = DEFAULT_SEED,
+    allow_sealed: bool = False,
 ) -> SamplePlan:
-    """tune 행에서 defect 전수 + good 층화 표본을 만든다."""
+    """tune 행에서 defect 전수 + good 층화 표본을 만든다.
 
-    if split in SEALED_SPLITS:
+    ``allow_sealed=True`` 면 봉인 분할도 전수 표본으로 만들 수 있다(T08).
+    기본값 False 면 기존 거부 동작을 유지한다.
+    """
+
+    sealed_allowed = allow_sealed and split in SEALED_SPLITS
+    if split in SEALED_SPLITS and not sealed_allowed:
         raise SampleError(f"봉인된 split에서는 표본을 만들 수 없습니다: {split}")
-    if split not in EVAL_SPLITS:
+    if split not in EVAL_SPLITS and not sealed_allowed:
         raise SampleError(f"T05는 {split!r} 분할을 지원하지 않습니다: {list(EVAL_SPLITS)}")
     if good_target < 0:
         raise SampleError(f"good_target은 0 이상이어야 합니다: {good_target}")

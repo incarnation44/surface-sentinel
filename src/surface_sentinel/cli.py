@@ -224,7 +224,13 @@ def _add_eval_parser(subparsers: Any) -> None:
     eval_parser.add_argument(
         "--split",
         default="tune",
-        help="평가 분할 (tune만 허용, test/official_test는 거부).",
+        help="평가 분할 (tune만 허용, test/official_test는 --allow-sealed 시 T08 측정).",
+    )
+    eval_parser.add_argument(
+        "--allow-sealed",
+        action="store_true",
+        default=False,
+        help="봉인 분할(test/official_test) 일회성 측정을 허용합니다(T08). 미지정 시 거부.",
     )
     eval_parser.add_argument(
         "--config",
@@ -451,7 +457,15 @@ def _print_sealed_notice() -> None:
 
 
 def _cmd_eval(args: argparse.Namespace) -> int:
-    from .evaluation.runner import EvalError, SealedSplitAccess, run_evaluation
+    from .evaluation.runner import (
+        SEALED_SPLITS,
+        EvalError,
+        SealedSplitAccess,
+        run_evaluation,
+    )
+
+    if args.split in SEALED_SPLITS:
+        return _cmd_eval_sealed(args)
 
     try:
         result = run_evaluation(
@@ -520,6 +534,61 @@ def _cmd_eval(args: argparse.Namespace) -> int:
 
 def _pct_text(value: float | None) -> str:
     return "-" if value is None else f"{value:.4f}"
+
+
+def _cmd_eval_sealed(args: argparse.Namespace) -> int:
+    """T08 봉인 분할 일회성 측정. --allow-sealed 가 없으면 exit 6 으로 거부한다."""
+
+    from .evaluation.runner import EvalError, SealedSplitAccess
+    from .evaluation.sealed import run_sealed_measurement
+
+    if not args.allow_sealed:
+        _print_error(
+            f"봉인된 split은 --allow-sealed 없이 열 수 없습니다: {args.split}."
+        )
+        return EXIT_SEALED
+    try:
+        payload = run_sealed_measurement(
+            split=args.split,
+            config_path=args.config,
+            splits_dir=args.splits_dir,
+            raw_root=args.raw_root,
+            evidence_dir=args.evidence_dir,
+            report_dir=args.report_dir,
+            use_cache=args.use_cache,
+            overlays=args.overlays,
+        )
+    except SealedSplitAccess as exc:
+        _print_error(str(exc))
+        return EXIT_SEALED
+    except EvalError as exc:
+        _print_error(str(exc))
+        return int(exc.exit_code)
+    except FileNotFoundError as exc:
+        _print_error(f"산출물을 저장하지 못했습니다: {exc}")
+        return EXIT_STORAGE
+
+    plan = payload["sample_plan"]
+    lock = payload["lock"]
+    image = payload["variants"]["P"]["report"]["image_metrics"]
+    print(
+        f"봉인 분할: {payload['split']} "
+        f"(access_count={lock['access_count']}, reuse={str(lock['reuse']).lower()})"
+    )
+    print(
+        f"표본: defect {plan['defect_taken']} (전수) + good {plan['good_taken']} (전수)"
+    )
+    for key in ("defect_escape_rate", "good_false_ng_rate", "review_rate"):
+        ratio = image[key]
+        print(f"P {key}: {_pct_text(ratio['value'])} (분모 {ratio['denominator']})")
+    for label, goal in payload["goals"].items():
+        verdict = (
+            "판정 불가" if goal["pass"] is None else ("PASS" if goal["pass"] else "FAIL")
+        )
+        print(f"목표 {label}: {verdict}")
+    for key, value in payload["paths"].items():
+        print(f"{key}: {value}")
+    return EXIT_OK
 
 
 def _add_adopted_verify_parser(subparsers: Any) -> None:
@@ -825,7 +894,13 @@ def _add_batch_parser(subparsers: Any) -> None:
     batch_parser.add_argument(
         "--split",
         default="tune",
-        help="데이터 분할 이름 (tune만 허용, test/official_test는 거부).",
+        help="데이터 분할 이름 (tune만 허용, test/official_test는 --allow-sealed 시 허용).",
+    )
+    batch_parser.add_argument(
+        "--allow-sealed",
+        action="store_true",
+        default=False,
+        help="봉인 분할(test/official_test) 일회성 실행을 허용합니다(T08). 미지정 시 거부.",
     )
     batch_parser.add_argument(
         "--config",
@@ -881,6 +956,7 @@ def _cmd_batch(args: argparse.Namespace) -> int:
             output_dir=args.output_dir,
             limit=args.limit,
             run_id=args.run_id,
+            allow_sealed=args.allow_sealed,
         )
     except SealedSplitError as exc:
         _print_error(str(exc))
