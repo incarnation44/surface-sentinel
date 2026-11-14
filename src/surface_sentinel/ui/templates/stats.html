@@ -30,7 +30,7 @@
       <td>{{ payload.by_status[name] }}</td>
       <td>{{ r.formatted() }}</td>
       <td style="width:35%">
-        <div style="background:#eaeef2;border-radius:4px;height:10px">
+        <div style="background:var(--track-bg, #eaeef2);border-radius:4px;height:10px">
           <div style="background:var(--{{ color }});height:10px;border-radius:4px;
                       width:{{ '%.1f'|format(r.value * 100) if r.value is not none else '0.0' }}%"></div>
         </div>

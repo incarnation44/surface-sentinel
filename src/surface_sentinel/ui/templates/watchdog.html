@@ -1,66 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Watchdog 무결성 감사 &amp; PSI 드리프트 관제 — Surface Sentinel
-<h2>4. Phase 4 사람-기계 피드백 캘리브레이션 &amp; 하드 샘플 큐 (observe-only)</h2>
-{% if not calibration or calibration.decided_count == 0 %}
-<div class="notice">아직 기록된 작업자 검토 결정이 없습니다. 검토 큐에서 결정을 남기면 우선순위 정합성과 하드 샘플 큐가 자동 집계됩니다.</div>
-{% else %}
-<div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
-    <div>
-      <strong>검토 피드백 집계 ({{ selected_run_id }}):</strong>
-      <span class="meta num" style="margin-left:8px">결정 완료 <strong>{{ calibration.decided_count }}</strong> / 전체 REVIEW {{ calibration.total_review_samples }}건 (미결정 {{ calibration.undecided_count }}건)</span>
-    </div>
-    <div class="meta num">
-      사람 확정 NG: <strong>{{ "%.1f"|format((calibration.confirmed_ng_ratio.value or 0) * 100) }}%</strong> ({{ calibration.confirmed_ng_ratio.numerator }}/{{ calibration.confirmed_ng_ratio.denominator }}) ·
-      기각 OK: <strong>{{ "%.1f"|format((calibration.false_alarm_ok_ratio.value or 0) * 100) }}%</strong> ({{ calibration.false_alarm_ok_ratio.numerator }}/{{ calibration.false_alarm_ok_ratio.denominator }})
-    </div>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>우선순위</th><th>REVIEW 건수</th><th>검토 완료</th><th>사람 확정 NG</th><th>기각 OK</th><th>확정 NG 비율 (분모)</th></tr></thead>
-        <tbody>
-          {% for band in ["P0", "P1", "P2", "P3"] %}
-          {% set pb = calibration.by_priority[band] %}
-          {% set pr = pb.confirmed_ng_ratio %}
-          <tr>
-            <td><span class="prio p-{{ band }}">{{ band }}</span></td>
-            <td class="num">{{ pb.review_count }}</td>
-            <td class="num">{{ pb.decided_count }}</td>
-            <td class="num">{{ pb.confirmed_ng_count }}</td>
-            <td class="num">{{ pb.false_alarm_ok_count }}</td>
-            <td class="num">{% if pr.value is not none %}{{ "%.1f"|format(pr.value * 100) }}% (분모 {{ pr.denominator|int }}){% else %}- (분모 0){% endif %}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>샘플</th><th>하드 샘플 유형</th><th>우선순위</th><th>점수</th><th>사람 판정</th><th>사유 / 메모</th></tr></thead>
-        <tbody>
-          {% for h in calibration.hard_examples %}
-          <tr>
-            <td class="num"><a href="/runs/{{ selected_run_id }}/samples/{{ h.sample_id }}">{{ h.sample_id }}</a></td>
-            <td><span class="badge {{ "b-NG" if h.kind == "BLINDSPOT_DEFECT" else ("b-REVIEW" if h.kind == "HIGH_PRIO_FALSE_ALARM" else "b-ERROR") }}">{{ h.kind }}</span></td>
-            <td><span class="prio p-{{ h.priority }}">{{ h.priority }}</span></td>
-            <td class="num">{{ "%.4f"|format(h.score) }}</td>
-            <td><span class="badge b-{{ h.human_status }}">{{ h.human_status }}</span></td>
-            <td class="meta"><code>{{ h.reason_code }}</code>{% if h.note %} — {{ h.note }}{% endif %}</td>
-          </tr>
-          {% else %}
-          <tr><td colspan="6" class="meta">불일치 하드 샘플이 없습니다.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <ul style="margin:10px 0 0;padding-left:18px;font-size:12px;color:var(--muted)">
-    {% for rec in calibration.recommendations_ko %}<li>{{ rec }}</li>{% endfor %}
-  </ul>
-</div>
-{% endif %}
-{% endblock %}
+{% block title %}Watchdog 무결성 감사 &amp; PSI 드리프트 관제 — Surface Sentinel{% endblock %}
 {% block content %}
 <h1>Watchdog 무결성 감사 &amp; PSI 드리프트 관제</h1>
 <p class="meta">Phase 3 observe-only 관제 콘솔 · 저장소 하드 게이트 · run/DB 무결성 · 배치 분포 PSI 드리프트 감시 (기계 판정·설정 불변)</p>
@@ -218,7 +157,7 @@
         <td><span class="badge b-{{ f.status.value }}">{{ f.status.value }}</span></td>
         <td class="num">{{ "%.4f"|format(f.baseline_mean) }} → {{ "%.4f"|format(f.target_mean) }} ({{ "%+.4f"|format(f.delta_mean) }})</td>
         <td>
-          <div style="position:relative;height:16px;background:#eef2f6;border:1px solid var(--line-soft);border-radius:3px">
+          <div style="position:relative;height:16px;background:var(--track-bg, #eef2f6);border:1px solid var(--line-soft);border-radius:3px">
             <div style="position:absolute;top:0;bottom:0;left:{{ g.watch_pct }}%;width:2px;background:#d97706" title="WATCH 0.10"></div>
             <div style="position:absolute;top:0;bottom:0;left:{{ g.alert_pct }}%;width:2px;background:#dc2626" title="DRIFT_ALERT 0.25"></div>
             <div style="height:100%;width:{{ g.psi_pct }}%;background:{{ 'var(--ng)' if f.psi >= 0.25 else ('var(--review)' if f.psi >= 0.10 else 'var(--ok)') }};opacity:0.8;border-radius:2px"></div>
@@ -234,5 +173,66 @@
 {% endif %}
 {% else %}
 <div class="notice">드리프트를 비교할 run 디렉터리가 없습니다.</div>
+{% endif %}
+
+<h2>4. Phase 4 사람-기계 피드백 캘리브레이션 &amp; 하드 샘플 큐 (observe-only)</h2>
+{% if not calibration or calibration.decided_count == 0 %}
+<div class="notice">아직 기록된 작업자 검토 결정이 없습니다. 검토 큐에서 결정을 남기면 우선순위 정합성과 하드 샘플 큐가 자동 집계됩니다.</div>
+{% else %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+    <div>
+      <strong>검토 피드백 집계 ({{ selected_run_id }}):</strong>
+      <span class="meta num" style="margin-left:8px">결정 완료 <strong>{{ calibration.decided_count }}</strong> / 전체 REVIEW {{ calibration.total_review_samples }}건 (미결정 {{ calibration.undecided_count }}건)</span>
+    </div>
+    <div class="meta num">
+      사람 확정 NG: <strong>{{ "%.1f"|format((calibration.confirmed_ng_ratio.value or 0) * 100) }}%</strong> ({{ calibration.confirmed_ng_ratio.numerator }}/{{ calibration.confirmed_ng_ratio.denominator }}) ·
+      기각 OK: <strong>{{ "%.1f"|format((calibration.false_alarm_ok_ratio.value or 0) * 100) }}%</strong> ({{ calibration.false_alarm_ok_ratio.numerator }}/{{ calibration.false_alarm_ok_ratio.denominator }})
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>우선순위</th><th>REVIEW 건수</th><th>검토 완료</th><th>사람 확정 NG</th><th>기각 OK</th><th>확정 NG 비율 (분모)</th></tr></thead>
+        <tbody>
+          {% for band in ["P0", "P1", "P2", "P3"] %}
+          {% set pb = calibration.by_priority[band] %}
+          {% set pr = pb.confirmed_ng_ratio %}
+          <tr>
+            <td><span class="prio p-{{ band }}">{{ band }}</span></td>
+            <td class="num">{{ pb.review_count }}</td>
+            <td class="num">{{ pb.decided_count }}</td>
+            <td class="num">{{ pb.confirmed_ng_count }}</td>
+            <td class="num">{{ pb.false_alarm_ok_count }}</td>
+            <td class="num">{% if pr.value is not none %}{{ "%.1f"|format(pr.value * 100) }}% (분모 {{ pr.denominator|int }}){% else %}- (분모 0){% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>샘플</th><th>하드 샘플 유형</th><th>우선순위</th><th>점수</th><th>사람 판정</th><th>사유 / 메모</th></tr></thead>
+        <tbody>
+          {% for h in calibration.hard_examples %}
+          <tr>
+            <td class="num"><a href="/runs/{{ selected_run_id }}/samples/{{ h.sample_id }}">{{ h.sample_id }}</a></td>
+            <td><span class="badge {{ "b-NG" if h.kind == "BLINDSPOT_DEFECT" else ("b-REVIEW" if h.kind == "HIGH_PRIO_FALSE_ALARM" else "b-ERROR") }}">{{ h.kind }}</span></td>
+            <td><span class="prio p-{{ h.priority }}">{{ h.priority }}</span></td>
+            <td class="num">{{ "%.4f"|format(h.score) }}</td>
+            <td><span class="badge b-{{ h.human_status }}">{{ h.human_status }}</span></td>
+            <td class="meta"><code>{{ h.reason_code }}</code>{% if h.note %} — {{ h.note }}{% endif %}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="meta">불일치 하드 샘플이 없습니다.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <ul style="margin:10px 0 0;padding-left:18px;font-size:12px;color:var(--muted)">
+    {% for rec in calibration.recommendations_ko %}<li>{{ rec }}</li>{% endfor %}
+  </ul>
+</div>
 {% endif %}
 {% endblock %}

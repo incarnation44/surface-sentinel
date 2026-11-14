@@ -38,18 +38,18 @@
     <span class="meta num">현재 점수: <strong>{{ "%.6f"|format(sample.record.score) }}</strong> · REVIEW 상한 {{ "%.2f"|format(review_band_max) }} · NG 하한 {{ "%.2f"|format(ng_min) }}</span>
   </div>
   <svg viewBox="0 0 600 68" width="100%" style="max-height:76px;display:block" role="img" aria-label="점수 임계값 눈금자">
-    <rect x="{{ x_left }}" y="24" width="{{ ok_x - x_left }}" height="12" fill="#dcfce7" stroke="#86efac" stroke-width="1"/>
-    <rect x="{{ ok_x }}" y="24" width="{{ ng_x - ok_x }}" height="12" fill="#fef3c7" stroke="#fcd34d" stroke-width="1"/>
-    <rect x="{{ ng_x }}" y="24" width="{{ (x_left + x_width) - ng_x }}" height="12" fill="#fee2e2" stroke="#fca5a5" stroke-width="1"/>
+    <rect x="{{ x_left }}" y="24" width="{{ ok_x - x_left }}" height="12" class="ruler-ok" stroke-width="1"/>
+    <rect x="{{ ok_x }}" y="24" width="{{ ng_x - ok_x }}" height="12" class="ruler-review" stroke-width="1"/>
+    <rect x="{{ ng_x }}" y="24" width="{{ (x_left + x_width) - ng_x }}" height="12" class="ruler-ng" stroke-width="1"/>
     <line x1="{{ ok_x }}" y1="18" x2="{{ ok_x }}" y2="42" stroke="#a16207" stroke-width="1.5" stroke-dasharray="2,2"/>
     <line x1="{{ ng_x }}" y1="18" x2="{{ ng_x }}" y2="42" stroke="#b91c1c" stroke-width="1.5"/>
-    <text x="{{ x_left }}" y="56" font-size="10" fill="#475569">0.00</text>
-    <text x="{{ ok_x }}" y="56" font-size="10" fill="#a16207" text-anchor="middle">{{ "%.2f"|format(review_band_max) }}</text>
-    <text x="{{ ng_x }}" y="56" font-size="10" fill="#b91c1c" text-anchor="middle">{{ "%.2f"|format(ng_min) }} (NG)</text>
-    <text x="{{ x_left + x_width }}" y="56" font-size="10" fill="#475569" text-anchor="end">1.50+</text>
-    <line x1="{{ pin_x }}" y1="10" x2="{{ pin_x }}" y2="42" stroke="#0f172a" stroke-width="2"/>
-    <circle cx="{{ pin_x }}" cy="10" r="4.5" fill="#2563eb" stroke="#0f172a" stroke-width="1.5"/>
-    <text x="{{ pin_x }}" y="12" dx="8" font-size="11" font-weight="700" fill="#0f172a">{{ "%.4f"|format(sc) }}</text>
+    <text x="{{ x_left }}" y="56" class="ruler-axis" font-size="10">0.00</text>
+    <text x="{{ ok_x }}" y="56" class="ruler-label-review" font-size="10" text-anchor="middle">{{ "%.2f"|format(review_band_max) }}</text>
+    <text x="{{ ng_x }}" y="56" class="ruler-label-ng" font-size="10" text-anchor="middle">{{ "%.2f"|format(ng_min) }} (NG)</text>
+    <text x="{{ x_left + x_width }}" y="56" class="ruler-axis" font-size="10" text-anchor="end">1.50+</text>
+    <line x1="{{ pin_x }}" y1="10" x2="{{ pin_x }}" class="ruler-pin-line" y2="42" stroke-width="2"/>
+    <circle cx="{{ pin_x }}" cy="10" class="ruler-pin-dot" r="4.5" stroke-width="1.5"/>
+    <text x="{{ pin_x }}" y="12" dx="8" font-size="11" class="ruler-pin-text" font-weight="700">{{ "%.4f"|format(sc) }}</text>
   </svg>
 </div>
 
@@ -91,29 +91,29 @@
     <strong style="font-size:14px">2D (면적 × 평균대비) 등위선 위상도 &amp; 반사실적 경계 해석</strong>
     <span class="meta num">NG 여유 <strong>{{ "%+.4f"|format(counterfactual.margin_to_ng) }}</strong> · REVIEW 상한 여유 <strong>{{ "%+.4f"|format(counterfactual.margin_to_review_band) }}</strong></span>
   </div>
-  <div class="notice" style="margin:0 0 12px;background:#f8fafc;border-color:var(--line);color:var(--text)">{{ counterfactual.headline_ko }}</div>
+  <div class="notice" style="margin:0 0 12px;background:var(--surface-2);border-color:var(--line);color:var(--text)">{{ counterfactual.headline_ko }}</div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;align-items:start">
     <div>
-      <svg id="phase-diagram-svg" viewBox="{{ pd.view_box }}" width="100%" style="background:#fff;border:1px solid var(--line-soft);border-radius:6px;display:block" role="img" aria-label="2D 면적 대 평균대비 등위선 위상도">
-        <rect x="{{ plt.x0 }}" y="{{ plt.y0 }}" width="{{ plt.x1 - plt.x0 }}" height="{{ plt.y1 - plt.y0 }}" fill="#fef3c7"/>
-        <rect x="{{ plt.x0 }}" y="{{ plt.y0 }}" width="{{ pd.min_area_x - plt.x0 }}" height="{{ plt.y1 - plt.y0 }}" fill="#e2e8f0"/>
-        <rect x="{{ plt.x0 }}" y="{{ pd.min_contrast_y }}" width="{{ plt.x1 - plt.x0 }}" height="{{ plt.y1 - pd.min_contrast_y }}" fill="#e2e8f0"/>
-        {% if pd.ng_polygon %}<polygon points="{{ pd.ng_polygon }}" fill="#fee2e2"/>{% endif %}
+      <svg id="phase-diagram-svg" viewBox="{{ pd.view_box }}" width="100%" style="border:1px solid var(--line-soft);border-radius:6px;display:block" role="img" aria-label="2D 면적 대 평균대비 등위선 위상도">
+        <rect x="{{ plt.x0 }}" y="{{ plt.y0 }}" width="{{ plt.x1 - plt.x0 }}" height="{{ plt.y1 - plt.y0 }}" class="pd-bg-review"/>
+        <rect x="{{ plt.x0 }}" y="{{ plt.y0 }}" width="{{ pd.min_area_x - plt.x0 }}" height="{{ plt.y1 - plt.y0 }}" class="pd-bg-invalid"/>
+        <rect x="{{ plt.x0 }}" y="{{ pd.min_contrast_y }}" width="{{ plt.x1 - plt.x0 }}" height="{{ plt.y1 - pd.min_contrast_y }}" class="pd-bg-invalid"/>
+        {% if pd.ng_polygon %}<polygon points="{{ pd.ng_polygon }}" class="pd-bg-ng"/>{% endif %}
         <line x1="{{ pd.min_area_x }}" y1="{{ plt.y0 }}" x2="{{ pd.min_area_x }}" y2="{{ plt.y1 }}" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3"/>
         <line x1="{{ plt.x0 }}" y1="{{ pd.min_contrast_y }}" x2="{{ plt.x1 }}" y2="{{ pd.min_contrast_y }}" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3"/>
         <line x1="{{ pd.sat_area_x }}" y1="{{ plt.y0 }}" x2="{{ pd.sat_area_x }}" y2="{{ plt.y1 }}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2,3"/>
         <line x1="{{ plt.x0 }}" y1="{{ pd.sat_contrast_y }}" x2="{{ plt.x1 }}" y2="{{ pd.sat_contrast_y }}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2,3"/>
-        {% if pd.review_polyline %}<polyline points="{{ pd.review_polyline }}" fill="none" stroke="#a16207" stroke-width="1.5" stroke-dasharray="4,3"/>{% endif %}
-        {% if pd.ng_polyline %}<polyline points="{{ pd.ng_polyline }}" fill="none" stroke="#b91c1c" stroke-width="2.2"/>{% endif %}
-        <rect x="{{ plt.x0 }}" y="{{ plt.y0 }}" width="{{ plt.x1 - plt.x0 }}" height="{{ plt.y1 - plt.y0 }}" fill="none" stroke="#334155" stroke-width="1"/>
-        {% for xt in pd.x_ticks %}<line x1="{{ xt.x }}" y1="{{ plt.y1 }}" x2="{{ xt.x }}" y2="{{ plt.y1 + 4 }}" stroke="#475569" stroke-width="1"/><text x="{{ xt.x }}" y="{{ plt.y1 + 15 }}" font-size="9" fill="#475569" text-anchor="middle">{{ xt.value }}</text>{% endfor %}
-        {% for yt in pd.y_ticks %}<line x1="{{ plt.x0 - 4 }}" y1="{{ yt.y }}" x2="{{ plt.x0 }}" y2="{{ yt.y }}" stroke="#475569" stroke-width="1"/><text x="{{ plt.x0 - 7 }}" y="{{ yt.y + 3 }}" font-size="9" fill="#475569" text-anchor="end">{{ yt.value }}</text>{% endfor %}
-        <text x="{{ (plt.x0 + plt.x1) / 2 }}" y="272" font-size="10" font-weight="700" fill="#334155" text-anchor="middle">후보 면적 area_px (0 ~ 900px)</text>
-        <text x="14" y="{{ (plt.y0 + plt.y1) / 2 }}" font-size="10" font-weight="700" fill="#334155" text-anchor="middle" transform="rotate(-90 14 {{ (plt.y0 + plt.y1) / 2 }})">평균 대비 mean_contrast (0 ~ 36)</text>
-        <text x="{{ plt.x0 + 6 }}" y="{{ plt.y1 - 8 }}" font-size="9" fill="#475569">무효 영역 (&lt;40px 또는 &lt;16)</text>
-        <text x="{{ pd.min_area_x + 6 }}" y="{{ pd.min_contrast_y - 6 }}" font-size="9" fill="#92400e">REVIEW</text>
-        <text x="{{ plt.x1 - 8 }}" y="{{ plt.y0 + 14 }}" font-size="10" font-weight="700" fill="#991b1b" text-anchor="end">NG (evidence ≥ 0.50)</text>
-        {% for pt in pd.points %}<g class="cf-dot-group" data-comp-idx="{{ pt.index }}"><circle class="cf-dot" data-comp-idx="{{ pt.index }}" cx="{{ pt.x }}" cy="{{ pt.y }}" r="{{ 6.5 if pt.is_pivotal else 5 }}" fill="{{ "#dc2626" if pt.is_ng else ("#d97706" if pt.is_valid else "#64748b") }}" stroke="#0f172a" stroke-width="{{ 2 if pt.is_pivotal else 1.2 }}" style="cursor:pointer"/><text x="{{ pt.x }}" y="{{ pt.y - 8 }}" font-size="10" font-weight="700" fill="#0f172a" text-anchor="middle">#{{ pt.index }}{% if pt.clamped %}+{% endif %}</text></g>{% endfor %}
+        {% if pd.review_polyline %}<polyline points="{{ pd.review_polyline }}" class="pd-curve-review" fill="none" stroke-width="1.5" stroke-dasharray="4,3"/>{% endif %}
+        {% if pd.ng_polyline %}<polyline points="{{ pd.ng_polyline }}" class="pd-curve-ng" fill="none" stroke-width="2.2"/>{% endif %}
+        <rect x="{{ plt.x0 }}" y="{{ plt.y0 }}" width="{{ plt.x1 - plt.x0 }}" height="{{ plt.y1 - plt.y0 }}" class="pd-frame" fill="none" stroke-width="1"/>
+        {% for xt in pd.x_ticks %}<line x1="{{ xt.x }}" y1="{{ plt.y1 }}" x2="{{ xt.x }}" y2="{{ plt.y1 + 4 }}" class="pd-tick" stroke-width="1"/><text class="pd-tick-text" x="{{ xt.x }}" y="{{ plt.y1 + 15 }}" font-size="9" text-anchor="middle">{{ xt.value }}</text>{% endfor %}
+        {% for yt in pd.y_ticks %}<line x1="{{ plt.x0 - 4 }}" y1="{{ yt.y }}" x2="{{ plt.x0 }}" y2="{{ yt.y }}" class="pd-tick" stroke-width="1"/><text class="pd-tick-text" x="{{ plt.x0 - 7 }}" y="{{ yt.y + 3 }}" font-size="9" text-anchor="end">{{ yt.value }}</text>{% endfor %}
+        <text x="{{ (plt.x0 + plt.x1) / 2 }}" y="272" font-size="10" class="pd-axis-title" font-weight="700" text-anchor="middle">후보 면적 area_px (0 ~ 900px)</text>
+        <text x="14" y="{{ (plt.y0 + plt.y1) / 2 }}" font-size="10" class="pd-axis-title" font-weight="700" text-anchor="middle" transform="rotate(-90 14 {{ (plt.y0 + plt.y1) / 2 }})">평균 대비 mean_contrast (0 ~ 36)</text>
+        <text x="{{ plt.x0 + 6 }}" y="{{ plt.y1 - 8 }}" class="pd-label-invalid" font-size="9">무효 영역 (&lt;40px 또는 &lt;16)</text>
+        <text x="{{ pd.min_area_x + 6 }}" y="{{ pd.min_contrast_y - 6 }}" class="pd-label-review" font-size="9">REVIEW</text>
+        <text x="{{ plt.x1 - 8 }}" y="{{ plt.y0 + 14 }}" font-size="10" class="pd-label-ng" font-weight="700" text-anchor="end">NG (evidence ≥ 0.50)</text>
+        {% for pt in pd.points %}<g class="cf-dot-group" data-comp-idx="{{ pt.index }}"><circle class="cf-dot" data-comp-idx="{{ pt.index }}" cx="{{ pt.x }}" cy="{{ pt.y }}" r="{{ 6.5 if pt.is_pivotal else 5 }}" fill="{{ "#dc2626" if pt.is_ng else ("#d97706" if pt.is_valid else "#64748b") }}" stroke="#0f172a" stroke-width="{{ 2 if pt.is_pivotal else 1.2 }}" style="cursor:pointer"/><text x="{{ pt.x }}" y="{{ pt.y - 8 }}" font-size="10" class="pd-dot-text" font-weight="700" text-anchor="middle">#{{ pt.index }}{% if pt.clamped %}+{% endif %}</text></g>{% endfor %}
       </svg>
       <div class="meta" style="margin-top:6px;font-size:12px">회색: 무효(area&lt;{{ pd.min_area_px }} 또는 대비&lt;{{ "%.0f"|format(pd.min_contrast_gray) }}) · 황색: REVIEW · 적색 곡선: NG 쌍곡선(evidence=0.50) · 점선: 대비 포화 상한({{ "%.0f"|format(pd.sat_contrast_gray) }})</div>
     </div>
@@ -151,14 +151,15 @@
   var rows = document.querySelectorAll(".cf-row[data-comp-idx]");
   var dots = document.querySelectorAll(".cf-dot[data-comp-idx]");
   function highlight(idx) {
+    var dark = document.documentElement.getAttribute("data-theme") === "dark";
     rows.forEach(function(r) {
       var on = r.getAttribute("data-comp-idx") === String(idx);
-      r.style.background = on ? "#eff6ff" : "";
+      r.style.background = on ? (dark ? "rgba(56, 189, 248, 0.14)" : "#eff6ff") : "";
     });
     dots.forEach(function(d) {
       var on = d.getAttribute("data-comp-idx") === String(idx);
       d.setAttribute("r", on ? "9" : "5.5");
-      d.setAttribute("stroke", on ? "#2563eb" : "#0f172a");
+      d.setAttribute("stroke", on ? (dark ? "#38bdf8" : "#2563eb") : (dark ? "#e6edf3" : "#0f172a"));
       d.setAttribute("stroke-width", on ? "3" : "1.5");
     });
   }
@@ -284,7 +285,7 @@
       <td class="num">{{ "%.3f"|format(bar.ms) }}</td>
       <td>
         <div class="bar-track">
-          <div class="bar-fill" style="width:{{ bar.pct }}%;background:{{ '#0f172a' if bar.name == 'total' else 'var(--accent)' }}"></div>
+          <div class="bar-fill" style="width:{{ bar.pct }}%;background:{{ 'var(--text)' if bar.name == 'total' else 'var(--accent)' }}"></div>
         </div>
       </td>
     </tr>

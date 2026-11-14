@@ -270,10 +270,14 @@ def test_wave3b_counterfactual_hotspot_and_watchdog_calibration(client: TestClie
     assert "<th>결정 완료</th>" in mtxt
     assert "http://" not in mtxt
 
-    # 3) watchdog.html Phase 4 캘리브레이션: 결정 전 빈 상태 -> 결정 후 집계
+    # 3) watchdog.html Phase 4 캘리브레이션: <title>이 아닌 <main> 본문에 렌더링되는지 검증
     resp_wd_empty = client.get(f"/watchdog?run_id={ui_run.RUN_ID}")
     assert resp_wd_empty.status_code == 200
-    assert "아직 기록된 작업자 검토 결정이 없습니다" in resp_wd_empty.text
+    empty_title = resp_wd_empty.text.split("<title>", 1)[1].split("</title>", 1)[0]
+    empty_main = resp_wd_empty.text.split("<main>", 1)[1].split("</main>", 1)[0]
+    assert "4. Phase 4 사람-기계 피드백 캘리브레이션" not in empty_title
+    assert "4. Phase 4 사람-기계 피드백 캘리브레이션" in empty_main
+    assert "아직 기록된 작업자 검토 결정이 없습니다" in empty_main
 
     post = client.post(
         f"/runs/{ui_run.RUN_ID}/review/70002",
@@ -291,7 +295,11 @@ def test_wave3b_counterfactual_hotspot_and_watchdog_calibration(client: TestClie
     resp_wd_full = client.get(f"/watchdog?run_id={ui_run.RUN_ID}")
     assert resp_wd_full.status_code == 200
     wtxt = resp_wd_full.text
-    assert "Phase 4 사람-기계 피드백 캘리브레이션" in wtxt
-    assert "결정 완료 <strong>1</strong>" in wtxt
-    assert "CONFIRMED_DEFECT" in wtxt
+    full_title = wtxt.split("<title>", 1)[1].split("</title>", 1)[0]
+    full_main = wtxt.split("<main>", 1)[1].split("</main>", 1)[0]
+    assert "4. Phase 4 사람-기계 피드백 캘리브레이션" not in full_title
+    assert "4. Phase 4 사람-기계 피드백 캘리브레이션" in full_main
+    assert "결정 완료 <strong>1</strong>" in full_main
+    assert "CONFIRMED_DEFECT" in full_main
+    assert "id=\"theme-toggle\"" in wtxt
     assert "http://" not in wtxt

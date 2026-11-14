@@ -205,7 +205,8 @@ def test_browser_wave3b_phase_diagram_hotspot_and_watchdog(
     assert "2D 라인스캔 스트립 공간 핫스팟 지도" in page.content()
 
     page.goto(base_url + f"/watchdog?run_id={ui_run.RUN_ID}", wait_until="networkidle")
-    assert "Phase 4 사람-기계 피드백 캘리브레이션" in page.content()
+    assert "4. Phase 4 사람-기계 피드백 캘리브레이션" in (page.text_content("main") or "")
+    assert "Phase 4" not in page.title()
     assert errors == []
     assert external == []
 
@@ -235,3 +236,31 @@ def test_t10_integrated_guide_desktop_and_mobile(
 
     assert errors == []
     assert [u for u in external if u.startswith(("http://", "https://"))] == []
+def test_browser_dark_telemetry_theme_toggle(
+    browser_page: tuple[Any, list[str], list[str]], base_url: str
+) -> None:
+    page, errors, external = browser_page
+    page.goto(base_url + "/", wait_until="networkidle")
+    assert page.evaluate("document.documentElement.getAttribute('data-theme')") is None
+    assert page.get_attribute("#theme-toggle", "aria-pressed") == "false"
+
+    page.click("#theme-toggle")
+    assert page.evaluate("document.documentElement.getAttribute('data-theme')") == "dark"
+    assert page.evaluate("localStorage.getItem('ss-theme')") == "dark"
+    assert page.get_attribute("#theme-toggle", "aria-pressed") == "true"
+
+    # 다른 페이지 이동 시 localStorage 기반 다크 테마 유지 및 본문 렌더링 확인
+    page.goto(base_url + f"/watchdog?run_id={ui_run.RUN_ID}", wait_until="networkidle")
+    assert page.evaluate("document.documentElement.getAttribute('data-theme')") == "dark"
+    assert "4. Phase 4 사람-기계 피드백 캘리브레이션" in (page.text_content("main") or "")
+
+    # 다시 클릭 시 라이트 모드 복귀 및 ?theme=dark 쿼리 파라미터 전환
+    page.click("#theme-toggle")
+    assert page.evaluate("document.documentElement.getAttribute('data-theme')") is None
+    page.goto(
+        base_url + f"/runs/{ui_run.RUN_ID}/samples/70002?theme=dark",
+        wait_until="networkidle",
+    )
+    assert page.evaluate("document.documentElement.getAttribute('data-theme')") == "dark"
+    assert errors == []
+    assert external == []

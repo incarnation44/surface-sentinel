@@ -50,9 +50,9 @@
         {% set lo_pct = (ratio.ci_low * 100)|round(1) %}
         {% set hi_pct = (ratio.ci_high * 100)|round(1) %}
         {% set val_pct = (ratio.value * 100)|round(1) %}
-        <div style="position:relative;height:14px;background:#eef2f6;border:1px solid var(--line-soft);border-radius:3px">
+        <div style="position:relative;height:14px;background:var(--track-bg, #eef2f6);border:1px solid var(--line-soft);border-radius:3px">
           <div style="position:absolute;top:5px;height:4px;left:{{ lo_pct }}%;width:{{ [hi_pct - lo_pct, 1.0]|max }}%;background:#93c5fd;border-radius:2px"></div>
-          <div style="position:absolute;top:2px;left:calc({{ val_pct }}% - 3px);width:6px;height:10px;background:var(--navy);border-radius:2px"></div>
+          <div style="position:absolute;top:2px;left:calc({{ val_pct }}% - 3px);width:6px;height:10px;background:var(--metric-pin, var(--navy));border-radius:2px"></div>
         </div>
         {% else %}
         <span class="meta">-</span>
@@ -92,7 +92,7 @@
       <span class="meta num">후보 {{ hotspot.ng_total_hits }}건 · 최대 셀 {{ hotspot.ng_max_cell }}</span>
     </div>
     <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
-      <svg viewBox="{{ hotspot.view_box }}" width="168" style="border:1px solid var(--line-soft);border-radius:5px;background:#fff;flex-shrink:0" role="img" aria-label="NG 샘플 후보 공간 핫스팟 히트맵">
+      <svg class="hotspot-svg" viewBox="{{ hotspot.view_box }}" width="168" style="border:1px solid var(--line-soft);border-radius:5px;flex-shrink:0" role="img" aria-label="NG 샘플 후보 공간 핫스팟 히트맵">
         {% for cell in hotspot.ng_cells %}<rect x="{{ cell.x }}" y="{{ cell.y }}" width="{{ cell.w }}" height="{{ cell.h }}" fill="{{ cell.fill }}" stroke="#e2e8f0" stroke-width="0.6"><title>열 {{ cell.col + 1 }}/6, 행 {{ cell.row + 1 }}/14: {{ cell.count }}건</title></rect>{% endfor %}
         <rect x="{{ hotspot.pad }}" y="{{ hotspot.pad }}" width="{{ hotspot.grid_w }}" height="{{ hotspot.grid_h }}" fill="none" stroke="#334155" stroke-width="1"/>
         <line x1="{{ hotspot.left_15_x }}" y1="{{ hotspot.pad }}" x2="{{ hotspot.left_15_x }}" y2="{{ hotspot.pad + hotspot.grid_h }}" stroke="#991b1b" stroke-width="1" stroke-dasharray="3,3"/>
@@ -110,7 +110,7 @@
       <span class="meta num">후보 {{ hotspot.review_total_hits }}건 · 최대 셀 {{ hotspot.review_max_cell }}</span>
     </div>
     <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
-      <svg viewBox="{{ hotspot.view_box }}" width="168" style="border:1px solid var(--line-soft);border-radius:5px;background:#fff;flex-shrink:0" role="img" aria-label="REVIEW 보류 후보 공간 핫스팟 히트맵">
+      <svg class="hotspot-svg" viewBox="{{ hotspot.view_box }}" width="168" style="border:1px solid var(--line-soft);border-radius:5px;flex-shrink:0" role="img" aria-label="REVIEW 보류 후보 공간 핫스팟 히트맵">
         {% for cell in hotspot.review_cells %}<rect x="{{ cell.x }}" y="{{ cell.y }}" width="{{ cell.w }}" height="{{ cell.h }}" fill="{{ cell.fill }}" stroke="#e2e8f0" stroke-width="0.6"><title>열 {{ cell.col + 1 }}/6, 행 {{ cell.row + 1 }}/14: {{ cell.count }}건</title></rect>{% endfor %}
         <rect x="{{ hotspot.pad }}" y="{{ hotspot.pad }}" width="{{ hotspot.grid_w }}" height="{{ hotspot.grid_h }}" fill="none" stroke="#334155" stroke-width="1"/>
         <line x1="{{ hotspot.left_15_x }}" y1="{{ hotspot.pad }}" x2="{{ hotspot.left_15_x }}" y2="{{ hotspot.pad + hotspot.grid_h }}" stroke="#92400e" stroke-width="1" stroke-dasharray="3,3"/>
