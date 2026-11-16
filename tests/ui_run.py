@@ -132,7 +132,7 @@ def make_run(
         "split": "tune",
         "config_path": "configs/base.toml",
         "config_hash": CONFIG_HASH,
-        "code": {"version": "0.1.0"},
+        "code": {"version": "1.0.1"},
         "env": {"python": "3.11"},
         "manifest_sha256": "0" * 64,
         "split_sha256": "0" * 64,

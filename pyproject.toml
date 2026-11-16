@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "surface-sentinel"
-version = "0.1.0"
+version = "1.0.1"
 description = "Deterministic surface-defect inspection and verification system for KolektorSDD2"
 readme = "README.md"
 requires-python = ">=3.11,<3.12"

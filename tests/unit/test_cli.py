@@ -13,13 +13,13 @@ def test_version_flag(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as excinfo:
         main(["--version"])
     assert excinfo.value.code == 0
-    assert "surface-sentinel 0.1.0" in capsys.readouterr().out
+    assert "surface-sentinel 1.0.1" in capsys.readouterr().out
 
 
 def test_doctor_prints_json(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["doctor"]) == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload["package_version"] == "0.1.0"
+    assert payload["package_version"] == "1.0.1"
     assert payload["config_schema"] == "1.0"
     assert "python" in payload
     assert "opencv" in payload

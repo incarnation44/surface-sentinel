@@ -302,6 +302,7 @@ def _inspect(
     output_dir: Path,
     label: str,
     split: str,
+    registry: Any = None,
 ) -> InspectionOutcome:
     """엔진별 검사 실행. YOLO 실행 환경·모델 문제는 503으로 바꾼다."""
 
@@ -322,6 +323,7 @@ def _inspect(
             output_dir=output_dir,
             split=split,
             label=label,
+            registry=registry,
         )
     except ImportError as exc:
         raise HTTPException(
@@ -394,6 +396,11 @@ def create_inspection_app(
     app.state.db_path = db_file
     app.state.raw_root = Path(raw_root) if raw_root is not None else None
     app.state.config = config
+    try:
+        runtime = importlib.import_module("surface_sentinel.yolo.runtime")
+        app.state.yolo_registry = runtime.YoloEngineRegistry()
+    except ImportError:
+        app.state.yolo_registry = None
 
     @contextmanager
     def open_db() -> Iterator[sqlite3.Connection]:
@@ -455,6 +462,7 @@ def create_inspection_app(
             output_dir=output_dir,
             label=label,
             split=split,
+            registry=getattr(app.state, "yolo_registry", None),
         )
         result = outcome.result
         model_version = _model_version(engine.value)

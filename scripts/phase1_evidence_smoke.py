@@ -34,6 +34,7 @@ from surface_sentinel.yolo.evaluate import (
     resolve_split_rows,
 )
 from surface_sentinel.yolo.inspect import inspect_with_yolo
+from surface_sentinel.yolo.runtime import YoloEngineRegistry
 
 REPO = Path(__file__).resolve().parents[1]
 OUT_ROOT = REPO / "runs" / "evidence-smoke"
@@ -48,6 +49,7 @@ def main() -> int:
     good = next(row for row in rows if row.label == "good")
     agent_config = load_agent_config(REPO / "configs" / "agent.toml")
     profiles = load_profiles(DEFAULT_CONFIG_PATH, REPO / "configs" / "profiles")
+    registry = YoloEngineRegistry()
 
     samples = []
     for row in (defect, good):
@@ -59,6 +61,7 @@ def main() -> int:
             output_dir=OUT_ROOT / f"combined_{row.sample_id}",
             split="tune",
             label=row.label,
+            registry=registry,
         )
         observations = outcome.engine_observations
         if len(observations) != 2:

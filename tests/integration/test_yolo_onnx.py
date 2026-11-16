@@ -85,3 +85,31 @@ def test_to_input_tensor_shape_contract() -> None:
     tensor = to_input_tensor(np.zeros((416, 416, 3), np.uint8))
     assert tensor.shape == (1, 3, 416, 416)
     assert tensor.dtype == np.float32
+
+
+@SKIP_NO_DET
+def test_api_registry_reuses_session_across_requests(tmp_path: Path) -> None:
+    """같은 det 모델 2회 요청 → 세션 1회만 생성 (감사 P1-1 완료 기준)."""
+    import cv2
+    from fastapi.testclient import TestClient
+
+    from surface_sentinel.api import create_inspection_app
+
+    app = create_inspection_app(runs_dir=tmp_path / "runs")
+    client = TestClient(app)
+    image = np.tile(np.linspace(40, 200, 96, dtype=np.uint8), (96, 1))
+    success, buffer = cv2.imencode(".png", image)
+    assert success
+    payload = buffer.tobytes()
+    for _ in range(2):
+        response = client.post(
+            "/api/inspect",
+            files={"file": ("sample.png", payload, "image/png")},
+            data={"label": "unknown", "split": "tune"},
+            params={"engine": "yolo-det"},
+        )
+        assert response.status_code == 200
+    registry = app.state.yolo_registry
+    assert registry is not None
+    assert registry.cold_starts == 1
+    assert registry.size == 1

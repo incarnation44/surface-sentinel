@@ -996,7 +996,11 @@ def run_yolo_evaluation(
     engine: Any = None,
     adjustment_note: str = "",
 ) -> EvalRun:
-    """tune CSV → (val|tune) 행 → ONNX 평가 → JSON·JSONL·보고서."""
+    """tune CSV → (val|tune) 행 → ONNX 평가 → JSON·JSONL·보고서.
+
+    세션 정책: 실행당 단일 엔진 재사용(ADR 0008 평가 실행 범위).
+    스크립트 직접 호출은 YoloEngineRegistry 주입.
+    """
 
     if split in SEALED_SPLITS:
         raise YoloSealedSplitError(f"봉인된 split은 열 수 없습니다: {split}")
