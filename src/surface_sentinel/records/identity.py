@@ -10,6 +10,10 @@ canonical JSON 으로 해시한 것이 ``inspection_fingerprint`` 이고, 이미
 
 ``code_sha``/``code_dirty`` 는 진입점(API 생성·워커 시작·평가 CLI)에서
 ``evaluation.recalibration.git_code_identity`` 로 1회 계산해 주입한다.
+``code_dirty`` 가 ``True`` 면 ``code_sha`` 는 ``<HEAD>-dirty-<내용 digest>`` 형태로
+합성된다 — 같은 HEAD 라도 미커밋 내용이 다르면 fingerprint 가 달라져, 서로 다른
+코드 결과가 같은 검사로 중복 제거되지 않는다(감사 5.4). clean 트리는 ``<HEAD>``
+그대로라 기존 fingerprint 와 같다.
 이 모듈은 subprocess/네트워크를 쓰지 않는다(워커 핫패스 금지 규칙).
 """
 

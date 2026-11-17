@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from collections.abc import Callable
 from dataclasses import replace
@@ -50,7 +51,32 @@ from .types import (
 
 _T = TypeVar("_T")
 
+# 내부 진단 전용 로거. 결과 객체나 응답에는 노출하지 않는다.
+logger = logging.getLogger(__name__)
+
 DEFAULT_OUTPUT_DIR = Path("runs/inspect")
+
+
+def _failure_context(
+    *,
+    exc: BaseException,
+    stage: Stage,
+    run_id: str,
+    sample_id: str,
+    metadata: InputMetadata | None,
+    config: AppConfig,
+) -> str:
+    """예상 못한 실패의 원인 추적용 컨텍스트를 한 줄로 만든다.
+
+    반환값은 내부 로그 전용이며 결과 객체나 응답에는 절대 넣지 않는다.
+    """
+
+    return (
+        f"stage={stage.value} | exc_type={type(exc).__name__} | run_id={run_id} | "
+        f"sample_id={sample_id} | "
+        f"image_sha256={metadata.image_sha256 if metadata is not None else ''} | "
+        f"config_hash={config.config_hash}"
+    )
 
 
 def _error_result(
@@ -247,7 +273,18 @@ def inspect_image(
             analyzed=analyzed,
         )
         debug = None
-    except Exception:
+    except Exception as exc:
+        logger.exception(
+            "예상 못한 내부 예외 발생 | %s",
+            _failure_context(
+                exc=exc,
+                stage=current_stage,
+                run_id=run_id,
+                sample_id=sample_id,
+                metadata=metadata,
+                config=config,
+            ),
+        )
         timings["total"] = float(
             sum(timings[stage.value] for stage in STAGE_ORDER)
         )
@@ -269,7 +306,19 @@ def inspect_image(
 
     try:
         validate_sample_result(result)
-    except SchemaError:
+    except SchemaError as exc:
+        logger.error(
+            "결과 스키마 검증 실패 폴백 | %s",
+            _failure_context(
+                exc=exc,
+                stage=current_stage,
+                run_id=run_id,
+                sample_id=sample_id,
+                metadata=metadata,
+                config=config,
+            ),
+            exc_info=True,
+        )
         fallback = _error_result(
             error_code=ErrorCode.E_PROCESS_INTERNAL,
             error_stage=current_stage,

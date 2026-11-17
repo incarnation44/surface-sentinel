@@ -3,7 +3,7 @@
 제공 서브커맨드: ``doctor``, ``data``(``build-manifest``, ``make-splits``, ``verify``),
 ``inspect``, ``batch``, ``eval``, ``recalibrate``, ``fullverify-details``,
 ``adopted-verify``, ``defect-map``, ``serve``, ``yolo``(``export``, ``evaluate``),
-``records``(``init``, ``list``, ``stats``), ``worker``(``run``),
+``records``(``init``, ``list``, ``stats``, ``verify``), ``worker``(``run``),
 ``agent``(``run``, ``replay``, ``audit``, ``drift``, ``triage``, ``explain``, ``calibrate``),
 ``gate``, ``repro``(``check``). 사람이 읽는 도움말과 오류 메시지는 한국어다.
 """
@@ -1432,6 +1432,22 @@ def _add_records_parser(subparsers: Any) -> None:
         help="DB 파일 경로 (기본 data/derived/records.db).",
     )
 
+    verify_parser = records_subparsers.add_parser(
+        "verify",
+        help="기록 DB 무결성과 append-only 트리거를 검사합니다.",
+        description=(
+            "PRAGMA integrity_check·PRAGMA foreign_key_check·필수 append-only "
+            "트리거 8개 존재를 검사합니다. 정상이면 PASS(exit 0), "
+            "무결성/외래키/트리거 위반이면 FAIL(exit 5)입니다. 읽기 전용입니다."
+        ),
+    )
+    verify_parser.add_argument(
+        "--db",
+        type=Path,
+        default=Path("data/derived/records.db"),
+        help="DB 파일 경로 (기본 data/derived/records.db).",
+    )
+
 
 def _require_db_file(db_path: Path) -> bool:
     if not db_path.is_file():
@@ -1519,6 +1535,37 @@ def _cmd_records_stats(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _cmd_records_verify(args: argparse.Namespace) -> int:
+    from .records.db import DatabaseError, connect, verify_records_integrity
+
+    if not _require_db_file(args.db):
+        return EXIT_INPUT
+    connection = None
+    try:
+        connection = connect(args.db)
+        report = verify_records_integrity(connection)
+    except DatabaseError as exc:
+        _print_error(f"기록 DB 오류: {exc}")
+        return EXIT_STORAGE
+    finally:
+        if connection is not None:
+            connection.close()
+
+    print(f"대상: {args.db}")
+    print(f"integrity_check: {report.integrity_check}")
+    print(f"foreign_key_check: 위반 {report.foreign_key_violations}건")
+    trigger_total = 8
+    missing = report.missing_triggers
+    print(f"append-only 트리거: {trigger_total - len(missing)}/{trigger_total} 존재")
+    for name in missing:
+        print(f"  누락: {name}")
+    if report.ok:
+        print("PASS: 기록 DB 무결성·append-only 트리거 정상")
+        return EXIT_OK
+    _print_error("FAIL: 기록 DB 무결성 검사에 실패했습니다 (records init 으로 트리거 재설치)")
+    return EXIT_STORAGE
+
+
 def _run_records(args: argparse.Namespace) -> int:
     if args.records_command == "init":
         return _cmd_records_init(args)
@@ -1526,8 +1573,10 @@ def _run_records(args: argparse.Namespace) -> int:
         return _cmd_records_list(args)
     if args.records_command == "stats":
         return _cmd_records_stats(args)
+    if args.records_command == "verify":
+        return _cmd_records_verify(args)
     print(
-        "records 하위 명령이 필요합니다: init, list, stats",
+        "records 하위 명령이 필요합니다: init, list, stats, verify",
         file=sys.stderr,
     )
     return EXIT_USAGE

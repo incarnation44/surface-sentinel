@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import sqlite3
+from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
 
@@ -15,6 +16,22 @@ from .fingerprint import inspection_fingerprint
 
 SCHEMA_PACKAGE = "surface_sentinel.records"
 SCHEMA_RESOURCE = "schema.sql"
+
+# append-only 트리거 정본은 schema.sql 의 마커 구간이다(아래 두 상수로 추출).
+TRIGGER_SECTION_BEGIN = "-- APPEND-ONLY TRIGGERS (SQLite 전용) BEGIN"
+TRIGGER_SECTION_END = "-- END APPEND-ONLY TRIGGERS"
+
+# 필수 트리거 8개(테이블 4개 × UPDATE/DELETE). schema.sql 과 이름이 같아야 한다.
+APPEND_ONLY_TRIGGER_NAMES = (
+    "trg_inspections_no_update",
+    "trg_inspections_no_delete",
+    "trg_review_decisions_no_update",
+    "trg_review_decisions_no_delete",
+    "trg_engine_observations_no_update",
+    "trg_engine_observations_no_delete",
+    "trg_agent_assessments_no_update",
+    "trg_agent_assessments_no_delete",
+)
 
 
 class DatabaseError(RuntimeError):
@@ -57,6 +74,70 @@ def _schema_table_block(table: str) -> str:
     start = sql.index(marker)
     end = sql.index(");", start) + 2
     return sql[start:end]
+
+
+def append_only_trigger_sql() -> str:
+    """``schema.sql`` 의 append-only 트리거 구간만 추출한다(DDL 정본 단일화).
+
+    트리거 DDL 도 스키마 정본 한 곳에만 둔다. 마이그레이션으로 테이블을
+    DROP/RENAME 하면 그 테이블의 트리거가 함께 사라지므로, 여기서 꺼내 다시 건다.
+    """
+
+    sql = load_schema_sql()
+    start = sql.index(TRIGGER_SECTION_BEGIN)
+    end = sql.index(TRIGGER_SECTION_END, start)
+    return sql[start:end]
+
+
+def ensure_append_only_triggers(connection: sqlite3.Connection) -> None:
+    """필수 append-only 트리거를 (재)설치한다(멱등).
+
+    ``executescript`` 는 실행 전에 열린 트랜잭션을 커밋하므로, 마이그레이션
+    트랜잭션 **안에서** 호출하지 않는다. 마이그레이션이 끝난 뒤 호출한다.
+    """
+
+    connection.executescript(append_only_trigger_sql())
+
+
+@dataclass(frozen=True)
+class RecordsIntegrityReport:
+    """``verify_records_integrity`` 결과(불변 값 객체)."""
+
+    integrity_check: str
+    foreign_key_violations: int
+    missing_triggers: tuple[str, ...]
+
+    @property
+    def ok(self) -> bool:
+        """무결성·외래키·트리거가 모두 정상인가."""
+
+        return (
+            self.integrity_check == "ok"
+            and self.foreign_key_violations == 0
+            and not self.missing_triggers
+        )
+
+
+def verify_records_integrity(connection: sqlite3.Connection) -> RecordsIntegrityReport:
+    """기록 DB 의 무결성·외래키·append-only 트리거를 검사한다.
+
+    ``PRAGMA integrity_check``, ``PRAGMA foreign_key_check``, 필수 트리거 8개
+    존재를 확인해 :class:`RecordsIntegrityReport` 로 돌려준다(쓰기 없음).
+    """
+
+    integrity_row = connection.execute("PRAGMA integrity_check").fetchone()
+    integrity = str(integrity_row[0]) if integrity_row is not None else "unknown"
+    violations = len(connection.execute("PRAGMA foreign_key_check").fetchall())
+    present = {
+        str(row[0])
+        for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'trigger'")
+    }
+    missing = tuple(name for name in APPEND_ONLY_TRIGGER_NAMES if name not in present)
+    return RecordsIntegrityReport(
+        integrity_check=integrity,
+        foreign_key_violations=violations,
+        missing_triggers=missing,
+    )
 
 
 def _inspections_v2_ddl() -> str:
@@ -130,19 +211,31 @@ def migrate_to_fingerprint(connection: sqlite3.Connection) -> bool:
 
 
 def init_db(connection: sqlite3.Connection) -> None:
-    """``schema.sql``을 실행하고 v1→v2 마이그레이션을 적용한다(여러 번 호출 안전)."""
+    """``schema.sql``을 실행하고 v1→v2 마이그레이션을 적용한다(여러 번 호출 안전).
+
+    마이그레이션은 ``inspections`` 를 DROP/RENAME 하므로 그 테이블의 트리거가
+    함께 사라진다. 그래서 마이그레이션 **뒤에** append-only 트리거를 다시 건다.
+    """
 
     connection.executescript(load_schema_sql())
     migrate_to_fingerprint(connection)
+    ensure_append_only_triggers(connection)
     connection.commit()
 
 
 __all__ = [
+    "APPEND_ONLY_TRIGGER_NAMES",
     "DatabaseError",
+    "RecordsIntegrityReport",
     "SCHEMA_PACKAGE",
     "SCHEMA_RESOURCE",
+    "TRIGGER_SECTION_BEGIN",
+    "TRIGGER_SECTION_END",
+    "append_only_trigger_sql",
     "connect",
+    "ensure_append_only_triggers",
     "init_db",
     "load_schema_sql",
     "migrate_to_fingerprint",
+    "verify_records_integrity",
 ]

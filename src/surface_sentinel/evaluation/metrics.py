@@ -13,6 +13,18 @@ Wilson 95% 구간(연속성 보정 없음, z=1.96)::
     구간   = (center - half, center + half)  # 0..1로 자름
 
 n = 0이면 구간을 정의하지 않는다(0, 1을 보고하지 않는다).
+
+**근사 한계(감사 5.10, 2026-11-17).** Wilson 구간은 "시행이 서로 독립"을
+가정한다. 이 모듈에서 그 가정이 성립하는 것은 **이미지 단위 비율**(escape,
+false N-G, review 등 — 이미지 하나가 시행 하나)까지다. 다음 두 곳은
+독립 가정이 깨지므로 Wilson 값은 **근사 구간**이며, 정확한 95% CI가 필요하면
+``evaluation.bootstrap``의 이미지(그룹) 단위 부트스트랩을 함께 쓴다.
+
+* ``balanced_accuracy`` — 두 성분 Wilson 구간의 평균은 평균 지표의 CI가
+  아니다(성분 간 상관·비대칭 표본 수를 반영하지 못한다). 정의 문자열도
+  "보수적 근사"라고 적혀 있고, 그 문자열과 값은 하위 호환을 위해 그대로 둔다.
+* ``pixel_precision``/``pixel_recall`` — 픽셀을 독립 시행으로 세지만 같은
+  이미지 안 픽셀은 공간 상관이 있다. 픽셀 수가 크면 구간이 과도하게 좁아진다.
 """
 
 from __future__ import annotations
@@ -149,7 +161,18 @@ class Confusion:
 
 
 def image_metrics(confusion: Confusion) -> dict[str, Ratio]:
-    """§4.2의 이미지 지표 9개. P=결함 이미지 수, N=정상 이미지 수."""
+    """§4.2의 이미지 지표 9개. P=결함 이미지 수, N=정상 이미지 수.
+
+    이미지 비율(escape, false N-G, review, automation, decided accuracy)의
+    Wilson 구간은 이미지 하나를 시행 하나로 보므로 그대로 쓸 수 있다.
+
+    ``balanced_accuracy``만 예외다. 여기서 내는 구간은 **두 성분 Wilson
+    구간의 평균**이라 평균 지표의 엄밀한 95% CI가 아니다(근사). 값·정의
+    문자열·구간은 하위 호환을 위해 동결되어 있으므로 바꾸지 않는다.
+    정확한 CI가 필요하면
+    :func:`surface_sentinel.evaluation.bootstrap.balanced_accuracy_bootstrap_ci`
+    를 ``Confusion``의 ``(label, status)`` 쌍에 적용한다.
+    """
 
     p = confusion.evaluated("defect")
     n = confusion.evaluated("good")
@@ -302,7 +325,15 @@ def localization_metrics(
     matches: Sequence[GtMatch],
     pixels: PixelCounts,
 ) -> dict[str, Ratio]:
-    """§4.3 영역 지표. 분모 두 개(전체 GT / NG·REVIEW 이미지 안 GT)를 모두 낸다."""
+    """§4.3 영역 지표. 분모 두 개(전체 GT / NG·REVIEW 이미지 안 GT)를 모두 낸다.
+
+    ``pixel_precision``/``pixel_recall``의 Wilson 구간은 **픽셀을 독립
+    시행으로 센 근사**다. 같은 이미지 안 픽셀은 공간 상관이 있어 실제
+    불확실성보다 좁거나 넓게 나올 수 있다. 정의 문자열·반환값은 하위 호환을
+    위해 그대로 두고, 이미지 단위 CI가 필요하면
+    :func:`surface_sentinel.evaluation.bootstrap.pixel_ratio_bootstrap_ci`
+    를 이미지별 ``PixelCounts``에 적용한다.
+    """
 
     all_gt = len(matches)
     decided_gt = sum(1 for match in matches if match.image_status in SCORED_STATUSES)

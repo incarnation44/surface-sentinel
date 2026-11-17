@@ -6,6 +6,12 @@
 
 Windows에서는 디렉터리 핸들 fsync가 지원되지 않으므로 디렉터리 fsync는
 POSIX에서만 수행한다. 파일 fsync는 두 플랫폼 모두에서 수행한다.
+
+보장 범위(감사 5.12): 이 구조가 보장하는 것은 **원자적 게시**다 — 최종
+디렉터리는 완성본만 보이거나 아예 보이지 않는다(부분 run이 정상 결과로
+노출되지 않는다). **전원 손실 후 완전한 crash durability**는 별개 주장이며
+특히 Windows에서는 보장하지 않는다(일부 파일 fsync 오류 무시, 디렉터리
+fsync 부재). durability가 필요한 운영 환경에서는 별도 검증이 필요하다.
 """
 
 from __future__ import annotations

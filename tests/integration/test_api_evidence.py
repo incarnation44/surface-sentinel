@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import sys
 import types
+from dataclasses import replace
 from pathlib import Path
 
 import cv2
@@ -23,7 +24,7 @@ from surface_sentinel.api import app as app_module
 from surface_sentinel.api import create_inspection_app
 from surface_sentinel.contracts import Status
 from surface_sentinel.pipeline import InspectionOutcome
-from surface_sentinel.records.db import connect, init_db
+from surface_sentinel.records.db import connect, ensure_append_only_triggers, init_db
 from surface_sentinel.records.store import list_agent_assessments, list_inspections
 
 
@@ -164,3 +165,69 @@ def test_duplicate_upload_keeps_single_assessment(
     assert second.json()["deduplicated"] is True
     rows = _assessments(runs_dir)
     assert len(rows) == 1  # 같은 검사 + 같은 해시 → 중복 기록 없음
+
+
+def test_duplicate_upload_reads_stored_observation(
+    runs_dir: Path, client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """dedup 응답의 components/error_code 는 저장된 engine_observation 이 정본이다."""
+
+    fake = types.ModuleType("surface_sentinel.yolo.inspect")
+
+    def stub(image_path, config, **kwargs):  # noqa: ANN001 - 진입점 시그니처
+        component = make_component(0, (10, 10, 20, 20), evidence=0.7)
+        obs = make_observation(
+            "yolo-det",
+            Status.NG,
+            components=[component],
+            score=0.7,
+            reasons=["DEFECT_EVIDENCE_STRONG"],
+            task="det",
+        )
+        return InspectionOutcome(
+            result=replace(
+                make_result(Status.NG, reasons=["DEFECT_EVIDENCE_STRONG"], score=0.7),
+                components=(component,),
+            ),
+            engine_observations=(obs,),
+        )
+
+    fake.inspect_with_yolo = stub  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "surface_sentinel.yolo.inspect", fake)
+
+    payload = synthetic_png(seed=5)
+    first = upload(client, payload, engine="yolo-det")
+    assert first.status_code == 200
+    body = first.json()
+    assert body["deduplicated"] is False
+    assert body["components"][0]["bbox"] == [10, 10, 20, 20]
+
+    # 저장된 관찰을 바꿔 둔다 — dedup 응답이 이 값을 읽는지 본다.
+    # 변조 시뮬레이션: append-only 트리거를 잠시 내렸다가 변조 후 복원한다
+    # (docs/design/append-only-enforcement.md §7의 테스트 예외 절차).
+    stored_component = make_component(0, (1, 2, 3, 4), evidence=0.3).to_dict()
+    connection = connect(runs_dir / "records.db")
+    try:
+        connection.execute("DROP TRIGGER IF EXISTS trg_engine_observations_no_update")
+        with connection:
+            connection.execute(
+                "UPDATE engine_observations SET components = ?, error_code = ? "
+                "WHERE inspection_id = ? AND engine = ?",
+                (
+                    json.dumps([stored_component], ensure_ascii=False),
+                    "E_PROCESS_INTERNAL",
+                    body["inspection_id"],
+                    "yolo-det",
+                ),
+            )
+        ensure_append_only_triggers(connection)
+    finally:
+        connection.close()
+
+    second = upload(client, payload, engine="yolo-det").json()
+
+    assert second["deduplicated"] is True
+    assert second["inspection_id"] == body["inspection_id"]
+    assert second["components"][0]["bbox"] == [1, 2, 3, 4]
+    assert second["error_code"] == "E_PROCESS_INTERNAL"
+    assert second["error_stage"] == ""  # stage 는 저장하지 않는다

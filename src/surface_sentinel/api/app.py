@@ -40,6 +40,7 @@ from ..agent.stability import analyze_weak_geometry, arbitrate_patches
 from ..config import REVIEW_BAND_MAX, AppConfig, default_config, load_config
 from ..contracts import Status
 from ..pipeline import InspectionOutcome, inspect_image
+from ..pipeline.stages import VALID_LABELS, VALID_SPLITS
 from ..records.db import DatabaseError, connect, init_db
 from ..records.identity import EngineSpec, opencv_spec
 from ..records.store import (
@@ -88,6 +89,9 @@ OUTPUT_DIRNAME = "api_inspect"
 
 #: 업로드 상한(32 MiB). 로컬 API라도 메모리 폭주는 막는다.
 MAX_UPLOAD_BYTES = 32 * 1024 * 1024
+
+#: 업로드 청크 크기. 전체를 한 번에 읽지 않고 이 크기로 나눠 읽는다(메모리 상한).
+UPLOAD_CHUNK_BYTES = 64 * 1024
 
 #: 허용 이미지 확장자(워커와 같은 집합).
 IMAGE_SUFFIXES: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")
@@ -343,6 +347,57 @@ def _inspect(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+def _validate_label_split(label: str, split: str) -> None:
+    """``label``/``split`` 이 허용 집합 안인지 경계에서 검증한다.
+
+    허용 값의 단일 정본은 :data:`surface_sentinel.pipeline.stages.VALID_LABELS`
+    / ``VALID_SPLITS`` 다(사본을 만들지 않는다). 허용 집합 밖 값은 파일 읽기·
+    검사 실행·DB 기록 **전에** 422로 끝낸다 — 잘못된 값이 ERROR 판정과 검사
+    행을 만들지 않게 하기 위함이다.
+
+    ``split`` 의 ``test``/``official_test`` 는 허용 값이지만 봉인 정책상
+    파이프라인이 ERROR(``E_SEALED_DENIED``)로 거부한다(여기서 우회하지 않는다).
+    """
+
+    if label not in VALID_LABELS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"label은 {', '.join(VALID_LABELS)} 중 하나여야 합니다: {label!r}",
+        )
+    if split not in VALID_SPLITS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"split은 {', '.join(VALID_SPLITS)} 중 하나여야 합니다: {split!r}",
+        )
+
+
+def _upload_too_large_detail() -> str:
+    """업로드 상한 초과 시 한국어 안내(상한 값은 호출 시점의 전역을 읽는다)."""
+
+    return f"업로드는 {MAX_UPLOAD_BYTES // (1024 * 1024)} MiB까지 허용합니다."
+
+
+async def _read_upload_bounded(upload: UploadFile) -> bytes:
+    """업로드를 ``MAX_UPLOAD_BYTES`` + 청크 1개까지만 읽는다(메모리 상한).
+
+    전체를 ``await file.read()`` 로 한 번에 받으면 상한 검사 전에 메모리가
+    폭주한다. 여기서는 ``UPLOAD_CHUNK_BYTES`` 단위로 읽으며 누적량이 상한을
+    넘는 순간 413으로 중단한다 — 읽기 총량은 상한 + 청크 1개를 넘지 않는다.
+    """
+
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await upload.read(UPLOAD_CHUNK_BYTES)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail=_upload_too_large_detail())
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
 def _store_upload(upload_dir: Path, payload: bytes, sha256: str, suffix: str) -> Path:
     """업로드 바이트를 ``runs_dir`` 아래에 보관한다(같은 해시는 같은 경로)."""
 
@@ -432,17 +487,32 @@ def create_inspection_app(
         label: Annotated[str, Form()] = "unknown",
         split: Annotated[str, Form()] = "tune",
     ) -> InspectResponse:
-        """이미지 한 장을 검사하고 기록한다(기계 판정은 파이프라인이 소유)."""
+        """이미지 한 장을 검사하고 기록한다(기계 판정은 파이프라인이 소유).
 
-        payload = await file.read()
-        await file.close()
+        경계 검증: ``label``/``split`` 이 허용 집합(:mod:`pipeline.stages` 정본)
+        밖이면 파일을 읽기 전에 422 로 끝낸다(ERROR 행을 만들지 않는다).
+        업로드는 상한까지만 청크로 읽고, 넘으면 413 이다.
+
+        중복제거(``deduplicated=True``)일 때 응답의 저장 필드(``run_id``,
+        ``sample_id``, ``status``, ``score``, ``reasons``, ``overlay_url``)는
+        방금 계산한 결과가 아니라 **DB에 저장된 canonical 행**에서 만든다.
+        ``components`` 는 해당 엔진의 저장된 ``engine_observations`` 행이 있으면
+        그 ``components`` JSON 을, 없으면(단일 엔진 검사는 관찰 미기록) 이번
+        결과의 값을 쓴다 — 같은 fingerprint 면 파이프라인이 결정론적이라 일치한다.
+        ``error_code`` 는 저장된 관찰 값을 쓰고, 저장하지 않는 ``error_stage`` 는
+        빈 문자열이다. 저장 관찰이 없으면(단일 엔진) 이번 결과의
+        ``error_code``/``error_stage`` 를 유지한다(같은 fingerprint = 결정론적
+        = 원래 실행과 같은 진단 값). 내부 경로·stack trace 는 응답에 넣지 않는다.
+        """
+
+        _validate_label_split(label, split)
+
+        try:
+            payload = await _read_upload_bounded(file)
+        finally:
+            await file.close()
         if not payload:
             raise HTTPException(status_code=400, detail="빈 파일은 검사할 수 없습니다.")
-        if len(payload) > MAX_UPLOAD_BYTES:
-            raise HTTPException(
-                status_code=413,
-                detail=f"업로드는 {MAX_UPLOAD_BYTES // (1024 * 1024)} MiB까지 허용합니다.",
-            )
         suffix = Path(file.filename or "").suffix.lower()
         if suffix not in IMAGE_SUFFIXES:
             raise HTTPException(
@@ -540,23 +610,59 @@ def create_inspection_app(
                         exc_info=True,
                     )
             row = get_inspection(connection, inspection_id)
+            observation_rows = (
+                list_engine_observations(connection, inspection_id) if deduplicated else []
+            )
 
         overlay_url = None
         if row is not None and _row_overlay_path(row, directory) is not None:
             overlay_url = f"/api/inspections/{inspection_id}/overlay.png"
 
+        # 기본값: 이번 요청의 계산 결과(새 행 경로).
+        run_id = str(result.run_id)
+        sample_id = str(result.sample_id)
+        status = result.status
+        score = float(result.score)
+        reasons: list[Any] = list(result.reasons)
+        components_out = [ComponentOut.from_feature(feature) for feature in result.components]
+        error_code = "" if result.error_code is None else result.error_code.value
+        error_stage = "" if result.error_stage is None else result.error_stage.value
+
+        if deduplicated and row is not None:
+            # 중복 적중: 응답은 저장된 canonical 행이 정본이다(새 계산값으로 덮지 않는다).
+            run_id = str(row["run_id"])
+            sample_id = str(row["sample_id"])
+            status = Status(str(row["status"]))
+            score = float(row["score"])
+            reasons = [str(reason) for reason in json.loads(str(row["reasons"]) or "[]")]
+            stored = next(
+                (obs for obs in observation_rows if str(obs["engine"]) == engine.value),
+                None,
+            )
+            if stored is not None:
+                stored_components = json.loads(str(stored.get("components") or "[]"))
+                components_out = [ComponentOut(**component) for component in stored_components]
+                error_code = str(stored.get("error_code") or "")
+                # error_stage 는 관찰 표에 저장하지 않는다 → 미저장이므로 빈 문자열.
+                error_stage = ""
+            # 저장 관찰이 없으면(단일 엔진 검사는 관찰 미기록) 이번 결과의
+            # error_code/error_stage 를 유지한다 — 같은 fingerprint 면 파이프라인이
+            # 결정론적이라 원래 실행과 같은 진단 값이다(ERROR 진단 가능성 보존).
+
         return InspectResponse(
             inspection_id=inspection_id,
-            run_id=str(result.run_id),
-            sample_id=str(result.sample_id),
-            status=result.status,
-            score=float(result.score),
-            reasons=list(result.reasons),
-            components=[ComponentOut.from_feature(feature) for feature in result.components],
+            run_id=run_id,
+            sample_id=sample_id,
+            status=status,
+            score=score,
+            reasons=reasons,
+            components=components_out,
             engine=engine,
             model_version=model_version,
             overlay_url=overlay_url,
             deduplicated=deduplicated,
+            error_code=error_code,
+            error_stage=error_stage,
             task=spec.task,
             model_sha256=spec.model_sha256,
             inspection_fingerprint=spec.fingerprint,

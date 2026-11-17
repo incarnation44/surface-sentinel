@@ -61,10 +61,18 @@ class ComponentOut(BaseModel):
 class InspectResponse(BaseModel):
     """``POST /api/inspect`` 응답.
 
-    ``status``/``reasons``/``components``는 **이번 요청의 검사 결과**다.
-    ``inspection_id``는 DB에 남은 행(같은 이미지면 기존 행)이고,
-    ``deduplicated``가 참이면 새 행을 만들지 않았다는 뜻이다. 저장된 기계
-    판정은 ``GET /api/inspections/{id}``로 확인한다(불변).
+    ``status``/``reasons``/``components``는 기본적으로 이번 요청의 검사 결과다.
+    다만 ``deduplicated``가 참이면 저장된 행(및 저장된 엔진 관찰)이 정본이며
+    아래 필드 규칙을 따른다. ``inspection_id``는 DB에 남은 행(같은 이미지면
+    기존 행)이고, ``deduplicated``가 참이면 새 행을 만들지 않았다는 뜻이며
+    이때 저장 필드(``run_id``/``sample_id``/``status``/``score``/``reasons``/
+    ``overlay_url``)는 DB의 canonical 행에서 온다. 저장된 기계 판정은
+    ``GET /api/inspections/{id}``로 확인한다(불변).
+
+    ``error_code``/``error_stage``는 처리 ERROR(파이프라인이 낸 오류)의 진단용
+    값이며 정상 검사는 빈 문자열이다. dedup 적중 시 저장된 엔진 관찰의
+    ``error_code``를 쓰고, 관찰이 없으면(단일 엔진) 이번 결과의 진단 값을
+    유지한다(같은 fingerprint = 결정론적). 내부 경로·stack trace는 담지 않는다.
     """
 
     inspection_id: int
@@ -78,6 +86,9 @@ class InspectResponse(BaseModel):
     model_version: str
     overlay_url: str | None
     deduplicated: bool
+    #: 처리 ERROR 진단(정상 검사는 빈 문자열). 내부 경로는 노출하지 않는다.
+    error_code: str = ""
+    error_stage: str = ""
     #: 검사 신원 provenance (P0-2/P0-3). opencv 는 task·model_sha256 이 비어 있다.
     task: str = ""
     model_sha256: str = ""

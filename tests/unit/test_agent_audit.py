@@ -16,7 +16,7 @@ from surface_sentinel.agent.audit import (
 from surface_sentinel.agent.trace import TraceWriter
 from surface_sentinel.config import default_config
 from surface_sentinel.contracts import SampleResult, Status
-from surface_sentinel.records.db import connect, init_db
+from surface_sentinel.records.db import connect, ensure_append_only_triggers, init_db
 from surface_sentinel.records.store import insert_inspection
 from surface_sentinel.review.store import ReviewStore
 
@@ -176,9 +176,13 @@ def test_audit_records_db_missing_does_not_create_file_and_checks_integrity(
     assert audit_records_db(db_path).verdict is AuditVerdict.PASS
 
     # 레거시 행(provenance_complete=0) -> REVISE
-    raw = sqlite3.connect(str(db_path))
-    raw.execute("UPDATE inspections SET provenance_complete = 0 WHERE id = ?", (id_ok,))
-    raw.commit()
+    # 변조 시뮬레이션: append-only 트리거를 잠시 내렸다가 변조 후 복원한다
+    # (docs/design/append-only-enforcement.md §7의 테스트 예외 절차).
+    raw = connect(db_path)
+    raw.execute("DROP TRIGGER IF EXISTS trg_inspections_no_update")
+    with raw:
+        raw.execute("UPDATE inspections SET provenance_complete = 0 WHERE id = ?", (id_ok,))
+    ensure_append_only_triggers(raw)
     raw.close()
     assert audit_records_db(db_path).verdict is AuditVerdict.REVISE
 

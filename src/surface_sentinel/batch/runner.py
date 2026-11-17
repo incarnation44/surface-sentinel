@@ -4,8 +4,10 @@
 ``runs/.tmp-<run_id>-<pid>/``에 먼저 쓰고 fsync한 뒤 ``os.replace``로 최종
 이름으로 교체한다. ``run.json``은 항상 마지막에 쓴다.
 
-봉인 규칙: ``test``/``official_test``는 파일을 열기 전에 거부한다. 이 모듈에는
-봉인 분할을 읽는 경로가 없다.
+봉인 규칙: ``test``/``official_test``는 기본적으로 파일을 열기 전에 거부한다.
+유일한 예외는 명시적 ``allow_sealed=True`` 경로로, ``evaluation.sealed.
+ensure_sealed_access`` 잠금 원장 기록 후에만 일회성 측정을 허용한다(T08).
+원장 없는 봉인 접근 경로는 없다.
 """
 
 from __future__ import annotations

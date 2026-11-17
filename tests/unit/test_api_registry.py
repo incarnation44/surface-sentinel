@@ -2,8 +2,19 @@
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 import surface_sentinel.api.app as app_mod
 from surface_sentinel.api.schemas import EngineName
+
+
+@pytest.fixture(autouse=True)
+def _stable_code_identity(monkeypatch):
+    """앱 생성이 실제 저장소 git 상태를 읽지 않게 고정한다(dirty 무관)."""
+
+    from surface_sentinel.evaluation import recalibration
+
+    monkeypatch.setattr(recalibration, "git_code_identity", lambda: ("test-sha", False))
 
 
 def _yolo_engine():

@@ -95,3 +95,75 @@ CREATE INDEX IF NOT EXISTS idx_inspections_status ON inspections(status);
 CREATE INDEX IF NOT EXISTS idx_review_inspection ON review_decisions(inspection_id);
 CREATE INDEX IF NOT EXISTS idx_observations_inspection ON engine_observations(inspection_id);
 CREATE INDEX IF NOT EXISTS idx_assessments_inspection ON agent_assessments(inspection_id);
+
+-- APPEND-ONLY TRIGGERS (SQLite 전용) BEGIN
+--
+-- append-only 는 애플리케이션 규칙만이 아니라 스키마 수준에서도 강제한다(감사 5.13).
+--   * inspections            : 기계 판정 행 — UPDATE·DELETE 금지(완전 불변)
+--   * review_decisions       : 사람 판정 — append-only
+--   * engine_observations    : 엔진별 원본 관찰 — append-only
+--   * agent_assessments      : 에이전트 교차 증거 — append-only
+-- 위반은 sqlite3.IntegrityError(ABORT)로 거부된다. 트리거 이름은
+-- records/db.py 의 APPEND_ONLY_TRIGGER_NAMES 와 1:1로 맞춰야 한다(records verify 가 검사).
+--
+-- 마이그레이션 예외: 스키마를 바꾸는 마이그레이션은 이 트리거를 잠시 내려야 한다.
+--   같은 트랜잭션 안에서 DROP TRIGGER → 스키마 변경 → db.init_db() 로 재보장.
+--   자세한 절차는 docs/design/append-only-enforcement.md 참고.
+--
+-- PostgreSQL 이식 시(SQLite 트리거는 이식되지 않는다) 동등 장치가 필요하다:
+--   CREATE OR REPLACE FUNCTION forbid_mutation() RETURNS trigger AS $$
+--   BEGIN RAISE EXCEPTION '% 는 append-only 입니다', TG_TABLE_NAME; END;
+--   $$ LANGUAGE plpgsql;
+--   CREATE TRIGGER trg_inspections_no_update BEFORE UPDATE OR DELETE ON inspections
+--     FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+--   (테이블 4개 × UPDATE/DELETE 조합 모두 동일하게 건다.)
+--   권한으로 막는 방법도 병행 가능: REVOKE UPDATE, DELETE ON inspections FROM app_role;
+
+CREATE TRIGGER IF NOT EXISTS trg_inspections_no_update
+BEFORE UPDATE ON inspections
+BEGIN
+    SELECT RAISE(ABORT, 'inspections 는 append-only 입니다: 기계 판정 행은 수정할 수 없습니다.');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_inspections_no_delete
+BEFORE DELETE ON inspections
+BEGIN
+    SELECT RAISE(ABORT, 'inspections 는 append-only 입니다: 기계 판정 행은 삭제할 수 없습니다.');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_review_decisions_no_update
+BEFORE UPDATE ON review_decisions
+BEGIN
+    SELECT RAISE(ABORT, 'review_decisions 는 append-only 입니다: 사람 판정 행은 수정할 수 없습니다.');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_review_decisions_no_delete
+BEFORE DELETE ON review_decisions
+BEGIN
+    SELECT RAISE(ABORT, 'review_decisions 는 append-only 입니다: 사람 판정 행은 삭제할 수 없습니다.');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_engine_observations_no_update
+BEFORE UPDATE ON engine_observations
+BEGIN
+    SELECT RAISE(ABORT, 'engine_observations 는 append-only 입니다: 관찰 행은 수정할 수 없습니다.');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_engine_observations_no_delete
+BEFORE DELETE ON engine_observations
+BEGIN
+    SELECT RAISE(ABORT, 'engine_observations 는 append-only 입니다: 관찰 행은 삭제할 수 없습니다.');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_agent_assessments_no_update
+BEFORE UPDATE ON agent_assessments
+BEGIN
+    SELECT RAISE(ABORT, 'agent_assessments 는 append-only 입니다: 평가 행은 수정할 수 없습니다.');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_agent_assessments_no_delete
+BEFORE DELETE ON agent_assessments
+BEGIN
+    SELECT RAISE(ABORT, 'agent_assessments 는 append-only 입니다: 평가 행은 삭제할 수 없습니다.');
+END;
+-- END APPEND-ONLY TRIGGERS

@@ -23,6 +23,7 @@ T05가 확인한 병목(714/714장에 컴포넌트가 존재 → ``OK`` 경로�
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import time
@@ -76,12 +77,115 @@ def git_head() -> str:
     return completed.stdout.strip() if completed.returncode == 0 else ""
 
 
+#: dirty 트리 코드 digest 의 16진수 문자 수. 8바이트 절단으로 충돌 여유가 충분하다.
+CODE_DIGEST_CHARS = 16
+
+#: untracked 파일 **내용**을 digest 에 넣는 디렉터리 접두사(저장소 루트 기준).
+#: 그 밖의 untracked 파일은 경로만 digest 에 들어간다(대용량 산출물 비용 회피).
+CODE_PATH_PREFIXES = ("src/", "configs/")
+
+
+def _git_text(args: Sequence[str]) -> str | None:
+    """git 명령의 stdout(성공 시). 실패·타임아웃·미설치면 ``None``."""
+
+    try:
+        completed = subprocess.run(
+            ["git", *args],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return completed.stdout if completed.returncode == 0 else None
+
+
+def _repo_root() -> Path:
+    """저장소 루트. 확인 실패 시 현재 디렉터리로 폴백한다."""
+
+    top = _git_text(["rev-parse", "--show-toplevel"])
+    if top and top.strip():
+        return Path(top.strip())
+    return Path.cwd()
+
+
+def _untracked_code_files() -> list[str]:
+    """저장소 루트 기준 ``src/``·``configs/`` 아래 untracked 파일 경로(정렬·결정론)."""
+
+    listing = _git_text(
+        ["ls-files", "--others", "--exclude-standard", "--full-name", "-z"]
+    )
+    if not listing:
+        return []
+    return sorted(
+        path
+        for path in (item.replace("\\", "/") for item in listing.split("\0") if item)
+        if path.startswith(CODE_PATH_PREFIXES)
+    )
+
+
+def _file_sha256(path: Path) -> str:
+    """파일 바이트 SHA256. 읽을 수 없으면 ``"unreadable"``(예외를 올리지 않는다)."""
+
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError:
+        return "unreadable"
+    return digest.hexdigest()
+
+
+def _code_digest(porcelain: str) -> str:
+    """dirty 트리 **코드 내용** digest(16진수 ``CODE_DIGEST_CHARS`` 자).
+
+    입력은 ``porcelain``(이미 수집한 ``git status --porcelain``) + ``git diff HEAD``
+    + ``src/``·``configs/`` 아래 untracked 파일의 (경로, 내용 SHA256) 이며, 모두
+    정렬 고정 순서로 이어 해시해 결정론을 지킨다.
+
+    어느 단계가 실패해도 예외를 올리지 않는다 — 호출부는 ``code_dirty=True`` 를
+    그대로 유지하므로 clean 으로 오판하지 않는다.
+    """
+
+    hasher = hashlib.sha256()
+    hasher.update(b"status\0")
+    hasher.update(porcelain.encode("utf-8", "surrogateescape"))
+
+    diff = _git_text(["diff", "HEAD", "--no-color", "--no-ext-diff"])
+    if diff is None:
+        # diff 를 못 읽어도 status 기반 digest 로 진행한다(내용 차이는 못 가르지만
+        # dirty 는 유지되어 커밋된 결과와 섞이지 않는다).
+        hasher.update(b"\0diff-unavailable\0")
+    else:
+        hasher.update(b"\0diff\0")
+        hasher.update(diff.encode("utf-8", "surrogateescape"))
+
+    root = _repo_root()
+    for path in _untracked_code_files():
+        hasher.update(b"\0untracked\0")
+        hasher.update(path.encode("utf-8", "surrogateescape"))
+        hasher.update(b"\0")
+        hasher.update(_file_sha256(root / path).encode("ascii"))
+
+    return hasher.hexdigest()[:CODE_DIGEST_CHARS]
+
+
 def git_code_identity() -> tuple[str, bool]:
     """코드 신원 ``(code_sha, code_dirty)``. 진입점에서 1회만 계산해 주입한다.
 
     API 생성·워커 시작·평가 CLI 시작 시 1회 호출한다(이미지별 핫패스 금지).
-    git 이 없거나 실패하면 ``("", False)`` — 검사를 막지 않는다. 더러운 트리는
-    ``code_dirty=True`` 로 fingerprint 가 달라져 커밋 전 결과와 섞이지 않는다.
+    git 이 없거나 실패하면 ``("", False)`` — 검사를 막지 않는다.
+
+    * clean 트리: ``(HEAD, False)`` — 기존 계약·기존 fingerprint 와 완전히 같다
+      (기존 DB 행·보고서 하위 호환). subprocess 는 2회(rev-parse + status)뿐이다.
+    * dirty 트리: ``(<HEAD>-dirty-<digest>, True)``. digest 는 미커밋 **내용**
+      (status + diff + ``src/``·``configs/`` untracked 파일 SHA256)이므로, 같은
+      HEAD 라도 변경 내용이 다르면 code_sha·fingerprint 가 달라진다(감사 5.4 —
+      서로 다른 코드 결과가 한 검사로 중복 제거되는 문제).
     """
 
     try:
@@ -103,8 +207,10 @@ def git_code_identity() -> tuple[str, bool]:
         )
     except (OSError, subprocess.SubprocessError):
         return "", False
-    dirty = status.returncode == 0 and bool(status.stdout.strip())
-    return head.stdout.strip(), dirty
+    revision = head.stdout.strip()
+    if status.returncode != 0 or not status.stdout.strip():
+        return revision, False
+    return f"{revision}-dirty-{_code_digest(status.stdout)}", True
 
 
 @dataclass(frozen=True)
@@ -531,6 +637,8 @@ def write_report(
 
 
 __all__ = [
+    "CODE_DIGEST_CHARS",
+    "CODE_PATH_PREFIXES",
     "DEFAULT_JSONL",
     "DEFAULT_REPORT",
     "GOOD_TARGET",
