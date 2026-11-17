@@ -180,6 +180,9 @@ def git_code_identity() -> tuple[str, bool]:
     API 생성·워커 시작·평가 CLI 시작 시 1회 호출한다(이미지별 핫패스 금지).
     git 이 없거나 실패하면 ``("", False)`` — 검사를 막지 않는다.
 
+    * 상태 불명(rev-parse 실패·status 실패·타임아웃): ``("", False)``.
+      dirty 여부를 알 수 없는 상태를 clean ``(HEAD, False)`` 로 기록하지 않는다
+      (감사 6.1 fail-open 제거 — 불명 신원은 clean 신원과 fingerprint 가 다르다).
     * clean 트리: ``(HEAD, False)`` — 기존 계약·기존 fingerprint 와 완전히 같다
       (기존 DB 행·보고서 하위 호환). subprocess 는 2회(rev-parse + status)뿐이다.
     * dirty 트리: ``(<HEAD>-dirty-<digest>, True)``. digest 는 미커밋 **내용**
@@ -208,7 +211,11 @@ def git_code_identity() -> tuple[str, bool]:
     except (OSError, subprocess.SubprocessError):
         return "", False
     revision = head.stdout.strip()
-    if status.returncode != 0 or not status.stdout.strip():
+    if status.returncode != 0:
+        # status 실패 = 상태 불명. clean 으로 기록하지 않는다(감사 6.1).
+        # code_sha 를 비워 clean(HEAD) 신원과 섞이지 않게 한다. 검사는 막지 않는다.
+        return "", False
+    if not status.stdout.strip():
         return revision, False
     return f"{revision}-dirty-{_code_digest(status.stdout)}", True
 

@@ -9,6 +9,8 @@ git 출력과 맞는지는 별도 tmp 저장소 테스트로 확인한다.
 * dirty 트리 → ``(f"{HEAD}-dirty-{16진수 16자}", True)`` — 미커밋 **내용**이
   다르면 code_sha 가 달라진다.
 * git 실패 → ``("", False)``. diff 만 실패해도 clean 으로 오판하지 않는다.
+* 상태 불명(status 실패·타임아웃) → ``("", False)`` — clean ``(HEAD, False)`` 와
+  구분한다(감사 6.1 fail-open 제거).
 """
 
 from __future__ import annotations
@@ -195,11 +197,23 @@ def test_git_missing_returns_empty(monkeypatch: pytest.MonkeyPatch) -> None:
     assert recalibration.git_code_identity() == ("", False)
 
 
-def test_status_failure_keeps_sha(monkeypatch: pytest.MonkeyPatch) -> None:
-    stub = _install(monkeypatch, _GitStub(head=OTHER_HEAD, status="", status_code=128))
+def test_status_unknown_is_not_clean(monkeypatch: pytest.MonkeyPatch) -> None:
+    """status 실패·타임아웃(상태 불명)은 clean 이 아니라 ``("", False)`` (감사 6.1).
 
-    assert recalibration.git_code_identity() == (OTHER_HEAD, False)
+    rev-parse 가 성공했어도 dirty 여부를 모르면 ``(HEAD, False)`` 로 기록하지 않는다.
+    """
+
+    stub = _install(monkeypatch, _GitStub(head=OTHER_HEAD, status="", status_code=128))
+    assert recalibration.git_code_identity() == ("", False)
     assert len(stub.calls) == 2
+
+    def timeout_run(cmd: list[str], **_kw: object) -> types.SimpleNamespace:
+        if cmd[1:2] == ["status"]:
+            raise subprocess.TimeoutExpired(cmd, 10)
+        return _completed(OTHER_HEAD)
+
+    monkeypatch.setattr(recalibration.subprocess, "run", timeout_run)
+    assert recalibration.git_code_identity() == ("", False)
 
 
 def test_diff_failure_falls_back_and_stays_dirty(monkeypatch: pytest.MonkeyPatch) -> None:
