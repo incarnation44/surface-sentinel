@@ -2869,7 +2869,19 @@ def _run_data(args: argparse.Namespace) -> int:
     return EXIT_USAGE
 
 
+def _ensure_utf8_stdio() -> None:
+    """비-UTF-8 콘솔·파이프(예: 영문 Windows cp1252)에서 한글 출력 오류를 막는다."""
+
+    for stream in (sys.stdout, sys.stderr):
+        encoding = (getattr(stream, "encoding", None) or "").lower().replace("_", "-")
+        reconfigure = getattr(stream, "reconfigure", None)
+        if encoding != "utf-8" and callable(reconfigure):
+            with contextlib.suppress(OSError, ValueError):
+                reconfigure(encoding="utf-8", errors="replace")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
+    _ensure_utf8_stdio()
     parser = build_parser()
     args = parser.parse_args(argv)
     if args.command == "doctor":
