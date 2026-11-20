@@ -46,23 +46,51 @@ def load_schema_sql() -> str:
 
 
 def connect(db_path: str | Path) -> sqlite3.Connection:
-    """DB에 연결하고 WAL·외래키를 켠다.
+    """DB에 연결하고 busy_timeout·외래키·WAL을 켠다.
 
     부모 디렉터리가 없으면 만든다. 반환된 연결은 ``row_factory``가
-    :class:`sqlite3.Row`라 컬럼 이름으로 값을 읽는다.
+    :class:`sqlite3.Row`라 컬럼 이름으로 값을 읽는다. ``PRAGMA`` 실행 중
+    오류가 나면 열린 연결을 정리하고 :class:`DatabaseError`로 변환한다.
     """
 
     path = Path(db_path)
     if path.parent != Path(""):
         path.parent.mkdir(parents=True, exist_ok=True)
+    connection: sqlite3.Connection | None = None
     try:
         connection = sqlite3.connect(str(path))
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA busy_timeout=5000")
+        connection.execute("PRAGMA foreign_keys=ON")
+        connection.execute("PRAGMA journal_mode=WAL")
     except sqlite3.Error as exc:
+        if connection is not None:
+            connection.close()
         raise DatabaseError(f"DB를 열지 못했습니다: {path} ({exc})") from exc
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA journal_mode=WAL")
-    connection.execute("PRAGMA foreign_keys=ON")
-    connection.execute("PRAGMA busy_timeout=5000")
+    return connection
+
+
+def connect_readonly(db_path: str | Path) -> sqlite3.Connection:
+    """기존 DB를 SQLite URI 읽기 전용(``?mode=ro``)으로 연다.
+
+    파일이나 WAL을 생성·변경하지 않는다. 파일이 없거나 연결/PRAGMA에
+    실패하면 열린 연결을 정리하고 :class:`DatabaseError`를 발생시킨다.
+    """
+
+    path = Path(db_path)
+    if not path.is_file():
+        raise DatabaseError(f"DB 파일이 없습니다: {path}")
+    uri = f"{path.resolve().as_uri()}?mode=ro"
+    connection: sqlite3.Connection | None = None
+    try:
+        connection = sqlite3.connect(uri, uri=True)
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA busy_timeout=5000")
+        connection.execute("PRAGMA query_only=ON")
+    except sqlite3.Error as exc:
+        if connection is not None:
+            connection.close()
+        raise DatabaseError(f"DB를 읽기 전용으로 열지 못했습니다: {path} ({exc})") from exc
     return connection
 
 
@@ -233,6 +261,7 @@ __all__ = [
     "TRIGGER_SECTION_END",
     "append_only_trigger_sql",
     "connect",
+    "connect_readonly",
     "ensure_append_only_triggers",
     "init_db",
     "load_schema_sql",

@@ -120,7 +120,7 @@ def test_to_sample_result_fills_contract_fields() -> None:
     assert "cfg-abc" in result.config_hash
     feature = result.components[0]
     assert feature.index == 0
-    assert feature.bbox == (40, 10, 60, 30)
+    assert feature.bbox == (40, 10, 20, 20)
     assert feature.area_px == 400
     assert feature.area_ratio == pytest.approx(400 / (200 * 100))
     assert feature.aspect_ratio == pytest.approx(1.0)
@@ -181,3 +181,62 @@ def test_to_sample_result_is_deterministic() -> None:
     first = to_sample_result(dets, **kwargs)  # type: ignore[arg-type]
     second = to_sample_result(dets, **kwargs)  # type: ignore[arg-type]
     assert first.to_dict() == second.to_dict()
+
+
+def test_adapter_bbox_xywh_contract_matches_evidence_and_stability() -> None:
+    """adapter 의 ComponentFeature.bbox 는 (x, y, w, h) 계약으로 IoU·중재와 일치한다."""
+
+    from surface_sentinel.agent.evidence import assess_cross_evidence, bbox_iou
+    from surface_sentinel.agent.stability import ArbitrationVerdict, arbitrate_patches
+    from surface_sentinel.contracts import ComponentFeature, EngineObservation
+
+    yolo_res = to_sample_result(
+        [Detection(bbox_xyxy=(100.0, 200.0, 120.0, 230.0), score=0.85)],
+        run_id="run-xywh",
+        sample_id="s-xywh",
+        image_size=(240, 320),
+    )
+    yolo_comp = yolo_res.components[0]
+    assert yolo_comp.bbox == (100, 200, 20, 30)
+    assert bbox_iou(yolo_comp.bbox, (100, 200, 20, 30)) == pytest.approx(1.0)
+
+    opencv_comp = ComponentFeature(
+        index=0,
+        area_px=600,
+        bbox=(100, 200, 20, 30),
+        area_ratio=600 / (240 * 320),
+        aspect_ratio=20 / 30,
+        elongation=1.5,
+        solidity=1.0,
+        mean_contrast_gray=40.0,
+        max_contrast_gray=80.0,
+        integrated_contrast=24000.0,
+        border_distance_px=100.0,
+        touches_roi_border=False,
+        evidence=0.85,
+    )
+    opencv_res = SampleResult(
+        run_id="run-xywh",
+        sample_id="s-xywh",
+        original_id="s-xywh",
+        split="tune",
+        label="defect",
+        status=Status.NG,
+        score=0.85,
+        reasons=(ReasonCode.DEFECT_EVIDENCE_STRONG,),
+        components=(opencv_comp,),
+    )
+    obs_cv = EngineObservation(engine="opencv", result=opencv_res)
+    obs_yolo = EngineObservation(engine="yolo-det", result=yolo_res, task="det")
+
+    assessment = assess_cross_evidence(obs_cv, obs_yolo)
+    assert len(assessment.matches) == 1
+    assert assessment.matches[0].iou == pytest.approx(1.0)
+
+    image = np.full((320, 240, 3), 120, dtype=np.uint8)
+    image[200:230, 100:120, :] = 20
+    arbitration = arbitrate_patches(image, obs_cv, obs_yolo)
+    assert arbitration.verdict is ArbitrationVerdict.ALIGNED
+    assert arbitration.patch_b is not None
+    assert arbitration.patch_b.bbox == (100, 200, 20, 30)
+    assert arbitration.patch_b.local_contrast >= 80.0

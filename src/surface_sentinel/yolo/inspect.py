@@ -28,6 +28,7 @@ from ..config import AppConfig
 from ..contracts import EngineObservation, ErrorCode, ReasonCode, SampleResult, Stage, Status
 from ..pipeline import InspectionOutcome, inspect_image
 from ..pipeline.evidence import sanitize_sample_id
+from ..pipeline.stages import SEALED_SPLITS
 from ..records.fingerprint import (
     COMBINE_POLICY_VERSION,
     canonical_json_sha256,
@@ -251,6 +252,7 @@ def inspect_with_yolo(
     onnx_path: Path | None = None,
     policy: YoloDecisionPolicy | None = None,
     registry: YoloEngineRegistry | None = None,
+    allow_sealed: bool = False,
 ) -> InspectionOutcome:
     """한 이미지를 YOLO(det/seg/combined)로 검사한다.
 
@@ -289,6 +291,9 @@ def inspect_with_yolo(
             )
         )
 
+    if split in SEALED_SPLITS and not allow_sealed:
+        return fail(ErrorCode.E_SEALED_DENIED, Stage.VALIDATE_INPUT)
+
     task = engine_task(engine)
     model_path = resolve_onnx_path(engine, onnx_path)
 
@@ -301,6 +306,7 @@ def inspect_with_yolo(
             label=label,
             split=split,
             output_dir=output_dir,
+            allow_sealed=allow_sealed,
         ).result
         timings["opencv_total_ms"] = (time.perf_counter() - started) * 1000.0
 

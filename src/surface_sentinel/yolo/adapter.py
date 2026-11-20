@@ -89,7 +89,7 @@ def _component_from_detection(
     return ComponentFeature(
         index=index,
         area_px=area_px,
-        bbox=(x1, y1, x2, y2),
+        bbox=(x1, y1, width, height),
         area_ratio=area_ratio,
         aspect_ratio=aspect_ratio,
         elongation=max(1.0, elongation),

@@ -1,9 +1,9 @@
-"""T07 브라우저 테스트 (로컬 Chrome 필요).
+"""T07 브라우저 테스트 (로컬 Chrome 또는 Playwright Chromium 필요).
 
 CI에서는 제외된다(``-m "not data and not browser"``). 로컬 실행:
-``uv run pytest -m browser``. Playwright 브라우저 바이너리 대신
-시스템 Chrome(``channel="chrome"``)을 쓰고, 없으면 건너뛴다.
-통과 기준: 콘솔 오류 0·외부 요청 0·키보드 J/K 흐름·폼 제출 흐름.
+``uv run pytest -m browser``. 시스템 Chrome(``channel="chrome"``)을 먼저
+시도하고, 없으면 설치된 Playwright Chromium 으로 폴백한다. 둘 다 없으면
+건너뛴다. 통과 기준: 콘솔 오류 0·외부 요청 0·키보드 J/K 흐름·폼 제출 흐름.
 """
 
 from __future__ import annotations
@@ -51,10 +51,17 @@ def base_url(tmp_path: Path) -> Iterator[str]:
 def browser_page(base_url: str) -> Iterator[tuple[Any, list[str], list[str]]]:
     sync_api = pytest.importorskip("playwright.sync_api")
     with sync_api.sync_playwright() as playwright:
-        try:
-            browser = playwright.chromium.launch(channel="chrome", headless=True)
-        except Exception:
-            pytest.skip("로컬 Chrome을 찾을 수 없어 브라우저 테스트를 건너뜁니다.")
+        browser = None
+        for launch_kwargs in ({"channel": "chrome", "headless": True}, {"headless": True}):
+            try:
+                browser = playwright.chromium.launch(**launch_kwargs)
+                break
+            except Exception:
+                continue
+        if browser is None:
+            pytest.skip(
+                "로컬 Chrome 및 Playwright Chromium을 찾을 수 없어 브라우저 테스트를 건너뜁니다."
+            )
         page = browser.new_page()
         errors: list[str] = []
         external: list[str] = []

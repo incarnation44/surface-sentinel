@@ -15,12 +15,19 @@ import pytest
 
 from surface_sentinel.cli import main
 from surface_sentinel.contracts import ReasonCode, SampleResult, Status
-from surface_sentinel.records.db import connect, init_db, load_schema_sql
+from surface_sentinel.records.db import (
+    DatabaseError,
+    connect,
+    connect_readonly,
+    init_db,
+    load_schema_sql,
+)
 from surface_sentinel.records.store import (
     RecordsError,
     append_review,
     get_inspection,
     insert_inspection,
+    insert_inspection_with_dedup,
     list_inspections,
     stats,
 )
@@ -287,3 +294,69 @@ def test_cli_records_list_without_db_returns_exit_three(
 ) -> None:
     assert main(["records", "list", "--db", str(tmp_path / "missing.db")]) == 3
     assert "기록 DB" in capsys.readouterr().err
+
+
+def test_connect_sets_busy_timeout_before_wal_and_closes_on_pragma_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from surface_sentinel.records import db as db_module
+
+    executed: list[str] = []
+    closed = {"flag": False}
+
+    class _FakeConn:
+        row_factory = None
+
+        def execute(self, sql: str) -> None:
+            executed.append(sql)
+            if "journal_mode=WAL" in sql:
+                raise sqlite3.OperationalError("database is locked")
+
+        def close(self) -> None:
+            closed["flag"] = True
+
+    monkeypatch.setattr(db_module.sqlite3, "connect", lambda *_a, **_kw: _FakeConn())
+
+    with pytest.raises(DatabaseError, match="database is locked"):
+        connect(tmp_path / "locked.db")
+
+    assert executed == [
+        "PRAGMA busy_timeout=5000",
+        "PRAGMA foreign_keys=ON",
+        "PRAGMA journal_mode=WAL",
+    ]
+    assert closed["flag"] is True
+
+
+def test_connect_readonly_rejects_writes_and_missing_file(tmp_path: Path) -> None:
+    missing = tmp_path / "absent.db"
+    with pytest.raises(DatabaseError, match="없습니다"):
+        connect_readonly(missing)
+    assert not missing.exists()
+
+    db_path = tmp_path / "records.db"
+    writer = connect(db_path)
+    try:
+        init_db(writer)
+    finally:
+        writer.close()
+
+    reader = connect_readonly(db_path)
+    try:
+        assert reader.execute("PRAGMA query_only").fetchone()[0] == 1
+        with pytest.raises(sqlite3.OperationalError):
+            reader.execute("CREATE TABLE forbidden (id INTEGER)")
+    finally:
+        reader.close()
+
+
+def test_insert_inspection_with_dedup_reports_atomic_status(conn: sqlite3.Connection) -> None:
+    first_id, first_dedup = insert_inspection_with_dedup(
+        conn, _result(), engine="opencv", image_sha256=SHA_A
+    )
+    second_id, second_dedup = insert_inspection_with_dedup(
+        conn, _result(sample_id="70002"), engine="opencv", image_sha256=SHA_A
+    )
+    assert first_dedup is False
+    assert second_dedup is True
+    assert second_id == first_id

@@ -1536,13 +1536,13 @@ def _cmd_records_stats(args: argparse.Namespace) -> int:
 
 
 def _cmd_records_verify(args: argparse.Namespace) -> int:
-    from .records.db import DatabaseError, connect, verify_records_integrity
+    from .records.db import DatabaseError, connect_readonly, verify_records_integrity
 
     if not _require_db_file(args.db):
         return EXIT_INPUT
     connection = None
     try:
-        connection = connect(args.db)
+        connection = connect_readonly(args.db)
         report = verify_records_integrity(connection)
     except DatabaseError as exc:
         _print_error(f"기록 DB 오류: {exc}")

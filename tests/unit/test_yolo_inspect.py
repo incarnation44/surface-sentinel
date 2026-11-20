@@ -14,7 +14,7 @@ import pytest
 
 import synthetic
 from surface_sentinel.config import load_config
-from surface_sentinel.contracts import ReasonCode, SampleResult, Status
+from surface_sentinel.contracts import ErrorCode, ReasonCode, SampleResult, Stage, Status
 from surface_sentinel.pipeline import inspect_image
 from surface_sentinel.records.fingerprint import file_sha256, policy_hash
 from surface_sentinel.yolo import inspect as yolo_inspect
@@ -616,3 +616,67 @@ def test_single_engine_has_no_observations(
     _install_stub(monkeypatch, [_det(0.8)])
     outcome = inspect_with_yolo(image, BASE_CONFIG, engine="yolo-det", onnx_path=model)
     assert outcome.engine_observations == ()
+
+
+@pytest.mark.parametrize("engine", ("yolo-det", "yolo-seg", "combined"))
+@pytest.mark.parametrize("split", ("test", "official_test"))
+def test_sealed_split_denied_before_inference_and_opencv(
+    tmp_path: Path,
+    image: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    engine: str,
+    split: str,
+) -> None:
+    """봉인 분할(test/official_test)은 YOLO/combined 경로에서도 추론 전에 차단된다."""
+
+    model = _model(tmp_path, "seg" if engine == "yolo-seg" else "det")
+    monkeypatch.setenv(COMBINED_TASK_ENV, "det")
+    engines = _install_stub(monkeypatch, [_det(0.9)])
+    opencv_calls: list[Path] = []
+
+    def fail_if_called(*args: object, **kwargs: object) -> object:
+        opencv_calls.append(Path(str(args[0])))
+        raise AssertionError("봉인 분할에서 OpenCV 파이프라인이 호출되면 안 됩니다")
+
+    monkeypatch.setattr(yolo_inspect, "inspect_image", fail_if_called)
+
+    outcome = inspect_with_yolo(
+        image,
+        BASE_CONFIG,
+        engine=engine,
+        split=split,
+        onnx_path=model,
+        output_dir=tmp_path / "ov",
+    )
+
+    result = outcome.result
+    assert result.status is Status.ERROR
+    assert result.error_code is ErrorCode.E_SEALED_DENIED
+    assert result.error_stage is Stage.VALIDATE_INPUT
+    assert result.overlay_path == ""
+    assert outcome.engine_observations == ()
+    assert engines == []
+    assert opencv_calls == []
+
+
+def test_allow_sealed_opt_in_runs_on_synthetic_fixture(
+    tmp_path: Path, image: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """명시적 allow_sealed=True 일 때만 봉인 split 검사를 진행한다(합성 입력 전용)."""
+
+    model = _model(tmp_path)
+    engines = _install_stub(monkeypatch, [_det(0.8)])
+
+    result = inspect_with_yolo(
+        image,
+        BASE_CONFIG,
+        engine="yolo-det",
+        split="test",
+        onnx_path=model,
+        allow_sealed=True,
+    ).result
+
+    assert result.status is Status.NG
+    assert result.error_code is None
+    assert len(engines) == 1
+    assert len(engines[0].calls) == 1

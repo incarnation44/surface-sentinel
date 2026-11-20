@@ -316,3 +316,33 @@ def test_cli_records_verify_missing_db(
 ) -> None:
     assert main(["records", "verify", "--db", str(tmp_path / "missing.db")]) == 3
     assert "기록 DB가 없습니다" in capsys.readouterr().err
+
+
+def test_cli_records_verify_is_readonly_and_leaves_db_untouched(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """records verify 는 읽기 전용 연결(?mode=ro)만 사용해 DB·WAL 을 수정/생성하지 않는다."""
+
+    db_path = tmp_path / "readonly_check.db"
+    connection = connect(db_path)
+    try:
+        init_db(connection)
+        connection.execute("PRAGMA journal_mode=DELETE")
+        connection.commit()
+    finally:
+        connection.close()
+
+    wal_path = Path(f"{db_path}-wal")
+    shm_path = Path(f"{db_path}-shm")
+    assert not wal_path.exists()
+    before_stat = db_path.stat()
+    capsys.readouterr()
+
+    assert main(["records", "verify", "--db", str(db_path)]) == 0
+    captured = capsys.readouterr()
+    assert "PASS" in captured.out
+    assert not wal_path.exists()
+    assert not shm_path.exists()
+    after_stat = db_path.stat()
+    assert after_stat.st_mtime_ns == before_stat.st_mtime_ns
+    assert after_stat.st_size == before_stat.st_size

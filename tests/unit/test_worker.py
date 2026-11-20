@@ -463,3 +463,150 @@ def test_cli_worker_run_once(tmp_path: Path, capsys: pytest.CaptureFixture[str])
     assert "처리" in captured.out
     assert "기록" in captured.out
     assert len(_rows(db_path)) == 2
+
+
+def test_discard_artifacts_does_not_delete_prefix_colliding_samples(tmp_path: Path) -> None:
+    """sample_id='01' 폐기 시 '01_02_*' 등 타 샘플 산출물은 절대 삭제하지 않는다."""
+
+    from surface_sentinel.agent.worker import _discard_artifacts
+
+    out_dir = tmp_path / "overlays"
+    out_dir.mkdir()
+    for name in (
+        "01_overlay.png",
+        "01_result.json",
+        "01_yolo.png",
+        "01_02_overlay.png",
+        "01_02_result.json",
+        "01_02_yolo.png",
+    ):
+        (out_dir / name).write_bytes(b"data")
+
+    _discard_artifacts(out_dir, "01")
+
+    remaining = sorted(p.name for p in out_dir.iterdir())
+    assert remaining == ["01_02_overlay.png", "01_02_result.json", "01_02_yolo.png"]
+
+
+def test_worker_ok_discard_preserves_prefix_colliding_ng_overlay(tmp_path: Path) -> None:
+    """run_worker(ok_sample_rate=0)에서 '01.png' 폐기가 '01_02.png' 오버레이를 보존한다."""
+
+    incoming = tmp_path / "incoming"
+    incoming.mkdir()
+    synthetic.write_png(incoming / "01.png", synthetic.good_image())
+    defect_image, _mask = synthetic.dark_defect_image()
+    synthetic.write_png(incoming / "01_02.png", defect_image)
+    db_path = tmp_path / "records.db"
+
+    run_worker(
+        incoming=incoming,
+        db_path=db_path,
+        config=BASE_CONFIG,
+        ok_sample_rate=0,
+        once=True,
+    )
+
+    by_sample = {row["sample_id"]: row for row in _rows(db_path)}
+    assert by_sample["01"]["status"] == "OK"
+    assert by_sample["01"]["overlay_path"] == ""
+    assert by_sample["01_02"]["status"] == "NG"
+    ng_overlay = Path(str(by_sample["01_02"]["overlay_path"]))
+    assert ng_overlay.is_file()
+    assert ng_overlay.name == "01_02_overlay.png"
+
+
+def test_worker_retries_transient_oserror_instead_of_permanent_skip(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """일시 OSError 로 해시 읽기에 실패한 파일은 seen 에 영구 등록되지 않고 재시도된다."""
+
+    from surface_sentinel.agent import worker as worker_module
+
+    incoming = tmp_path / "incoming"
+    incoming.mkdir()
+    synthetic.write_png(incoming / "01.png", synthetic.good_image())
+    db_path = tmp_path / "records.db"
+
+    real_sha = worker_module.file_sha256
+    attempts = {"n": 0}
+
+    def flaky_sha(path: str | Path) -> str:
+        attempts["n"] += 1
+        if attempts["n"] == 1:
+            raise OSError("temporary file lock")
+        return real_sha(path)
+
+    monkeypatch.setattr(worker_module, "file_sha256", flaky_sha)
+
+    class _StopLoop(BaseException):
+        pass
+
+    sleeps = {"n": 0}
+
+    def fake_sleep(_seconds: float) -> None:
+        sleeps["n"] += 1
+        if sleeps["n"] >= 1:
+            raise _StopLoop
+
+    monkeypatch.setattr(worker_module.time, "sleep", fake_sleep)
+
+    with pytest.raises(_StopLoop):
+        run_worker(
+            incoming=incoming,
+            db_path=db_path,
+            config=BASE_CONFIG,
+            poll_seconds=0.01,
+            once=False,
+        )
+
+    assert attempts["n"] == 2
+    rows = _rows(db_path)
+    assert len(rows) == 1
+    assert rows[0]["sample_id"] == "01"
+
+
+def test_worker_caps_permanent_oserror_retries_to_prevent_audit_spam(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """지속적 OSError 파일은 max_retries 상한 이후 seen 에 등록돼 무한 로그 누적을 막는다."""
+
+    from surface_sentinel.agent import worker as worker_module
+
+    incoming = tmp_path / "incoming"
+    incoming.mkdir()
+    synthetic.write_png(incoming / "locked.png", synthetic.good_image())
+    db_path = tmp_path / "records.db"
+
+    attempts = {"n": 0}
+
+    def always_fail(_path: str | Path) -> str:
+        attempts["n"] += 1
+        raise OSError("permission denied")
+
+    monkeypatch.setattr(worker_module, "file_sha256", always_fail)
+
+    class _StopLoop(BaseException):
+        pass
+
+    sleeps = {"n": 0}
+
+    def fake_sleep(_seconds: float) -> None:
+        sleeps["n"] += 1
+        if sleeps["n"] >= 3:
+            raise _StopLoop
+
+    monkeypatch.setattr(worker_module.time, "sleep", fake_sleep)
+
+    with pytest.raises(_StopLoop):
+        run_worker(
+            incoming=incoming,
+            db_path=db_path,
+            config=BASE_CONFIG,
+            max_retries=2,
+            poll_seconds=0.01,
+            once=False,
+        )
+
+    assert attempts["n"] == 2
+    error_events = [e for e in _audit_events(db_path) if e["event"] == "error"]
+    assert len(error_events) == 2

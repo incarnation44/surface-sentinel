@@ -88,7 +88,7 @@ def _timing_json(result: SampleResult) -> str:
     return json.dumps(dict(result.timing_ms), ensure_ascii=False, sort_keys=True)
 
 
-def insert_inspection(
+def insert_inspection_with_dedup(
     connection: sqlite3.Connection,
     result: SampleResult,
     *,
@@ -99,16 +99,13 @@ def insert_inspection(
     task: str = "",
     model_sha256: str = "",
     provenance_complete: int | None = None,
-) -> int:
-    """검사 결과 한 건을 기록하고 행 ``id``를 돌려준다.
+) -> tuple[int, bool]:
+    """검사 결과 한 건을 기록하고 ``(id, deduplicated)``를 원자적으로 돌려준다.
 
     중복제거 키는 ``(image_sha256, inspection_fingerprint)`` 쌍이다(P0-2).
-    같은 이미지+같은 신원이면 새 행을 만들지 않고 **기존 행의 id**를 돌려준다.
-    같은 이미지라도 엔진·모델·설정 등이 다르면 별도 행으로 기록한다.
-    기존 행은 덮어쓰지 않는다.
-
-    ``fingerprint``를 주지 않으면 engine·config_hash 등으로 기본 신원을 계산한다
-    (code_sha 미포함 — 진입점에서 전체 신원을 계산해 주입하는 것을 권장).
+    같은 이미지+같은 신원이 이미 있거나 동시 삽입에서 ``UNIQUE`` 제약에 걸리면
+    기존 행의 ``id``와 ``deduplicated=True``를 돌려준다. 새로 삽입한 호출자만
+    ``deduplicated=False``를 받는다.
     """
 
     sha = normalize_sha256(image_sha256)
@@ -131,7 +128,7 @@ def insert_inspection(
         (sha, fingerprint),
     ).fetchone()
     if existing is not None:
-        return int(existing["id"])
+        return int(existing["id"]), True
 
     params = (
         str(result.run_id),
@@ -171,8 +168,45 @@ def insert_inspection(
         ).fetchone()
         if row is None:
             raise
-        return int(row["id"])
-    return int(cursor.lastrowid or 0)
+        return int(row["id"]), True
+    return int(cursor.lastrowid or 0), False
+
+
+def insert_inspection(
+    connection: sqlite3.Connection,
+    result: SampleResult,
+    *,
+    engine: str,
+    image_sha256: str,
+    model_version: str = "",
+    fingerprint: str | None = None,
+    task: str = "",
+    model_sha256: str = "",
+    provenance_complete: int | None = None,
+) -> int:
+    """검사 결과 한 건을 기록하고 행 ``id``를 돌려준다.
+
+    중복제거 키는 ``(image_sha256, inspection_fingerprint)`` 쌍이다(P0-2).
+    같은 이미지+같은 신원이면 새 행을 만들지 않고 **기존 행의 id**를 돌려준다.
+    같은 이미지라도 엔진·모델·설정 등이 다르면 별도 행으로 기록한다.
+    기존 행은 덮어쓰지 않는다.
+
+    ``fingerprint``를 주지 않으면 engine·config_hash 등으로 기본 신원을 계산한다
+    (code_sha 미포함 — 진입점에서 전체 신원을 계산해 주입하는 것을 권장).
+    """
+
+    row_id, _deduplicated = insert_inspection_with_dedup(
+        connection,
+        result,
+        engine=engine,
+        image_sha256=image_sha256,
+        model_version=model_version,
+        fingerprint=fingerprint,
+        task=task,
+        model_sha256=model_sha256,
+        provenance_complete=provenance_complete,
+    )
+    return row_id
 
 
 def append_review(
@@ -539,6 +573,7 @@ __all__ = [
     "get_inspection",
     "insert_engine_observation",
     "insert_inspection",
+    "insert_inspection_with_dedup",
     "list_agent_assessments",
     "list_engine_observations",
     "list_inspections",

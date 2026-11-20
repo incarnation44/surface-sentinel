@@ -17,5 +17,15 @@ jobs:
         with:
           python-version: "3.11"
       - run: uv sync --frozen
+      - run: uv lock --check
       - run: uv run ruff check .
+      - run: uv run surface-sentinel gate
+      - name: Verify records DB schema and append-only triggers
+        run: >
+          uv run python -c "import pathlib, subprocess, sys, tempfile;
+          d = tempfile.TemporaryDirectory();
+          db = pathlib.Path(d.name) / 'records.db';
+          subprocess.run([sys.executable, '-m', 'surface_sentinel', 'records', 'init', '--db', str(db)], check=True);
+          subprocess.run([sys.executable, '-m', 'surface_sentinel', 'records', 'verify', '--db', str(db)], check=True);
+          d.cleanup()"
       - run: uv run pytest -m "not data and not browser"

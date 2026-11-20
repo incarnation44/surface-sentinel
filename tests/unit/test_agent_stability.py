@@ -226,3 +226,36 @@ def test_arbitrate_patches_both_salient_and_aligned() -> None:
     )
     aligned = arbitrate_patches(img, obs_a, obs_b_same)
     assert aligned.verdict is ArbitrationVerdict.ALIGNED
+
+
+def test_arbitrate_patches_single_zero_salience_patch_does_not_crash() -> None:
+    """한쪽 패치가 None 이고 반대쪽이 경계 비접촉·salience=0 이어도 AssertionError 없이 중재한다."""
+
+    uniform = np.full((160, 160, 3), 120, dtype=np.uint8)
+    empty_a = make_observation("opencv", Status.OK, components=[], score=0.0)
+    interior_b = make_observation(
+        "yolo-seg",
+        Status.REVIEW,
+        components=[make_component(0, (60, 60, 20, 20))],
+        score=0.30,
+        task="seg",
+    )
+
+    res_b = arbitrate_patches(uniform, empty_a, interior_b)
+    assert res_b.verdict is ArbitrationVerdict.ENGINE_B_SALIENT
+    assert res_b.patch_a is None
+    assert res_b.patch_b is not None
+    assert res_b.patch_b.salience_index == 0.0
+    assert res_b.patch_b.touches_border is False
+
+    interior_a = make_observation(
+        "opencv",
+        Status.REVIEW,
+        components=[make_component(0, (60, 60, 20, 20))],
+        score=0.30,
+    )
+    empty_b = make_observation("yolo-seg", Status.OK, components=[], score=0.0, task="seg")
+    res_a = arbitrate_patches(uniform, interior_a, empty_b)
+    assert res_a.verdict is ArbitrationVerdict.ENGINE_A_SALIENT
+    assert res_a.patch_a is not None
+    assert res_a.patch_b is None

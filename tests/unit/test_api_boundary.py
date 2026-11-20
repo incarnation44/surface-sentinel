@@ -287,3 +287,93 @@ def test_dedup_does_not_change_machine_status(client: TestClient) -> None:
     assert second["status"] == first["status"]
     detail = client.get(f"/api/inspections/{first['inspection_id']}").json()
     assert detail["status"] == first["status"]
+
+
+@pytest.mark.parametrize("engine", ("yolo-det", "yolo-seg", "combined"))
+@pytest.mark.parametrize("split", ("test", "official_test"))
+def test_api_yolo_sealed_split_denied_without_inference(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    engine: str,
+    split: str,
+) -> None:
+    """API /api/inspect 도 YOLO/combined 봉인 split 요청을 추론 전에 E_SEALED_DENIED 로 거부한다."""
+
+    from surface_sentinel.yolo import inspect as yolo_inspect
+
+    calls: list[object] = []
+
+    class _FailEngine:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            calls.append((args, kwargs))
+            raise AssertionError("봉인 분할에서 YOLO 엔진이 생성되면 안 됩니다")
+
+    monkeypatch.setattr(yolo_inspect, "YoloOnnxEngine", _FailEngine)
+    response = client.post(
+        "/api/inspect",
+        params={"engine": engine},
+        files={"file": ("sealed_probe.png", synthetic_png(seed=9), "image/png")},
+        data={"label": "unknown", "split": split},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ERROR"
+    assert payload["error_code"] == "E_SEALED_DENIED"
+    assert payload["error_stage"] == "validate_input"
+    assert calls == []
+
+
+def test_dedup_canonical_non_error_clears_current_request_error_fields(
+    client: TestClient, runs_dir: Path
+) -> None:
+    """단일 엔진 dedup 시 canonical 행이 OK 면 현재 요청의 ERROR 진단 필드가 혼입되지 않는다."""
+
+    payload = synthetic_png(seed=11)
+    first = upload(client, payload, split="tune").json()
+    assert first["status"] != "ERROR"
+
+    # 같은 (image_sha256, fingerprint)로 split="test" 요청 → 파이프라인은 E_SEALED_DENIED
+    # ERROR 를 내지만, DB canonical 행은 비-ERROR 이므로 error_code/error_stage 를 비워야 한다.
+    second = upload(client, payload, split="test").json()
+    assert second["deduplicated"] is True
+    assert second["inspection_id"] == first["inspection_id"]
+    assert second["status"] == first["status"]
+    assert second["error_code"] == ""
+    assert second["error_stage"] == ""
+
+
+def test_store_upload_writes_atomically_without_temp_leftovers(tmp_path: Path) -> None:
+    payload = synthetic_png(seed=12)
+    sha = hashlib.sha256(payload).hexdigest()
+    upload_dir = tmp_path / "uploads"
+
+    saved = app_module._store_upload(upload_dir, payload, sha, ".png")
+    assert saved.is_file()
+    assert saved.read_bytes() == payload
+    # 임시 파일(.tmp-*) 잔여물 0건 확인
+    assert [p.name for p in upload_dir.iterdir()] == [saved.name]
+
+
+def test_inspection_spec_fallback_is_limited_to_error_outcomes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """모델 부재 시 일반 경로는 예외를 전파하고, ERROR 조기 거부 경로만 최소 spec 으로 폴백한다."""
+
+    from surface_sentinel.config import default_config
+    from surface_sentinel.yolo import inspect as yolo_inspect
+
+    monkeypatch.setenv(yolo_inspect.ONNX_ROOT_ENV, str(tmp_path / "empty-models"))
+    cfg = default_config()
+
+    with pytest.raises(FileNotFoundError):
+        app_module._inspection_spec(
+            "yolo-det", cfg, code_sha="abc", code_dirty=False, allow_minimal_fallback=False
+        )
+
+    minimal = app_module._inspection_spec(
+        "yolo-det", cfg, code_sha="abc", code_dirty=False, allow_minimal_fallback=True
+    )
+    assert minimal.engine == "yolo-det"
+    assert minimal.model_sha256 == ""
+    assert minimal.provenance_complete is False

@@ -232,14 +232,24 @@ def _inspect(
     )
 
 
+#: 워커 검사에서 생성될 수 있는 샘플 산출물 접미사(접두사 글롭 오삭제 방지).
+_ARTIFACT_SUFFIXES: tuple[str, ...] = (
+    "_overlay.png",
+    "_result.json",
+    "_response.png",
+    "_candidates.png",
+    "_yolo.png",
+)
+
+
 def _discard_artifacts(directory: Path, sample_id: str) -> None:
-    """표본에서 빠진 OK 샘플의 오버레이·결과 JSON을 지운다."""
+    """표본에서 빠진 OK 샘플의 오버레이·결과 JSON 등 지정 산출물만 지운다."""
 
     if not directory.is_dir():
         return
     safe_id = sanitize_sample_id(sample_id)
-    for path in directory.glob(f"{safe_id}_*"):
-        path.unlink(missing_ok=True)
+    for suffix in _ARTIFACT_SUFFIXES:
+        (directory / f"{safe_id}{suffix}").unlink(missing_ok=True)
 
 
 def _validate_options(
@@ -463,6 +473,8 @@ def run_worker(
     run_id = new_run_id(config)
     audit_path = audit_log_path(db_file)
     seen: set[tuple[str, int, int]] = set()
+    oserror_counts: dict[tuple[str, int, int], int] = {}
+    oserror_limit = max(1, max_retries)
 
     connection = connect(db_file)
     try:
@@ -477,8 +489,7 @@ def run_worker(
                 fingerprint = (path.name, int(stat.st_size), int(stat.st_mtime_ns))
                 if not once and fingerprint in seen:
                     continue
-                seen.add(fingerprint)
-                _process_one(
+                outcome = _process_one(
                     connection,
                     path,
                     run_id=run_id,
@@ -493,6 +504,16 @@ def run_worker(
                     spec=spec,
                     registry=registry,
                 )
+                if outcome != "error":
+                    seen.add(fingerprint)
+                    oserror_counts.pop(fingerprint, None)
+                else:
+                    failures = oserror_counts.get(fingerprint, 0) + 1
+                    if failures >= oserror_limit:
+                        seen.add(fingerprint)
+                        oserror_counts.pop(fingerprint, None)
+                    else:
+                        oserror_counts[fingerprint] = failures
                 handled += 1
             if once:
                 return

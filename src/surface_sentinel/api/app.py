@@ -19,11 +19,14 @@ app = create_inspection_app(runs_dir="runs")
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import importlib
 import json
 import logging
+import os
 import sqlite3
+import uuid
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -49,10 +52,9 @@ from ..records.store import (
     RecordsError,
     append_agent_assessment,
     append_review,
-    find_inspection_id,
     get_inspection,
     insert_engine_observation,
-    insert_inspection,
+    insert_inspection_with_dedup,
     list_agent_assessments,
     list_engine_observations,
     list_inspections,
@@ -274,14 +276,16 @@ def _inspection_spec(
     *,
     code_sha: str = "",
     code_dirty: bool = False,
+    allow_minimal_fallback: bool = False,
 ) -> EngineSpec:
     """검사 신원 EngineSpec 을 계산한다(P0-2/P0-3, 평가·워커와 같은 정의).
 
     opencv 는 모델 파일이 없는 기준선 신원. YOLO 계열은 ``yolo.inspect`` 의
     ``inspection_identity`` 로 실제 모델 SHA·정책 해시를 계산한다. ``code_sha``/
     ``code_dirty`` 는 앱 생성 시 1회 계산한 값을 주입한다(요청별 재계산 금지).
-    진입점이 없는 스텁 환경(테스트)에서는 신원 불완전 최소 spec 으로 폴백한다
-    (조용히 opencv 로 판정을 바꾸지는 않는다 — 판정은 이미 파이프라인이 확정했다).
+    봉인 조기 거부(``E_SEALED_DENIED``)처럼 모델 로드 전에 ``ERROR`` 로 끝난
+    경우(``allow_minimal_fallback=True``)에만 최소 spec 으로 폴백하고, 정상
+    판정 경로에서는 모델/설정 오류를 숨기지 않고 그대로 전파한다.
     """
 
     if engine == EngineName.OPENCV.value:
@@ -289,7 +293,11 @@ def _inspection_spec(
     module = importlib.import_module("surface_sentinel.yolo.inspect")
     identity = getattr(module, "inspection_identity", None)
     if callable(identity):
-        return identity(engine, config, code_sha=code_sha, code_dirty=code_dirty)
+        try:
+            return identity(engine, config, code_sha=code_sha, code_dirty=code_dirty)
+        except (FileNotFoundError, ValueError):
+            if not allow_minimal_fallback:
+                raise
     return EngineSpec(
         engine=engine,
         config_hash=config.config_hash,
@@ -399,12 +407,22 @@ async def _read_upload_bounded(upload: UploadFile) -> bytes:
 
 
 def _store_upload(upload_dir: Path, payload: bytes, sha256: str, suffix: str) -> Path:
-    """업로드 바이트를 ``runs_dir`` 아래에 보관한다(같은 해시는 같은 경로)."""
+    """업로드 바이트를 ``runs_dir`` 아래에 원자적으로 보관한다(같은 해시는 같은 경로)."""
 
     upload_dir.mkdir(parents=True, exist_ok=True)
     path = upload_dir / f"{sha256[:16]}{suffix}"
     if not path.is_file():
-        path.write_bytes(payload)
+        temporary = path.with_name(f".{path.name}.tmp-{os.getpid()}-{uuid.uuid4().hex}")
+        try:
+            with temporary.open("wb") as handle:
+                handle.write(payload)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, path)
+        except OSError:
+            with contextlib.suppress(OSError):
+                temporary.unlink()
+            raise
     return path
 
 
@@ -537,12 +555,16 @@ def create_inspection_app(
         result = outcome.result
         model_version = _model_version(engine.value)
         spec = await run_in_threadpool(
-            _inspection_spec, engine.value, config, code_sha=code_sha, code_dirty=code_dirty
+            _inspection_spec,
+            engine.value,
+            config,
+            code_sha=code_sha,
+            code_dirty=code_dirty,
+            allow_minimal_fallback=(result.status is Status.ERROR),
         )
 
         with open_db() as connection:
-            deduplicated = find_inspection_id(connection, sha256, spec.fingerprint) is not None
-            inspection_id = insert_inspection(
+            inspection_id, deduplicated = insert_inspection_with_dedup(
                 connection,
                 result,
                 engine=engine.value,
@@ -645,7 +667,12 @@ def create_inspection_app(
                 error_code = str(stored.get("error_code") or "")
                 # error_stage 는 관찰 표에 저장하지 않는다 → 미저장이므로 빈 문자열.
                 error_stage = ""
-            # 저장 관찰이 없으면(단일 엔진 검사는 관찰 미기록) 이번 결과의
+            elif status is not Status.ERROR:
+                # 저장 관찰이 없는 단일 엔진 dedup 에서 canonical 행이 정상/결함/검토
+                # 상태라면 이번 요청의 오류 진단 필드가 응답에 혼입되지 않게 비운다.
+                error_code = ""
+                error_stage = ""
+            # 저장 관찰이 없고 canonical 행도 ERROR 면 이번 결과의
             # error_code/error_stage 를 유지한다 — 같은 fingerprint 면 파이프라인이
             # 결정론적이라 원래 실행과 같은 진단 값이다(ERROR 진단 가능성 보존).
 

@@ -652,7 +652,7 @@ def arbitrate_patches(
     if patch_a is None and patch_b is None:
         verdict = ArbitrationVerdict.ALIGNED
         summary = f"{obs_a.engine}·{obs_b.engine} 모두 검출 후보가 없어 일치(ALIGNED)함"
-    elif both_present and overlap_iou >= 0.30:
+    elif patch_a is not None and patch_b is not None and overlap_iou >= 0.30:
         if patch_a.touches_border and patch_b.touches_border and max(sal_a, sal_b) < salient_min:
             verdict = ArbitrationVerdict.BORDER_NOISE_SUSPECT
             summary = (
@@ -675,11 +675,13 @@ def arbitrate_patches(
     ):
         verdict = ArbitrationVerdict.BORDER_NOISE_SUSPECT
         active = patch_a if patch_a is not None else patch_b
-        assert active is not None
-        summary = (
-            f"{active.engine} 후보 패치가 경계에 접촉하며 대비 {active.local_contrast:.1f}·"
-            f"경사도 {active.edge_sharpness:.1f}로 경계 반사 노이즈가 의심됨"
-        )
+        if active is not None:
+            summary = (
+                f"{active.engine} 후보 패치가 경계에 접촉하며 대비 {active.local_contrast:.1f}·"
+                f"경사도 {active.edge_sharpness:.1f}로 경계 반사 노이즈가 의심됨"
+            )
+        else:  # pragma: no cover - 위 both-None 분기에서 이미 처리됨
+            summary = "경계 반사 노이즈가 의심됨"
     elif (
         both_present
         and sal_a >= salient_min
@@ -691,17 +693,19 @@ def arbitrate_patches(
             f"{obs_a.engine}(현저성 {sal_a:.2f})와 {obs_b.engine}(현저성 {sal_b:.2f}) 모두 "
             "서로 다른 위치에서 뚜렷한 표면 단차를 보임"
         )
-    elif sal_a >= sal_b + dominance_margin or (patch_b is None and sal_a >= salient_min):
+    elif patch_a is not None and (
+        sal_a >= sal_b + dominance_margin or (patch_b is None and sal_a >= salient_min)
+    ):
         verdict = ArbitrationVerdict.ENGINE_A_SALIENT
-        assert patch_a is not None
         summary = (
             f"{obs_a.engine} 후보 패치(대비 {patch_a.local_contrast:.1f}, "
             f"경사도 {patch_a.edge_sharpness:.1f})가 {obs_b.engine} 후보보다 "
             "뚜렷한 표면 단차를 보임"
         )
-    elif sal_b >= sal_a + dominance_margin or (patch_a is None and sal_b >= salient_min):
+    elif patch_b is not None and (
+        sal_b >= sal_a + dominance_margin or (patch_a is None and sal_b >= salient_min)
+    ):
         verdict = ArbitrationVerdict.ENGINE_B_SALIENT
-        assert patch_b is not None
         summary = (
             f"{obs_b.engine} 후보 패치(대비 {patch_b.local_contrast:.1f}, "
             f"경사도 {patch_b.edge_sharpness:.1f})가 {obs_a.engine} 후보보다 "
@@ -712,20 +716,27 @@ def arbitrate_patches(
     ):
         verdict = ArbitrationVerdict.BORDER_NOISE_SUSPECT
         summary = "경계 접촉 및 저대비 후보 패치로 경계 노이즈가 의심됨"
-    elif sal_a >= sal_b:
+    elif patch_a is None and patch_b is not None:
+        verdict = ArbitrationVerdict.ENGINE_B_SALIENT
+        summary = (
+            f"{obs_b.engine} 후보 패치(대비 {patch_b.local_contrast:.1f}, "
+            f"경사도 {patch_b.edge_sharpness:.1f})가 상대적으로 우세함"
+        )
+    elif patch_a is not None and (patch_b is None or sal_a >= sal_b):
         verdict = ArbitrationVerdict.ENGINE_A_SALIENT
-        assert patch_a is not None
         summary = (
             f"{obs_a.engine} 후보 패치(대비 {patch_a.local_contrast:.1f}, "
             f"경사도 {patch_a.edge_sharpness:.1f})가 상대적으로 우세함"
         )
     else:
         verdict = ArbitrationVerdict.ENGINE_B_SALIENT
-        assert patch_b is not None
-        summary = (
-            f"{obs_b.engine} 후보 패치(대비 {patch_b.local_contrast:.1f}, "
-            f"경사도 {patch_b.edge_sharpness:.1f})가 상대적으로 우세함"
-        )
+        if patch_b is not None:
+            summary = (
+                f"{obs_b.engine} 후보 패치(대비 {patch_b.local_contrast:.1f}, "
+                f"경사도 {patch_b.edge_sharpness:.1f})가 상대적으로 우세함"
+            )
+        else:  # pragma: no cover - 위 분기에서 모든 None 조합 처리됨
+            summary = f"{obs_b.engine} 후보 패치가 상대적으로 우세함"
 
     payload = {
         "schema_version": ARBITRATION_SCHEMA_VERSION,
