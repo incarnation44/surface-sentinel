@@ -10,13 +10,15 @@
 from __future__ import annotations
 
 import sqlite3
+import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 from urllib.parse import quote
 
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from ..agent.audit import (
@@ -41,6 +43,16 @@ from ..pipeline.evidence import sanitize_sample_id
 from ..records.store import STATUS_ORDER, get_inspection, stats
 from ..review import ReviewError, ReviewStorageError, ReviewStore
 from ..version import __version__
+from .cinema import (
+    ALLOWED_CINEMA_EXTENSIONS,
+    CINEMA_CHAPTERS,
+    CINEMA_UPLOAD_CHUNK_BYTES,
+    MAX_CINEMA_UPLOAD_BYTES,
+    discover_cinema_presets,
+    load_cinema_config,
+    run_cinema_preset,
+    run_cinema_trace,
+)
 from .data import (
     RunEntry,
     UiInputError,
@@ -533,7 +545,7 @@ def create_app(
     def handle_http_error(
         request: Request, exc: StarletteHTTPException
     ) -> HTMLResponse | JSONResponse:
-        if request.url.path.startswith("/api/"):
+        if request.url.path.startswith(("/api/", "/cinema/preset/", "/cinema/inspect")):
             return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
         return render(
             request,
@@ -1165,6 +1177,107 @@ def create_app(
         if path is None:
             raise UiInputError(NO_IMAGE_TEXT)
         return FileResponse(path, media_type="image/png")
+
+    @app.get("/cinema", response_class=HTMLResponse)
+    def cinema_page(request: Request) -> HTMLResponse:
+        """3D 레이어 분해 & 영상식 10단계 검사 시네마 시연 뷰어."""
+
+        presets = discover_cinema_presets(
+            app.state.runs_dir, app.state.raw_root, app.state.repo_root
+        )
+        cfg = load_cinema_config(app.state.repo_root)
+        return render(
+            request,
+            "cinema.html",
+            {
+                "presets": [p.to_public_dict() for p in presets],
+                "chapters": list(CINEMA_CHAPTERS),
+                "config_hash": cfg.config_hash,
+                "ng_min": float(cfg.scoring.ng_min),
+            },
+        )
+
+    @app.get("/cinema/preset/{preset_id}")
+    def cinema_preset_payload(preset_id: str) -> JSONResponse:
+        """사전 등록된 tune/합성 프리셋의 실제 10단계 프레임·텔레메트리를 반환한다."""
+
+        presets = {
+            p.preset_id: p
+            for p in discover_cinema_presets(
+                app.state.runs_dir, app.state.raw_root, app.state.repo_root
+            )
+        }
+        preset = presets.get(preset_id)
+        if preset is None:
+            return JSONResponse(
+                {"detail": f"알 수 없는 시네마 프리셋입니다: {preset_id}"},
+                status_code=404,
+            )
+        cfg = load_cinema_config(app.state.repo_root)
+        try:
+            payload = run_cinema_preset(preset, config=cfg)
+        except (OSError, ValueError, RuntimeError) as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=400)
+        return JSONResponse(payload)
+
+    @app.post("/cinema/inspect")
+    async def cinema_inspect_upload(file: Annotated[UploadFile, File(...)]) -> JSONResponse:
+        """업로드 이미지의 실제 10단계 OpenCV 파이프라인을 임시 실행해 시네마 프레임을 반환한다.
+
+        DB 및 runs 디렉터리에는 아무 파일도 남기지 않으며 항상 ``split="tune"`` 으로만 실행한다.
+        """
+
+        filename = Path(file.filename or "upload.png").name
+        suffix = Path(filename).suffix.lower()
+        if suffix not in ALLOWED_CINEMA_EXTENSIONS:
+            return JSONResponse(
+                {"detail": f"지원하지 않는 이미지 확장자입니다: {suffix or '(없음)'}"},
+                status_code=400,
+            )
+
+        chunks: list[bytes] = []
+        total_read = 0
+        while True:
+            chunk = await file.read(CINEMA_UPLOAD_CHUNK_BYTES)
+            if not chunk:
+                break
+            total_read += len(chunk)
+            if total_read > MAX_CINEMA_UPLOAD_BYTES:
+                return JSONResponse(
+                    {
+                        "detail": (
+                            f"업로드 용량이 제한({MAX_CINEMA_UPLOAD_BYTES // (1024 * 1024)}MiB)을 "
+                            "초과했습니다."
+                        )
+                    },
+                    status_code=413,
+                )
+            chunks.append(chunk)
+
+        payload_bytes = b"".join(chunks)
+        if not payload_bytes:
+            return JSONResponse({"detail": "빈 파일은 검사할 수 없습니다."}, status_code=400)
+
+        cfg = load_cinema_config(app.state.repo_root)
+        sample_id = sanitize_sample_id(Path(filename).stem or "upload")
+
+        def _run() -> dict[str, Any]:
+            with tempfile.TemporaryDirectory(prefix="ss-cinema-up-") as tmp_dir:
+                target = Path(tmp_dir) / f"{sample_id}{suffix}"
+                target.write_bytes(payload_bytes)
+                return run_cinema_trace(
+                    target,
+                    sample_id=sample_id,
+                    config=cfg,
+                    label="unknown",
+                    source="upload",
+                )
+
+        try:
+            data = await run_in_threadpool(_run)
+        except (OSError, ValueError, RuntimeError) as exc:
+            return JSONResponse({"detail": f"이미지 검사 실패: {exc}"}, status_code=400)
+        return JSONResponse(data)
 
     return app
 

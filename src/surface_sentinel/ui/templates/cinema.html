@@ -1,0 +1,1790 @@
+{% extends "base.html" %}
+{% block title %}3D 시네마 시연 — Surface Sentinel{% endblock %}
+{% block content %}
+<style>
+/* ===== Surface Sentinel Editorial 3D Cinema Theme (Zero-CDN) ===== */
+.cinema-stage-root {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  padding: 20px 22px 24px;
+  background: #070b0f;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 64px rgba(2, 6, 15, 0.55);
+  color: #f1f5f9;
+}
+.cinema-stage-root:fullscreen,
+.cinema-stage-root.is-present-mode {
+  border-radius: 0;
+  padding: 22px 28px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+#studio-bg-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+.cinema-layer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Top Editorial Pill + Preset Bar */
+.cinema-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.editorial-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 18px 7px 9px;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.editorial-pill-ico {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 900;
+}
+.editorial-pill em {
+  font-style: italic;
+  font-family: Georgia, "Times New Roman", serif;
+  color: #d97706;
+  font-weight: 700;
+}
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.preset-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.preset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 19, 28, 0.72);
+  backdrop-filter: blur(10px);
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+.preset-btn:hover {
+  border-color: #34d399;
+  color: #ffffff;
+  background: rgba(16, 185, 129, 0.16);
+}
+.preset-btn.active {
+  border-color: #fbbf24;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.24), rgba(16, 185, 129, 0.18));
+  color: #ffffff;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.22);
+}
+.preset-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #38bdf8;
+}
+.preset-dot.NG { background: #fb7185; box-shadow: 0 0 8px #fb7185; }
+.preset-dot.REVIEW { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
+.preset-dot.OK { background: #34d399; box-shadow: 0 0 8px #34d399; }
+
+.upload-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px dashed rgba(251, 191, 36, 0.65);
+  background: rgba(245, 158, 11, 0.12);
+  color: #fde68a;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+.upload-pill:hover,
+.upload-pill.dragover {
+  background: rgba(245, 158, 11, 0.26);
+  border-color: #fde68a;
+  color: #ffffff;
+}
+.upload-pill input { display: none; }
+
+.present-btn {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  background: rgba(16, 185, 129, 0.16);
+  color: #a7f3d0;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+.present-btn:hover {
+  background: rgba(16, 185, 129, 0.30);
+  color: #ffffff;
+}
+
+.cinema-status-banner {
+  display: none;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.cinema-status-banner.error {
+  display: block;
+  background: rgba(244, 63, 94, 0.16);
+  border: 1px solid rgba(244, 63, 94, 0.45);
+  color: #fecdd3;
+}
+.cinema-status-banner.loading {
+  display: block;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.38);
+  color: #a7f3d0;
+}
+
+/* ===== Floating Neon Bezel Console (Reference Image 2 & 3) ===== */
+.bezel-wrap {
+  position: relative;
+  padding-top: 24px;
+}
+.bezel-tab {
+  position: absolute;
+  top: 0;
+  left: 18px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  border-radius: 10px 10px 0 0;
+  background: #05080c;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  border-bottom: 0;
+  color: #f8fafc;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.bezel-tab .live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 10px #34d399;
+}
+.bezel-frame {
+  position: relative;
+  border-radius: 18px;
+  padding: 1.5px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.78) 0%, rgba(52, 211, 153, 0.72) 52%, rgba(56, 189, 248, 0.65) 100%);
+  box-shadow: 0 0 42px rgba(16, 185, 129, 0.16), 0 22px 54px rgba(0, 0, 0, 0.52);
+}
+.bezel-inner {
+  border-radius: 16.5px;
+  background: rgba(7, 13, 18, 0.84);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Inner Header */
+.console-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+.console-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.console-brand-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #022c22;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 13px;
+}
+.console-title-sm {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+.console-sample-meta {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+.mode-switch {
+  display: inline-flex;
+  background: rgba(15, 23, 34, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+.mode-switch button {
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.mode-switch button.active {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #031912;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
+}
+
+/* Main Console Grid: Left Visual + Right Telemetry & Workflow Loop */
+.console-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.85fr);
+  min-height: 455px;
+}
+@media (max-width: 980px) {
+  .console-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.visual-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px 18px 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  background: radial-gradient(circle at 50% 44%, rgba(16, 185, 129, 0.10) 0%, transparent 62%);
+  user-select: none;
+}
+@media (max-width: 980px) {
+  .visual-stage { border-right: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
+}
+
+.stage-headline-strip {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.stage-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.32);
+  color: #6ee7b7;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.stage-big-title {
+  margin: 6px 0 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #f8fafc;
+}
+
+.scene-area {
+  position: relative;
+  flex: 1;
+  min-height: 330px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin: 6px 0;
+}
+
+/* 3D Exploded Layer Stack */
+.stack-3d-viewport {
+  width: 100%;
+  height: 100%;
+  min-height: 330px;
+  perspective: 1350px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+}
+.stack-3d-viewport:active { cursor: grabbing; }
+.stack-3d-viewport.hidden { display: none; }
+.stack-3d-rig {
+  position: relative;
+  width: 180px;
+  height: 298px;
+  transform-style: preserve-3d;
+  transition: transform 0.08s linear, width 0.2s ease, height 0.2s ease;
+}
+.layer-card-3d {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  border: 1.5px solid rgba(148, 163, 184, 0.26);
+  background: #05090e;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transition: opacity 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.55);
+}
+.layer-card-3d img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #04070c;
+}
+.layer-card-3d.is-active {
+  border-color: var(--layer-accent, #34d399);
+  box-shadow: 0 0 0 1px var(--layer-accent, #34d399), 0 0 28px rgba(52, 211, 153, 0.38), 0 20px 38px rgba(0, 0, 0, 0.65);
+}
+.layer-card-3d .layer-chip {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(5, 8, 13, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #e2e8f0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+.layer-card-3d.is-active .layer-chip {
+  border-color: var(--layer-accent, #34d399);
+  color: #ffffff;
+}
+.laser-beam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, #34d399 20%, #fef08a 50%, #34d399 80%, transparent 100%);
+  box-shadow: 0 0 14px 3px rgba(52, 211, 153, 0.72);
+  opacity: 0;
+  pointer-events: none;
+}
+.layer-card-3d.is-active .laser-beam { opacity: 0.95; }
+
+/* 2D Wipe Canvas & Zoom Callout Mode */
+.canvas-2d-wrap,
+.zoom-callout-wrap {
+  display: none;
+  width: 100%;
+  height: 100%;
+  min-height: 330px;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+.canvas-2d-wrap.visible,
+.zoom-callout-wrap.visible { display: flex; }
+
+#cinema-canvas {
+  max-width: 100%;
+  max-height: 330px;
+  border-radius: 12px;
+  border: 1px solid rgba(52, 211, 153, 0.38);
+  background: #04070c;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+/* Zoom Callout (Reference Images 4 & 5) */
+.zoom-callout-wrap {
+  padding: 6px 10px;
+  flex-wrap: wrap;
+}
+.zoom-full-card {
+  position: relative;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #04070c;
+  padding: 8px;
+}
+#zoom-overview-canvas {
+  display: block;
+  max-height: 295px;
+  border-radius: 8px;
+}
+.zoom-lens-console {
+  position: relative;
+  width: 280px;
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(11, 14, 18, 0.94);
+  border: 1.5px solid #fbbf24;
+  box-shadow: 0 0 32px rgba(245, 158, 11, 0.24), 0 16px 36px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.zoom-lens-tab {
+  position: absolute;
+  top: -12px;
+  left: 12px;
+  padding: 2px 9px;
+  border-radius: 6px;
+  background: #090c10;
+  border: 1px solid #fbbf24;
+  color: #fde68a;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+#zoom-crop-canvas {
+  width: 100%;
+  height: 158px;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: #04070c;
+  display: block;
+}
+.zoom-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+.zoom-metric-box {
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.zoom-metric-box .zk { font-size: 10px; color: #94a3b8; }
+.zoom-metric-box .zv { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: #fde68a; }
+
+/* Floating Bottom Caption Pill */
+.caption-pill {
+  align-self: center;
+  max-width: 94%;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.95);
+  color: #0f172a;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.42);
+}
+.caption-pill span {
+  color: #059669;
+  font-family: var(--font-mono);
+  margin-right: 6px;
+}
+
+/* ===== Right Rail: Glass KPIs + Vertical Workflow Loop (Reference Image 2) ===== */
+.hud-rail {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(5, 10, 14, 0.56);
+}
+.verdict-card {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(15, 23, 34, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.verdict-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.hud-score-big {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 800;
+  color: #f8fafc;
+  line-height: 1;
+}
+.hud-gauge-svg {
+  width: 100%;
+  height: 36px;
+  display: block;
+}
+
+.kpi-glass-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.kpi-glass {
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: rgba(16, 26, 36, 0.62);
+  border: 1px solid rgba(52, 211, 153, 0.16);
+}
+.kpi-glass .k {
+  font-size: 10.5px;
+  color: #94a3b8;
+}
+.kpi-glass .v {
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 800;
+  color: #a7f3d0;
+}
+
+/* Vertical Workflow Loop (Reference Image 2 Right Sidebar) */
+.loop-card {
+  flex: 1;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: rgba(9, 15, 22, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.loop-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+}
+.loop-pct { color: #fbbf24; }
+.loop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.loop-node {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.loop-node:hover { background: rgba(255, 255, 255, 0.05); color: #e2e8f0; }
+.loop-node .ln-left { display: inline-flex; align-items: center; gap: 7px; }
+.loop-node .ln-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #334155;
+}
+.loop-node.passed { color: #cbd5e1; }
+.loop-node.passed .ln-dot { background: #34d399; }
+.loop-node.active {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(52, 211, 153, 0.45);
+  color: #ffffff;
+  font-weight: 700;
+}
+.loop-node.active .ln-dot {
+  background: #fbbf24;
+  box-shadow: 0 0 8px #fbbf24;
+}
+.loop-ms { font-size: 10.5px; color: #64748b; }
+.loop-node.active .loop-ms { color: #fde68a; }
+
+.hud-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.hud-reason-pill {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.30);
+  color: #fde68a;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+/* Transport Bar */
+.transport-bar {
+  padding: 10px 18px;
+  background: rgba(4, 8, 12, 0.92);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.t-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(15, 23, 34, 0.9);
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.t-btn:hover { border-color: #34d399; color: #ffffff; }
+.t-btn.primary {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-color: #34d399;
+  color: #031912;
+}
+.scrubber-wrap {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#cinema-scrubber {
+  flex: 1;
+  accent-color: #34d399;
+  cursor: pointer;
+}
+.time-readout {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #94a3b8;
+  min-width: 72px;
+  text-align: right;
+}
+
+/* ===== Below-the-Fold Editorial Key-Points (Reference Image 1) ===== */
+.keypoint-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 16px;
+  align-items: stretch;
+}
+@media (max-width: 900px) {
+  .keypoint-grid { grid-template-columns: 1fr; }
+}
+.contract-dark-card {
+  position: relative;
+  border-radius: 16px;
+  padding: 20px;
+  background: linear-gradient(155deg, #090f16 0%, #0e1722 100%);
+  border: 1.5px solid rgba(56, 189, 248, 0.35);
+  color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 12px 30px rgba(2, 6, 18, 0.25);
+}
+.contract-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #7dd3fc;
+  letter-spacing: 0.05em;
+}
+.contract-code {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(2, 6, 12, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.65;
+  color: #cbd5e1;
+  white-space: pre-wrap;
+}
+.white-pill-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+}
+.white-feature-pill {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  border-top: 3px solid var(--pill-top, #f59e0b);
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.10);
+}
+.wfp-ico {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--pill-top, #f59e0b);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+.wfp-k {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  text-transform: uppercase;
+}
+.wfp-v {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.015em;
+}
+.sr-only-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+</style>
+
+<div class="cinema-stage-root" id="cinema-stage-root">
+  <canvas id="studio-bg-canvas" aria-hidden="true"></canvas>
+
+  <div class="cinema-layer">
+    <h1 class="sr-only-title">3D 파이프라인 시네마 · Surface Sentinel</h1>
+
+    <!-- Top Editorial Pill + Preset Controls -->
+    <div class="cinema-top-row">
+      <div class="editorial-pill">
+        <span class="editorial-pill-ico">SS</span>
+        <span>Deterministic, <em>auditable</em>, zero-CDN</span>
+      </div>
+
+      <div class="top-actions">
+        <div class="preset-strip" id="preset-strip" role="group" aria-label="시연 샘플 프리셋">
+          {% for p in presets %}
+          <button type="button" class="preset-btn{% if loop.first %} active{% endif %}" data-preset-id="{{ p.id }}" title="{{ p.subtitle }}">
+            <span class="preset-dot {{ p.badge }}"></span>
+            <span>{{ p.title }}</span>
+          </button>
+          {% endfor %}
+        </div>
+
+        <label class="upload-pill" id="cinema-dropzone" title="이미지를 드래그하거나 클릭해 실시간 10단계 검사">
+          <span>+ 내 이미지 검사</span>
+          <input type="file" id="cinema-file-input" accept=".png,.jpg,.jpeg,.bmp,.tif,.tiff">
+        </label>
+
+        <button type="button" id="btn-fullscreen" class="present-btn" title="발표용 전체화면 (단축키 F)">발표 전체화면</button>
+      </div>
+    </div>
+
+    <div id="cinema-banner" class="cinema-status-banner"></div>
+
+    <!-- Main Floating Neon Bezel Console -->
+    <section class="bezel-wrap" aria-label="3D 시네마 시연 콘솔">
+      <div class="bezel-tab">
+        <span class="live-dot"></span>
+        <span>SURFACE SENTINEL · R20 FROZEN · {{ config_hash[:12] }}</span>
+      </div>
+
+      <div class="bezel-frame">
+        <div class="bezel-inner">
+          <!-- Console Header -->
+          <div class="console-head">
+            <div class="console-brand">
+              <span class="console-brand-mark">10</span>
+              <div>
+                <div class="console-title-sm">10단계 결정론적 표면 결함 검사 시네마</div>
+                <div class="console-sample-meta" id="viewport-sample-label">로딩 중…</div>
+              </div>
+            </div>
+
+            <div class="mode-switch" role="group" aria-label="시각화 모드">
+              <button type="button" id="mode-3d-btn" class="active">3D 분해 스택</button>
+              <button type="button" id="mode-2d-btn">2D 시네마 와이프</button>
+              <button type="button" id="mode-zoom-btn">결함 줌인 콜아웃</button>
+            </div>
+          </div>
+
+          <!-- Console Body -->
+          <div class="console-body">
+            <!-- Left/Center Visual Viewport -->
+            <div class="visual-stage">
+              <div class="stage-headline-strip">
+                <div>
+                  <span class="stage-eyebrow" id="hud-stage-badge">STAGE 01–02</span>
+                  <h2 class="stage-big-title" id="hud-title">원본 표면 스캔 및 입력 검증</h2>
+                </div>
+                <div class="console-sample-meta" id="hud-size">해상도: -</div>
+              </div>
+
+              <div class="scene-area">
+                <!-- Mode 1: 3D Exploded Layer Stack -->
+                <div class="stack-3d-viewport" id="stack-3d-viewport" title="드래그해 3D 회전 · Space 재생/정지">
+                  <div class="stack-3d-rig" id="stack-3d-rig">
+                    {% for ch in chapters %}
+                    <div class="layer-card-3d" data-layer-idx="{{ ch.index }}" data-layer-key="{{ ch.key }}" style="--layer-accent: {{ ch.accent }};">
+                      <img alt="{{ ch.title }}" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+                      <div class="laser-beam"></div>
+                      <span class="layer-chip">{{ ch.stage_range }} · {{ ch.key }}</span>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+
+                <!-- Mode 2: 2D Cinema Wipe -->
+                <div class="canvas-2d-wrap" id="canvas-2d-wrap">
+                  <canvas id="cinema-canvas" width="440" height="540" aria-label="10단계 시네마 캔버스"></canvas>
+                </div>
+
+                <!-- Mode 3: Defect Zoom-in Callout -->
+                <div class="zoom-callout-wrap" id="zoom-callout-wrap">
+                  <div class="zoom-full-card">
+                    <canvas id="zoom-overview-canvas" width="160" height="320" aria-label="전체 표면 위치"></canvas>
+                  </div>
+                  <div class="zoom-lens-console">
+                    <span class="zoom-lens-tab" id="zoom-lens-tab">● DEFECT ZOOM CALLOUT</span>
+                    <canvas id="zoom-crop-canvas" width="252" height="158" aria-label="결함 확대 영역"></canvas>
+                    <div class="zoom-metrics-row">
+                      <div class="zoom-metric-box">
+                        <div class="zk">최대 성분 면적</div>
+                        <div class="zv" id="zoom-area">-</div>
+                      </div>
+                      <div class="zoom-metric-box">
+                        <div class="zk">최대 대비 (gray)</div>
+                        <div class="zv" id="zoom-contrast">-</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Editorial Floating Caption Pill -->
+              <div class="caption-pill" id="hud-caption">
+                <span id="hud-caption-tag">01/07</span>
+                <strong id="hud-sub">실제 10단계 OpenCV 산출물을 불러오는 중입니다.</strong>
+              </div>
+            </div>
+
+            <!-- Right Telemetry + Workflow Loop -->
+            <aside class="hud-rail" aria-label="실시간 텔레메트리 및 워크플로우 루프">
+              <div class="verdict-card">
+                <div class="verdict-top">
+                  <div>
+                    <div style="font-size:10px;color:#94a3b8;font-family:var(--font-mono)">SCORE · THRESHOLD</div>
+                    <div class="hud-score-big" id="hud-score">0.0000</div>
+                  </div>
+                  <div style="text-align:right">
+                    <span class="badge" id="hud-verdict-badge">SCAN</span>
+                    <div style="font-size:11px;color:#94a3b8;margin-top:3px" id="hud-verdict-ko">스캔 대기</div>
+                  </div>
+                </div>
+                <svg class="hud-gauge-svg" viewBox="0 0 320 36" aria-label="점수 임계값 게이지">
+                  <rect x="6" y="8" width="308" height="10" rx="5" fill="#1e293b"/>
+                  <rect x="6" y="8" width="82" height="10" rx="5" fill="rgba(16,185,129,0.34)"/>
+                  <rect x="88" y="8" width="21" height="10" fill="rgba(245,158,11,0.42)"/>
+                  <rect x="109" y="8" width="205" height="10" rx="5" fill="rgba(244,63,94,0.34)"/>
+                  <line x1="88" y1="4" x2="88" y2="22" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="2 2"/>
+                  <line x1="109" y1="4" x2="109" y2="22" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="2 2"/>
+                  <rect id="gauge-fill" x="6" y="8" width="0" height="10" rx="5" fill="#34d399"/>
+                  <circle id="gauge-pin" cx="6" cy="13" r="5.5" fill="#f8fafc" stroke="#34d399" stroke-width="2.5"/>
+                  <text x="6" y="33" fill="#94a3b8" font-size="9" font-family="monospace">0.0</text>
+                  <text x="52" y="33" fill="#fbbf24" font-size="9" font-family="monospace">REV 0.40</text>
+                  <text x="118" y="33" fill="#fb7185" font-size="9" font-family="monospace">NG {{ "%.2f"|format(ng_min) }}</text>
+                  <text x="294" y="33" fill="#94a3b8" font-size="9" font-family="monospace">1.5</text>
+                </svg>
+                <div class="hud-reasons" id="hud-reasons">
+                  <span class="hud-reason-pill">대기 중</span>
+                </div>
+              </div>
+
+              <div class="kpi-glass-grid">
+                <div class="kpi-glass">
+                  <div class="k">누적 소요 시간</div>
+                  <div class="v" id="hud-elapsed">0.0 ms</div>
+                </div>
+                <div class="kpi-glass">
+                  <div class="k">ROI 유효 비율</div>
+                  <div class="v" id="hud-roi">-</div>
+                </div>
+                <div class="kpi-glass">
+                  <div class="k">최대 Z / 응답</div>
+                  <div class="v" id="hud-zresp">-</div>
+                </div>
+                <div class="kpi-glass">
+                  <div class="k">정제 결함 성분</div>
+                  <div class="v" id="hud-comps">-</div>
+                </div>
+              </div>
+
+              <div class="loop-card">
+                <div class="loop-head">
+                  <span>INSPECTION LOOP</span>
+                  <span class="loop-pct" id="loop-pct">0%</span>
+                </div>
+                <div class="loop-list" id="loop-list">
+                  {% for ch in chapters %}
+                  <button type="button" class="loop-node{% if loop.first %} active{% endif %}" data-jump="{{ ch.index }}">
+                    <span class="ln-left">
+                      <span class="ln-dot"></span>
+                      <span>0{{ ch.index + 1 }} {{ ch.key }}</span>
+                    </span>
+                    <span class="loop-ms" data-ms-idx="{{ ch.index }}">0.0 ms</span>
+                  </button>
+                  {% endfor %}
+                </div>
+              </div>
+            </aside>
+          </div>
+
+          <!-- Transport Bar -->
+          <div class="transport-bar">
+            <button type="button" id="btn-play" class="t-btn primary">▶ 재생</button>
+            <button type="button" id="btn-restart" class="t-btn" title="처음부터 재생">↺</button>
+            <select id="cinema-speed" class="t-btn" aria-label="재생 속도" style="padding:5px 8px">
+              <option value="0.5">0.5×</option>
+              <option value="1" selected>1.0×</option>
+              <option value="1.5">1.5×</option>
+              <option value="2">2.0×</option>
+            </select>
+            <label class="t-btn" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer">
+              <input type="checkbox" id="toggle-explode" checked style="accent-color:#34d399"> 3D 분해
+            </label>
+            <div class="scrubber-wrap">
+              <input type="range" id="cinema-scrubber" min="0" max="1000" value="0" aria-label="시네마 타임라인">
+              <span class="time-readout" id="time-readout">01/07 · 0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Below-the-fold Simple Editorial Key-Points (Reference Image 1 Style) -->
+<section class="keypoint-grid" aria-label="발표 핵심 포인트 요약">
+  <div class="contract-dark-card">
+    <div>
+      <div class="contract-tab">● SURFACE SENTINEL · R20 CONTRACT</div>
+      <h3 style="margin:8px 0 10px;font-size:17px;color:#f8fafc">규칙이 코드를 지배하는 결정론적 검사</h3>
+      <pre class="contract-code">config_hash   = "{{ config_hash[:12] }}..."  # r20 동결
+split         = "tune"               # 봉인 test 무단 접근 차단
+io_isolation  = "TemporaryDirectory" # runs/ · SQLite DB 무기록
+scope         = "픽셀 기반 결함 후보 검사 · 검토 보조"</pre>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#94a3b8;flex-wrap:wrap;gap:8px">
+      <span>단축키: <kbd>Space</kbd> 재생 · <kbd>←</kbd>/<kbd>→</kbd> 단계 · <kbd>F</kbd> 전체화면</span>
+      <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:#cbd5e1">
+        <input type="checkbox" id="toggle-scroll-sync" style="accent-color:#10b981"> 스크롤 연동
+      </label>
+    </div>
+  </div>
+
+  <div class="white-pill-stack">
+    <div class="white-feature-pill" style="--pill-top:#f59e0b">
+      <div class="wfp-ico">01</div>
+      <div>
+        <div class="wfp-k">ONE FROZEN CONFIG</div>
+        <div class="wfp-v">r20 동결 설정으로 동일 입력 → 100% 동일 판정 재현</div>
+      </div>
+    </div>
+    <div class="white-feature-pill" style="--pill-top:#10b981">
+      <div class="wfp-ico">02</div>
+      <div>
+        <div class="wfp-k">10-STAGE TRANSPARENCY</div>
+        <div class="wfp-v">ROI → 대비 → Z-Map → 정제 → 3단계 판정(OK/REVIEW/NG)</div>
+      </div>
+    </div>
+    <div class="white-feature-pill" style="--pill-top:#3b82f6">
+      <div class="wfp-ico">03</div>
+      <div>
+        <div class="wfp-k">HONEST AUDIT &amp; SEALED SPLIT</div>
+        <div class="wfp-v">봉인 test 한계(Wilson 상한 21.55%)까지 투명 공개 · NO-GO 유지</div>
+      </div>
+    </div>
+    <div class="white-feature-pill" style="--pill-top:#8b5cf6">
+      <div class="wfp-ico">04</div>
+      <div>
+        <div class="wfp-k">ZERO-CDN OFFLINE CONSOLE</div>
+        <div class="wfp-v">외부 요청 0건 · 드래그앤드롭으로 즉시 실시간 시연</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  var presets = {{ presets | tojson }};
+  var chapterDefs = {{ chapters | tojson }};
+  var N_CHAPTERS = chapterDefs.length;
+  var TOTAL_DURATION_S = 10.5;
+
+  var state = {
+    data: null,
+    images: {},
+    progress: 0,
+    playing: false,
+    speed: 1.0,
+    mode: "3d", // "3d" | "2d" | "zoom"
+    exploded: true,
+    scrollSync: false,
+    rotY: -24,
+    rotX: 13,
+    dragging: false,
+    dragStartX: 0,
+    dragStartY: 0,
+    lastTs: 0,
+    scanPhase: 0
+  };
+
+  var els = {
+    stageRoot: document.getElementById("cinema-stage-root"),
+    bgCanvas: document.getElementById("studio-bg-canvas"),
+    banner: document.getElementById("cinema-banner"),
+    presetStrip: document.getElementById("preset-strip"),
+    fileInput: document.getElementById("cinema-file-input"),
+    dropzone: document.getElementById("cinema-dropzone"),
+    btnFullscreen: document.getElementById("btn-fullscreen"),
+    sampleLabel: document.getElementById("viewport-sample-label"),
+    mode3dBtn: document.getElementById("mode-3d-btn"),
+    mode2dBtn: document.getElementById("mode-2d-btn"),
+    modeZoomBtn: document.getElementById("mode-zoom-btn"),
+    stackViewport: document.getElementById("stack-3d-viewport"),
+    stackRig: document.getElementById("stack-3d-rig"),
+    canvasWrap: document.getElementById("canvas-2d-wrap"),
+    canvas: document.getElementById("cinema-canvas"),
+    zoomWrap: document.getElementById("zoom-callout-wrap"),
+    zoomOverview: document.getElementById("zoom-overview-canvas"),
+    zoomCrop: document.getElementById("zoom-crop-canvas"),
+    zoomTab: document.getElementById("zoom-lens-tab"),
+    zoomArea: document.getElementById("zoom-area"),
+    zoomContrast: document.getElementById("zoom-contrast"),
+    btnPlay: document.getElementById("btn-play"),
+    btnRestart: document.getElementById("btn-restart"),
+    speedSel: document.getElementById("cinema-speed"),
+    explodeChk: document.getElementById("toggle-explode"),
+    scrollChk: document.getElementById("toggle-scroll-sync"),
+    scrubber: document.getElementById("cinema-scrubber"),
+    timeReadout: document.getElementById("time-readout"),
+    loopPct: document.getElementById("loop-pct"),
+    loopNodes: document.querySelectorAll(".loop-node"),
+    hudStage: document.getElementById("hud-stage-badge"),
+    hudTitle: document.getElementById("hud-title"),
+    hudSub: document.getElementById("hud-sub"),
+    hudCaptionTag: document.getElementById("hud-caption-tag"),
+    hudScore: document.getElementById("hud-score"),
+    hudBadge: document.getElementById("hud-verdict-badge"),
+    hudVerdictKo: document.getElementById("hud-verdict-ko"),
+    gaugeFill: document.getElementById("gauge-fill"),
+    gaugePin: document.getElementById("gauge-pin"),
+    hudElapsed: document.getElementById("hud-elapsed"),
+    hudRoi: document.getElementById("hud-roi"),
+    hudZresp: document.getElementById("hud-zresp"),
+    hudComps: document.getElementById("hud-comps"),
+    hudReasons: document.getElementById("hud-reasons"),
+    hudSize: document.getElementById("hud-size")
+  };
+
+  var layerCards = Array.prototype.slice.call(document.querySelectorAll(".layer-card-3d"));
+  var ctx = els.canvas.getContext("2d");
+  var bgCtx = els.bgCanvas.getContext("2d");
+  var ovCtx = els.zoomOverview.getContext("2d");
+  var cropCtx = els.zoomCrop.getContext("2d");
+
+  // Ambient 3D Factory Bokeh Studio Backdrop (Zero-CDN)
+  function resizeStudioBg() {
+    var rect = els.stageRoot.getBoundingClientRect();
+    var w = Math.max(320, Math.round(rect.width));
+    var h = Math.max(320, Math.round(rect.height));
+    if (els.bgCanvas.width !== w || els.bgCanvas.height !== h) {
+      els.bgCanvas.width = w;
+      els.bgCanvas.height = h;
+    }
+  }
+
+  function renderStudioBg() {
+    var w = els.bgCanvas.width;
+    var h = els.bgCanvas.height;
+    if (!w || !h) { return; }
+    bgCtx.clearRect(0, 0, w, h);
+
+    // Deep obsidian-emerald studio base
+    var baseGrad = bgCtx.createLinearGradient(0, 0, w, h);
+    baseGrad.addColorStop(0, "#050a0d");
+    baseGrad.addColorStop(0.55, "#0b1412");
+    baseGrad.addColorStop(1, "#120d08");
+    bgCtx.fillStyle = baseGrad;
+    bgCtx.fillRect(0, 0, w, h);
+
+    var shift = (state.progress - 0.5) * 36 + (state.dragging ? state.rotY * 0.6 : 0);
+
+    // Warm amber + emerald volumetric bokeh glows (Reference Images 1-4)
+    var g1 = bgCtx.createRadialGradient(w * 0.16 - shift, h * 0.22, 10, w * 0.16 - shift, h * 0.22, w * 0.36);
+    g1.addColorStop(0, "rgba(245, 158, 11, 0.22)");
+    g1.addColorStop(1, "rgba(245, 158, 11, 0)");
+    bgCtx.fillStyle = g1;
+    bgCtx.fillRect(0, 0, w, h);
+
+    var g2 = bgCtx.createRadialGradient(w * 0.78 + shift * 0.8, h * 0.34, 12, w * 0.78 + shift * 0.8, h * 0.34, w * 0.38);
+    g2.addColorStop(0, "rgba(16, 185, 129, 0.20)");
+    g2.addColorStop(1, "rgba(16, 185, 129, 0)");
+    bgCtx.fillStyle = g2;
+    bgCtx.fillRect(0, 0, w, h);
+
+    // Perspective Factory Conveyor Rails
+    bgCtx.save();
+    bgCtx.strokeStyle = "rgba(251, 191, 36, 0.12)";
+    bgCtx.lineWidth = 1.2;
+    var horizonY = h * 0.62;
+    var vanishX = w * 0.52 - shift * 1.4;
+    for (var i = -5; i <= 5; i++) {
+      bgCtx.beginPath();
+      bgCtx.moveTo(vanishX + i * 24, horizonY);
+      bgCtx.lineTo(vanishX + i * 210, h + 30);
+      bgCtx.stroke();
+    }
+    for (var r = 1; r <= 7; r++) {
+      var frac = ((r + (state.scanPhase * 2) % 1) / 7);
+      var ry = horizonY + Math.pow(frac, 1.8) * (h - horizonY + 20);
+      bgCtx.strokeStyle = "rgba(52, 211, 153, " + (0.04 + frac * 0.08).toFixed(3) + ")";
+      bgCtx.beginPath();
+      bgCtx.moveTo(0, ry);
+      bgCtx.lineTo(w, ry);
+      bgCtx.stroke();
+    }
+
+    // Glowing Overhead Laser Scanner Arch
+    bgCtx.strokeStyle = "rgba(52, 211, 153, 0.24)";
+    bgCtx.lineWidth = 3;
+    bgCtx.beginPath();
+    bgCtx.arc(vanishX, horizonY + 12, Math.min(w, h) * 0.26, Math.PI, 0);
+    bgCtx.stroke();
+
+    // Overhead Studio Light Bars
+    bgCtx.strokeStyle = "rgba(253, 230, 138, 0.20)";
+    bgCtx.lineWidth = 3;
+    bgCtx.beginPath();
+    bgCtx.moveTo(w * 0.24 - shift * 0.4, h * 0.12);
+    bgCtx.lineTo(w * 0.38 - shift * 0.4, h * 0.07);
+    bgCtx.moveTo(w * 0.66 - shift * 0.4, h * 0.08);
+    bgCtx.lineTo(w * 0.80 - shift * 0.4, h * 0.13);
+    bgCtx.stroke();
+    bgCtx.restore();
+  }
+
+  function setBanner(kind, text) {
+    els.banner.className = "cinema-status-banner" + (kind ? " " + kind : "");
+    els.banner.textContent = text || "";
+  }
+
+  function preloadImages(frames) {
+    var promises = [];
+    var loaded = {};
+    Object.keys(frames).forEach(function (key) {
+      promises.push(new Promise(function (resolve) {
+        var img = new Image();
+        img.onload = function () { loaded[key] = img; resolve(); };
+        img.onerror = function () { resolve(); };
+        img.src = frames[key];
+      }));
+    });
+    return Promise.all(promises).then(function () {
+      state.images = loaded;
+      layerCards.forEach(function (card) {
+        var key = card.getAttribute("data-layer-key");
+        var imgEl = card.querySelector("img");
+        if (imgEl && frames[key]) {
+          imgEl.src = frames[key];
+        }
+      });
+    });
+  }
+
+  function adaptStackAspect(data) {
+    if (!data || !data.image_size) { return; }
+    var iw = Math.max(1, data.image_size.width);
+    var ih = Math.max(1, data.image_size.height);
+    var aspect = iw / ih;
+    var rigW, rigH;
+    if (aspect >= 1.0) {
+      rigW = Math.min(310, Math.max(210, Math.round(210 * aspect)));
+      rigH = Math.max(160, Math.round(rigW / aspect));
+    } else {
+      rigH = 296;
+      rigW = Math.min(250, Math.max(132, Math.round(rigH * aspect)));
+    }
+    els.stackRig.style.width = rigW + "px";
+    els.stackRig.style.height = rigH + "px";
+  }
+
+  function applyPayload(data, autoPlay) {
+    state.data = data;
+    state.progress = 0;
+    els.scrubber.value = "0";
+    adaptStackAspect(data);
+    els.sampleLabel.textContent =
+      data.sample_id + " · " + data.status + " (" + data.status_label + ") · total " + data.total_ms.toFixed(1) + " ms";
+    els.hudSize.textContent = "해상도: " + data.image_size.width + "×" + data.image_size.height + "px";
+
+    (data.chapters || []).forEach(function (ch) {
+      var msEl = document.querySelector('[data-ms-idx="' + ch.index + '"]');
+      if (msEl) { msEl.textContent = ch.duration_ms.toFixed(1) + " ms"; }
+    });
+
+    preloadImages(data.frames || {}).then(function () {
+      setBanner("", "");
+      renderFrame();
+      if (autoPlay) { setPlaying(true); }
+    });
+  }
+
+  function loadPreset(presetId, autoPlay) {
+    setPlaying(false);
+    setBanner("loading", "10단계 파이프라인 실행 및 3D 프레임 생성 중…");
+    document.querySelectorAll(".preset-btn").forEach(function (btn) {
+      btn.classList.toggle("active", btn.getAttribute("data-preset-id") === presetId);
+    });
+    fetch("/cinema/preset/" + encodeURIComponent(presetId))
+      .then(function (resp) {
+        if (!resp.ok) {
+          return resp.json().catch(function () { return {}; }).then(function (err) {
+            throw new Error(err.detail || "프리셋 로드 실패 (" + resp.status + ")");
+          });
+        }
+        return resp.json();
+      })
+      .then(function (data) { applyPayload(data, autoPlay); })
+      .catch(function (err) { setBanner("error", String(err.message || err)); });
+  }
+
+  function uploadFile(file) {
+    if (!file) { return; }
+    setPlaying(false);
+    setBanner("loading", "업로드 이미지의 실제 10단계 OpenCV 파이프라인 실행 중…");
+    document.querySelectorAll(".preset-btn").forEach(function (btn) { btn.classList.remove("active"); });
+    var fd = new FormData();
+    fd.append("file", file);
+    fetch("/cinema/inspect", { method: "POST", body: fd })
+      .then(function (resp) {
+        if (!resp.ok) {
+          return resp.json().catch(function () { return {}; }).then(function (err) {
+            throw new Error(err.detail || "이미지 검사 실패 (" + resp.status + ")");
+          });
+        }
+        return resp.json();
+      })
+      .then(function (data) { applyPayload(data, true); })
+      .catch(function (err) { setBanner("error", String(err.message || err)); });
+  }
+
+  function setPlaying(flag) {
+    state.playing = Boolean(flag);
+    els.btnPlay.textContent = state.playing ? "⏸ 일시정지" : "▶ 재생";
+    if (state.playing) {
+      if (state.progress >= 0.999) { state.progress = 0; }
+      state.lastTs = performance.now();
+    }
+  }
+
+  function currentStageInfo() {
+    var scaled = state.progress * (N_CHAPTERS - 1);
+    var idx = Math.min(N_CHAPTERS - 1, Math.max(0, Math.floor(scaled + 0.0001)));
+    var nextIdx = Math.min(N_CHAPTERS - 1, idx + 1);
+    var localT = Math.min(1, Math.max(0, scaled - idx));
+    return { idx: idx, nextIdx: nextIdx, localT: localT, scaled: scaled };
+  }
+
+  function updateHud(info) {
+    var data = state.data;
+    if (!data) { return; }
+    var activeIdx = info.localT > 0.55 ? info.nextIdx : info.idx;
+    var ch = (data.chapters && data.chapters[activeIdx]) || chapterDefs[activeIdx];
+    var pct = Math.round(state.progress * 100);
+
+    els.hudStage.textContent = ch.stage_range + " · " + ch.key.toUpperCase();
+    els.hudTitle.textContent = ch.title;
+    els.hudCaptionTag.textContent = "0" + (activeIdx + 1) + "/0" + N_CHAPTERS;
+    els.hudSub.textContent = ch.subtitle;
+
+    var revealRatio = activeIdx >= N_CHAPTERS - 1 ? 1.0 : Math.max(0, (state.progress - 0.55) / 0.45);
+    var shownScore = data.score * Math.min(1, revealRatio);
+    els.hudScore.textContent = shownScore.toFixed(4);
+
+    var gaugeW = Math.min(308, Math.max(0, (shownScore / 1.5) * 308));
+    els.gaugeFill.setAttribute("width", gaugeW.toFixed(1));
+    els.gaugePin.setAttribute("cx", (6 + gaugeW).toFixed(1));
+
+    var isFinal = state.progress >= 0.86;
+    if (isFinal) {
+      els.hudBadge.className = "badge b-" + data.status;
+      els.hudBadge.textContent = data.status;
+      els.hudVerdictKo.textContent = data.status_label + " 확정";
+    } else {
+      els.hudBadge.className = "badge";
+      els.hudBadge.textContent = "STAGE " + (activeIdx + 1);
+      els.hudVerdictKo.textContent = "분석 진행 중";
+    }
+
+    var elapsed = ch.cumulative_ms != null ? ch.cumulative_ms : (data.total_ms * state.progress);
+    els.hudElapsed.textContent = elapsed.toFixed(1) + " ms";
+    els.hudRoi.textContent = (activeIdx >= 1 && data.roi)
+      ? (data.roi.area_ratio * 100).toFixed(1) + "%"
+      : "대기";
+    els.hudZresp.textContent = activeIdx >= 2
+      ? "z " + data.telemetry.max_z.toFixed(1) + " / " + data.telemetry.max_response.toFixed(0)
+      : "대기";
+    els.hudComps.textContent = activeIdx >= 4
+      ? data.telemetry.component_count + "개 (" + data.telemetry.refined_px + "px)"
+      : "대기";
+
+    els.hudReasons.innerHTML = "";
+    var reasons = isFinal
+      ? (data.reasons && data.reasons.length ? data.reasons : ["NORMAL_NO_DEFECT"])
+      : [ch.stage_range + " 실행 중"];
+    reasons.forEach(function (r) {
+      var span = document.createElement("span");
+      span.className = "hud-reason-pill";
+      span.textContent = r;
+      els.hudReasons.appendChild(span);
+    });
+
+    els.timeReadout.textContent = "0" + (activeIdx + 1) + "/0" + N_CHAPTERS + " · " + pct + "%";
+    els.loopPct.textContent = pct + "%";
+    els.loopNodes.forEach(function (btn, i) {
+      btn.classList.toggle("active", i === activeIdx);
+      btn.classList.toggle("passed", i < activeIdx);
+    });
+  }
+
+  function render3D(info) {
+    var activeIdx = info.localT > 0.55 ? info.nextIdx : info.idx;
+    var spread = state.exploded ? 50 : 8;
+    var shiftX = state.exploded ? 22 : 0;
+    var autoYaw = state.exploded ? (-26 + state.progress * 16) : (-6 + state.progress * 12);
+    var rx = state.dragging ? state.rotX : (state.exploded ? 13 : 4);
+    var ry = state.dragging ? state.rotY : autoYaw;
+
+    els.stackRig.style.transform =
+      "rotateX(" + rx.toFixed(1) + "deg) rotateY(" + ry.toFixed(1) + "deg)";
+
+    var scanPct = ((state.scanPhase % 1) * 100).toFixed(1) + "%";
+    layerCards.forEach(function (card, idx) {
+      var rel = idx - info.scaled;
+      var z = -rel * spread;
+      var tx = rel * shiftX;
+      var ty = rel * (state.exploded ? -7 : 0);
+      var dist = Math.abs(rel);
+      var opacity = idx <= activeIdx + 1 ? Math.max(0.18, 1 - dist * 0.23) : 0.14;
+      var isAct = idx === activeIdx;
+      var pop = isAct ? 26 : 0;
+
+      card.classList.toggle("is-active", isAct);
+      card.style.opacity = opacity.toFixed(3);
+      card.style.zIndex = String(50 - Math.round(dist * 10));
+      card.style.transform =
+        "translate3d(" + tx.toFixed(1) + "px, " + ty.toFixed(1) + "px, " + (z + pop).toFixed(1) + "px) " +
+        "scale(" + (isAct ? 1.05 : 0.94) + ")";
+
+      var beam = card.querySelector(".laser-beam");
+      if (beam) { beam.style.top = scanPct; }
+    });
+  }
+
+  function render2D(info) {
+    var data = state.data;
+    if (!data) { return; }
+    var keyA = chapterDefs[info.idx].key;
+    var keyB = chapterDefs[info.nextIdx].key;
+    var imgA = state.images[keyA];
+    var imgB = state.images[keyB];
+    var cw = els.canvas.width;
+    var ch = els.canvas.height;
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.fillStyle = "#04070c";
+    ctx.fillRect(0, 0, cw, ch);
+    if (!imgA) { return; }
+
+    var scale = Math.min((cw - 24) / imgA.width, (ch - 24) / imgA.height);
+    var dw = imgA.width * scale;
+    var dh = imgA.height * scale;
+    var dx = (cw - dw) / 2;
+    var dy = (ch - dh) / 2;
+
+    ctx.drawImage(imgA, dx, dy, dw, dh);
+
+    var wipeY = dy + dh * info.localT;
+    if (imgB && info.nextIdx !== info.idx && info.localT > 0.01) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(dx, dy, dw, dh * info.localT);
+      ctx.clip();
+      ctx.drawImage(imgB, dx, dy, dw, dh);
+      ctx.restore();
+
+      ctx.save();
+      var grad = ctx.createLinearGradient(dx, wipeY - 10, dx, wipeY + 10);
+      grad.addColorStop(0, "rgba(52,211,153,0)");
+      grad.addColorStop(0.5, "rgba(253,224,71,0.95)");
+      grad.addColorStop(1, "rgba(52,211,153,0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(dx - 8, wipeY - 10, dw + 16, 20);
+      ctx.restore();
+    }
+
+    if (info.scaled >= 4.5 && data.components && data.components.length) {
+      var pulse = 0.55 + 0.45 * Math.sin(state.scanPhase * Math.PI * 2);
+      var sx = dw / Math.max(1, data.image_size.width);
+      var sy = dh / Math.max(1, data.image_size.height);
+      ctx.save();
+      ctx.strokeStyle = "rgba(251, 191, 36, " + pulse.toFixed(2) + ")";
+      ctx.lineWidth = 2.2;
+      data.components.forEach(function (comp) {
+        var bx = dx + comp.bbox[0] * sx;
+        var by = dy + comp.bbox[1] * sy;
+        var bw = comp.bbox[2] * sx;
+        var bh = comp.bbox[3] * sy;
+        ctx.strokeRect(bx - 3, by - 3, bw + 6, bh + 6);
+      });
+      ctx.restore();
+    }
+  }
+
+  function renderZoomCallout(info) {
+    var data = state.data;
+    if (!data) { return; }
+    var activeIdx = info.localT > 0.55 ? info.nextIdx : info.idx;
+    var activeKey = chapterDefs[activeIdx].key;
+    var img = state.images[activeKey] || state.images.overlay || state.images.original;
+    if (!img) { return; }
+
+    var ow = els.zoomOverview.width;
+    var oh = els.zoomOverview.height;
+    ovCtx.clearRect(0, 0, ow, oh);
+    ovCtx.fillStyle = "#04070c";
+    ovCtx.fillRect(0, 0, ow, oh);
+    var scale = Math.min((ow - 12) / img.width, (oh - 12) / img.height);
+    var dw = img.width * scale;
+    var dh = img.height * scale;
+    var dx = (ow - dw) / 2;
+    var dy = (oh - dh) / 2;
+    ovCtx.drawImage(img, dx, dy, dw, dh);
+
+    // Choose primary defect component or center crop (scale from image_size to actual frame size, e.g. 2x overlay)
+    var comp = (data.components && data.components.length) ? data.components[0] : null;
+    var rxScale = img.width / Math.max(1, data.image_size.width);
+    var ryScale = img.height / Math.max(1, data.image_size.height);
+    var bx0 = 0, by0 = 0, bbw = 0, bbh = 0;
+    var cx, cy, cw, ch;
+    if (comp) {
+      bx0 = comp.bbox[0] * rxScale;
+      by0 = comp.bbox[1] * ryScale;
+      bbw = comp.bbox[2] * rxScale;
+      bbh = comp.bbox[3] * ryScale;
+      cx = bx0 + bbw / 2;
+      cy = by0 + bbh / 2;
+      var pad = Math.max(bbw, bbh, 44 * rxScale) * 1.9;
+      cw = Math.min(img.width, Math.max(64 * rxScale, pad * 1.45));
+      ch = Math.min(img.height, Math.max(48 * ryScale, pad));
+      els.zoomTab.textContent = "● DEFECT ZOOM · " + activeKey.toUpperCase();
+      els.zoomArea.textContent = comp.area_px + " px";
+      els.zoomContrast.textContent = comp.max_contrast_gray.toFixed(1);
+    } else {
+      cx = img.width / 2;
+      cy = img.height / 2;
+      cw = Math.min(img.width, Math.max(80, img.width * 0.7));
+      ch = Math.min(img.height, Math.max(60, img.height * 0.35));
+      els.zoomTab.textContent = "● CLEAN SURFACE · " + activeKey.toUpperCase();
+      els.zoomArea.textContent = "0 px";
+      els.zoomContrast.textContent = "0.0";
+    }
+    var sx0 = Math.max(0, Math.min(img.width - cw, cx - cw / 2));
+    var sy0 = Math.max(0, Math.min(img.height - ch, cy - ch / 2));
+
+    // Highlight box on overview
+    var pulse = 0.65 + 0.35 * Math.sin(state.scanPhase * Math.PI * 2);
+    ovCtx.strokeStyle = "rgba(251, 191, 36, " + pulse.toFixed(2) + ")";
+    ovCtx.lineWidth = 2;
+    ovCtx.strokeRect(dx + sx0 * scale, dy + sy0 * scale, cw * scale, ch * scale);
+
+    // Render crisp magnified crop
+    var zw = els.zoomCrop.width;
+    var zh = els.zoomCrop.height;
+    cropCtx.clearRect(0, 0, zw, zh);
+    cropCtx.fillStyle = "#04070c";
+    cropCtx.fillRect(0, 0, zw, zh);
+    cropCtx.drawImage(img, sx0, sy0, cw, ch, 0, 0, zw, zh);
+
+    if (comp) {
+      var rx = ((bx0 - sx0) / cw) * zw;
+      var ry = ((by0 - sy0) / ch) * zh;
+      var rw = (bbw / cw) * zw;
+      var rh = (bbh / ch) * zh;
+      cropCtx.strokeStyle = "rgba(244, 63, 94, " + pulse.toFixed(2) + ")";
+      cropCtx.lineWidth = 2;
+      cropCtx.strokeRect(rx - 2, ry - 2, rw + 4, rh + 4);
+    }
+  }
+
+  function renderFrame() {
+    var info = currentStageInfo();
+    updateHud(info);
+    renderStudioBg();
+    if (state.mode === "3d") {
+      render3D(info);
+    } else if (state.mode === "2d") {
+      render2D(info);
+    } else {
+      renderZoomCallout(info);
+    }
+  }
+
+  function tick(now) {
+    var dt = state.lastTs ? Math.min(0.08, (now - state.lastTs) / 1000.0) : 0.016;
+    state.lastTs = now;
+    state.scanPhase = (state.scanPhase + dt * 0.45) % 1.0;
+
+    if (state.playing && state.data) {
+      state.progress += (dt * state.speed) / TOTAL_DURATION_S;
+      if (state.progress >= 1.0) {
+        state.progress = 1.0;
+        setPlaying(false);
+      }
+      els.scrubber.value = String(Math.round(state.progress * 1000));
+    }
+    if (state.data) {
+      renderFrame();
+    } else {
+      renderStudioBg();
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function setMode(nextMode) {
+    state.mode = nextMode;
+    els.mode3dBtn.classList.toggle("active", nextMode === "3d");
+    els.mode2dBtn.classList.toggle("active", nextMode === "2d");
+    els.modeZoomBtn.classList.toggle("active", nextMode === "zoom");
+    els.stackViewport.classList.toggle("hidden", nextMode !== "3d");
+    els.canvasWrap.classList.toggle("visible", nextMode === "2d");
+    els.zoomWrap.classList.toggle("visible", nextMode === "zoom");
+    renderFrame();
+  }
+
+  function jumpToChapter(idx) {
+    setPlaying(false);
+    state.progress = Math.min(1, Math.max(0, idx / (N_CHAPTERS - 1)));
+    els.scrubber.value = String(Math.round(state.progress * 1000));
+    renderFrame();
+  }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      if (els.stageRoot.requestFullscreen) {
+        els.stageRoot.requestFullscreen().catch(function () {
+          els.stageRoot.classList.toggle("is-present-mode");
+        });
+      } else {
+        els.stageRoot.classList.toggle("is-present-mode");
+      }
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  }
+
+  // Event bindings
+  els.presetStrip.addEventListener("click", function (ev) {
+    var btn = ev.target.closest(".preset-btn");
+    if (!btn) { return; }
+    loadPreset(btn.getAttribute("data-preset-id"), true);
+  });
+  els.fileInput.addEventListener("change", function () {
+    if (els.fileInput.files && els.fileInput.files[0]) {
+      uploadFile(els.fileInput.files[0]);
+      els.fileInput.value = "";
+    }
+  });
+  ["dragenter", "dragover"].forEach(function (evtName) {
+    els.dropzone.addEventListener(evtName, function (e) {
+      e.preventDefault();
+      els.dropzone.classList.add("dragover");
+    });
+  });
+  ["dragleave", "drop"].forEach(function (evtName) {
+    els.dropzone.addEventListener(evtName, function (e) {
+      e.preventDefault();
+      els.dropzone.classList.remove("dragover");
+    });
+  });
+  els.dropzone.addEventListener("drop", function (e) {
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+      uploadFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  els.btnFullscreen.addEventListener("click", toggleFullscreen);
+  els.mode3dBtn.addEventListener("click", function () { setMode("3d"); });
+  els.mode2dBtn.addEventListener("click", function () { setMode("2d"); });
+  els.modeZoomBtn.addEventListener("click", function () { setMode("zoom"); });
+  els.btnPlay.addEventListener("click", function () { setPlaying(!state.playing); });
+  els.btnRestart.addEventListener("click", function () {
+    state.progress = 0;
+    els.scrubber.value = "0";
+    setPlaying(true);
+  });
+  els.speedSel.addEventListener("change", function () {
+    state.speed = parseFloat(els.speedSel.value) || 1.0;
+  });
+  els.explodeChk.addEventListener("change", function () {
+    state.exploded = els.explodeChk.checked;
+    renderFrame();
+  });
+  els.scrollChk.addEventListener("change", function () {
+    state.scrollSync = els.scrollChk.checked;
+  });
+  els.scrubber.addEventListener("input", function () {
+    setPlaying(false);
+    state.progress = (parseFloat(els.scrubber.value) || 0) / 1000.0;
+    renderFrame();
+  });
+  els.loopNodes.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      jumpToChapter(parseInt(btn.getAttribute("data-jump"), 10) || 0);
+    });
+  });
+
+  // 3D drag rotation
+  els.stackViewport.addEventListener("pointerdown", function (e) {
+    state.dragging = true;
+    state.dragStartX = e.clientX;
+    state.dragStartY = e.clientY;
+    els.stackViewport.setPointerCapture(e.pointerId);
+  });
+  els.stackViewport.addEventListener("pointermove", function (e) {
+    if (!state.dragging) { return; }
+    var dx = e.clientX - state.dragStartX;
+    var dy = e.clientY - state.dragStartY;
+    state.dragStartX = e.clientX;
+    state.dragStartY = e.clientY;
+    state.rotY = Math.max(-68, Math.min(68, state.rotY + dx * 0.45));
+    state.rotX = Math.max(-35, Math.min(45, state.rotX - dy * 0.35));
+    renderFrame();
+  });
+  els.stackViewport.addEventListener("pointerup", function () { state.dragging = false; });
+  els.stackViewport.addEventListener("pointercancel", function () { state.dragging = false; });
+
+  window.addEventListener("resize", resizeStudioBg);
+  window.addEventListener("scroll", function () {
+    if (!state.scrollSync || state.playing || !state.data) { return; }
+    var doc = document.documentElement;
+    var maxScroll = Math.max(1, doc.scrollHeight - window.innerHeight);
+    if (maxScroll < 80) { return; }
+    state.progress = Math.min(1, Math.max(0, window.scrollY / maxScroll));
+    els.scrubber.value = String(Math.round(state.progress * 1000));
+    renderFrame();
+  }, { passive: true });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) {
+      return;
+    }
+    if (e.code === "Space") {
+      e.preventDefault();
+      setPlaying(!state.playing);
+    } else if (e.code === "ArrowRight") {
+      e.preventDefault();
+      jumpToChapter(Math.min(N_CHAPTERS - 1, currentStageInfo().idx + 1));
+    } else if (e.code === "ArrowLeft") {
+      e.preventDefault();
+      jumpToChapter(Math.max(0, currentStageInfo().idx - 1));
+    } else if (e.key === "f" || e.key === "F") {
+      e.preventDefault();
+      toggleFullscreen();
+    }
+  });
+
+  resizeStudioBg();
+  requestAnimationFrame(tick);
+  if (presets.length > 0) {
+    loadPreset(presets[0].id, false);
+  }
+})();
+</script>
+{% endblock %}

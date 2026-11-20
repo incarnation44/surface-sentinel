@@ -94,6 +94,7 @@ def test_pages_no_console_errors_no_external_requests(
         f"/runs/{ui_run.RUN_ID}/review?sort=priority",
         f"/runs/{ui_run.RUN_ID}/metrics",
         "/watchdog",
+        "/cinema",
         "/inspections",
         "/stats",
         "/compare",
