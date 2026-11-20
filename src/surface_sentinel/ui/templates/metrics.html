@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 {% block title %}지표 — {{ run.run_id }} — Surface Sentinel{% endblock %}
 {% block content %}
-<h1>지표·혼동행렬</h1>
-<p class="meta num">{{ run.run_id }}</p>
-<div class="navlinks">
-  <a href="/runs/{{ run.run_id }}">run 요약</a>
-  <a href="/runs/{{ run.run_id }}/review">검토 큐</a>
-  <a href="/runs/{{ run.run_id }}/triage">에이전트 트리아지</a>
+<div class="page-hero">
+  <div>
+    <span class="page-eyebrow">Run Metrics &amp; Confusion Matrix</span>
+    <h1>지표·혼동행렬</h1>
+    <p class="page-sub num">{{ run.run_id }} · 아래 지표는 <b>기계 판정 기준</b>입니다(평가 CLI와 같은 정의, 설계 §4.2). 모든 비율에 분모가 함께 표시됩니다. ERROR는 판정이 아니라 분모에서 제외됩니다.</p>
+  </div>
+  <div class="page-hero-aside navlinks" style="margin:0">
+    <a href="/runs/{{ run.run_id }}">run 요약</a>
+    <a href="/runs/{{ run.run_id }}/review">검토 큐</a>
+    <a href="/runs/{{ run.run_id }}/triage">에이전트 트리아지</a>
+  </div>
 </div>
-<p class="meta">
-  아래 지표는 <b>기계 판정 기준</b>입니다(평가 CLI와 같은 정의, 설계 §4.2).
-  모든 비율에 분모가 함께 표시됩니다. ERROR는 판정이 아니라 분모에서 제외됩니다.
-  검토로 바뀐 최종 상태는 run 요약 그리드와 샘플 상세에서 확인하세요.
-</p>
 
 <h2>혼동행렬 (기계 판정)</h2>
 <div class="table-wrap">
@@ -68,11 +68,13 @@
 </div>
 
 <h2>검토 현황</h2>
+<div class="table-wrap">
 <table>
   <tbody>
     <tr><th>REVIEW 샘플</th><td>{{ review_total }}</td><th>결정 완료</th><td>{{ review_done }}</td><th>미결정</th><td>{{ review_total - review_done }}</td></tr>
   </tbody>
 </table>
+</div>
 
 <div class="card" style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
   <div>

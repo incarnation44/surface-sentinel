@@ -1,36 +1,58 @@
 {% extends "base.html" %}
 {% block title %}run 비교 — Surface Sentinel{% endblock %}
 {% block content %}
-<h1>run 비교</h1>
-<div class="navlinks">
-  <a href="/">run 목록</a>
-  <a href="/stats">검사 통계</a>
-  <a href="/watchdog">Watchdog 관제</a>
+<div class="page-hero">
+  <div>
+    <span class="page-eyebrow">Side-by-Side Evaluation</span>
+    <h1>run 비교</h1>
+    <p class="page-sub">두 run의 지표를 같은 정의로 나란히 비교합니다. 모든 비율에 분모가 함께 표시되고, ERROR는 판정이 아니므로 분모에서 제외됩니다(기존 지표 페이지와 같은 정의).</p>
+  </div>
+  <div class="page-hero-aside navlinks" style="margin:0">
+    <a href="/">run 목록</a>
+    <a href="/stats">검사 통계</a>
+    <a href="/watchdog">Watchdog 관제</a>
+  </div>
 </div>
-<p class="meta">
-  두 run의 지표를 같은 정의로 나란히 비교합니다. 모든 비율에 분모가 함께 표시되고,
-  ERROR는 판정이 아니므로 분모에서 제외됩니다(기존 지표 페이지와 같은 정의).
-</p>
 
-<form method="get" action="/compare" class="decision">
-  <label for="base">기준 run (base)</label>
-  <select id="base" name="base">
-    <option value="">선택하세요</option>
-    {% for run in runs %}
-    <option value="{{ run.run_id }}" {% if run.run_id == base %}selected{% endif %}>{{ run.run_id }}</option>
-    {% endfor %}
-  </select>
-  <label for="target">비교 run (target)</label>
-  <select id="target" name="target">
-    <option value="">선택하세요</option>
-    {% for run in runs %}
-    <option value="{{ run.run_id }}" {% if run.run_id == target %}selected{% endif %}>{{ run.run_id }}</option>
-    {% endfor %}
-  </select>
-  <p><button type="submit">비교하기</button></p>
+<form method="get" action="/compare" class="compare-bar">
+  <div class="compare-field">
+    <label for="base">기준 run (base)</label>
+    <select id="base" name="base">
+      <option value="">선택하세요</option>
+      {% for run in runs %}
+      <option value="{{ run.run_id }}" {% if run.run_id == base %}selected{% endif %}>{{ run.run_id }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <span class="compare-vs" aria-hidden="true">VS</span>
+  <div class="compare-field">
+    <label for="target">비교 run (target)</label>
+    <select id="target" name="target">
+      <option value="">선택하세요</option>
+      {% for run in runs %}
+      <option value="{{ run.run_id }}" {% if run.run_id == target %}selected{% endif %}>{{ run.run_id }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <button type="submit">비교하기</button>
+  </div>
 </form>
 
 {% if rows %}
+<div class="kpi-strip">
+  <div class="kpi">
+    <div class="kpi-label">기준 run (base)</div>
+    <div class="kpi-val num" style="font-size:16px">{{ base_view.run.run_id }}</div>
+    <div class="kpi-sub">전체 {{ base_view.total }}건 · <a href="/runs/{{ base_view.run.run_id }}/metrics">base 지표 보기</a></div>
+  </div>
+  <div class="kpi kpi-accent">
+    <div class="kpi-label">비교 run (target)</div>
+    <div class="kpi-val num" style="font-size:16px">{{ target_view.run.run_id }}</div>
+    <div class="kpi-sub">전체 {{ target_view.total }}건 · <a href="/runs/{{ target_view.run.run_id }}/metrics">target 지표 보기</a></div>
+  </div>
+</div>
+
 <h2>지표 비교</h2>
 <div class="table-wrap">
 <table>
@@ -42,7 +64,7 @@
     <tr>
       <td>
         <code>{{ row.name }}</code>
-        {% if metric_labels.get(row.name) %}<div class="meta" style="font-size:11px">{{ metric_labels.get(row.name) }}</div>{% endif %}
+        {% if metric_labels.get(row.name) %}<div class="meta" style="font-size:11px;margin-top:3px">{{ metric_labels.get(row.name) }}</div>{% endif %}
       </td>
       <td class="num">{{ row.base.formatted() }}</td>
       <td class="num">{{ row.target.formatted() }}</td>
@@ -86,12 +108,12 @@
   </tbody>
 </table>
 </div>
-<p class="meta">
+<p class="meta" style="margin-top:12px">
   base 전체 {{ base_view.total }}건 · target 전체 {{ target_view.total }}건.
   상세는 각 run의 <a href="/runs/{{ base_view.run.run_id }}/metrics">base 지표</a>,
   <a href="/runs/{{ target_view.run.run_id }}/metrics">target 지표</a>에서 확인하세요.
 </p>
 {% else %}
-<div class="notice">두 run을 선택하면 지표를 나란히 비교합니다.</div>
+<div class="empty-card">두 run을 선택하면 지표를 나란히 비교합니다.</div>
 {% endif %}
 {% endblock %}

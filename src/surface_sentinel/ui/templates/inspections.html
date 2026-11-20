@@ -1,8 +1,19 @@
 {% extends "base.html" %}
 {% block title %}교차증거 DB 탐색기 — Surface Sentinel{% endblock %}
 {% block content %}
-<h1>교차증거 DB 탐색기</h1>
-<p class="meta">SQLite 검사 기록(<code>inspections</code> · <code>engine_observations</code> · <code>agent_assessments</code>)을 읽기 전용으로 탐색합니다. DB: <span class="hash">{{ db.path }}</span></p>
+<div class="page-hero">
+  <div>
+    <span class="page-eyebrow">Cross-Evidence SQLite Explorer</span>
+    <h1>교차증거 DB 탐색기</h1>
+    <p class="page-sub">SQLite 검사 기록(<code>inspections</code> · <code>engine_observations</code> · <code>agent_assessments</code>)을 읽기 전용으로 탐색합니다.</p>
+    <p class="meta" style="margin:6px 0 0">DB: <span class="hash">{{ db.path }}</span></p>
+  </div>
+  <div class="page-hero-aside navlinks" style="margin:0">
+    <a href="/">run 목록</a>
+    <a href="/stats">검사 통계</a>
+    <a href="/watchdog">Watchdog 관제</a>
+  </div>
+</div>
 
 {% if api_enabled %}
 <div class="card live-workbench-card" style="margin:12px 0 18px">
@@ -43,10 +54,10 @@
 <div class="notice">{{ db.message }}</div>
 {% else %}
 <div class="kpi-strip">
-  <div class="kpi"><div class="kpi-label">전체 기록</div><div class="kpi-val">{{ db.all_total }}</div></div>
-  <div class="kpi"><div class="kpi-label">OK (정상)</div><div class="kpi-val">{{ db.status_counts["OK"] }}</div></div>
-  <div class="kpi"><div class="kpi-label">NG (불량)</div><div class="kpi-val">{{ db.status_counts["NG"] }}</div></div>
-  <div class="kpi"><div class="kpi-label">REVIEW (보류)</div><div class="kpi-val">{{ db.status_counts["REVIEW"] }}</div></div>
+  <div class="kpi kpi-accent"><div class="kpi-label">전체 기록</div><div class="kpi-val">{{ db.all_total }}</div></div>
+  <div class="kpi kpi-ok"><div class="kpi-label">OK (정상)</div><div class="kpi-val">{{ db.status_counts["OK"] }}</div></div>
+  <div class="kpi kpi-ng"><div class="kpi-label">NG (불량)</div><div class="kpi-val">{{ db.status_counts["NG"] }}</div></div>
+  <div class="kpi kpi-review"><div class="kpi-label">REVIEW (보류)</div><div class="kpi-val">{{ db.status_counts["REVIEW"] }}</div></div>
 </div>
 
 <form method="get" action="/inspections" class="toolbar card">

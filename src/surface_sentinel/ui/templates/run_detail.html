@@ -6,12 +6,13 @@
 {% set s_total = counts.get("samples", 0)|int %}
 {% set r_status = run.payload.get("status", "ERROR") %}
 
-<div class="page-header">
+<div class="page-hero">
   <div>
+    <span class="page-eyebrow">Batch Run Summary</span>
     <h1>run 요약</h1>
     <p class="page-sub num">{{ run.run_id }} · 분할 <code>{{ run.payload.get("split", "-") }}</code> · 모드 <code>{{ run.payload.get("mode", "-") }}</code></p>
   </div>
-  <div class="navlinks" style="margin:0">
+  <div class="page-hero-aside navlinks" style="margin:0">
     <a class="btn" href="/runs/{{ run.run_id }}/triage">에이전트 트리아지</a>
     <a class="btn btn-ghost" href="/runs/{{ run.run_id }}/review?sort=priority">검토 큐(REVIEW)</a>
     <a class="btn btn-ghost" href="/runs/{{ run.run_id }}/metrics">지표·혼동행렬</a>

@@ -1,28 +1,37 @@
 {% extends "base.html" %}
 {% block title %}Watchdog 무결성 감사 &amp; PSI 드리프트 관제 — Surface Sentinel{% endblock %}
 {% block content %}
-<h1>Watchdog 무결성 감사 &amp; PSI 드리프트 관제</h1>
-<p class="meta">Phase 3 observe-only 관제 콘솔 · 저장소 하드 게이트 · run/DB 무결성 · 배치 분포 PSI 드리프트 감시 (기계 판정·설정 불변)</p>
+<div class="page-hero">
+  <div>
+    <span class="page-eyebrow">Phase 3 · Observe-Only Console</span>
+    <h1>Watchdog 무결성 감사 &amp; PSI 드리프트 관제</h1>
+    <p class="page-sub">저장소 하드 게이트, run/DB 무결성, 배치 분포 PSI 드리프트를 읽기 전용으로 감시합니다 (기계 판정·설정 불변).</p>
+  </div>
+  <div class="page-hero-aside">
+    <span class="mode-pill">읽기 전용 감사</span>
+    {% if selected_run_id %}<span class="mode-pill num">{{ selected_run_id }}</span>{% endif %}
+  </div>
+</div>
 
 <div class="kpi-strip">
-  <div class="kpi">
+  <div class="kpi {{ 'kpi-ok' if gate_report.verdict.value == 'PASS' else 'kpi-ng' }}">
     <div class="kpi-label">저장소 하드 게이트</div>
     <div class="kpi-val"><span class="badge b-{{ gate_report.verdict.value }}">{{ gate_report.verdict.value }}</span></div>
     <div class="kpi-sub">{{ gate_report.summary }}</div>
   </div>
-  <div class="kpi">
+  <div class="kpi {{ 'kpi-ok' if run_audit and run_audit.verdict.value == 'PASS' else ('kpi-ng' if run_audit else '') }}">
     <div class="kpi-label">Run 무결성 감사</div>
     <div class="kpi-val">
       {% if run_audit %}<span class="badge b-{{ run_audit.verdict.value }}">{{ run_audit.verdict.value }}</span>{% else %}-{% endif %}
     </div>
     <div class="kpi-sub num">{{ selected_run_id or "선택된 run 없음" }}</div>
   </div>
-  <div class="kpi">
+  <div class="kpi {{ 'kpi-ok' if db_audit.verdict.value == 'PASS' else 'kpi-review' }}">
     <div class="kpi-label">기록 DB 무결성</div>
     <div class="kpi-val"><span class="badge b-{{ db_audit.verdict.value }}">{{ db_audit.verdict.value }}</span></div>
     <div class="kpi-sub">{{ "DB 존재 (읽기 전용)" if db_exists else "DB 미생성 (읽기 전용)" }}</div>
   </div>
-  <div class="kpi">
+  <div class="kpi {{ 'kpi-ng' if drift_report and drift_report.status.value == 'DRIFT_ALERT' else ('kpi-review' if drift_report and drift_report.status.value == 'WATCH' else ('kpi-ok' if drift_report and drift_report.status.value == 'NORMAL' else '')) }}">
     <div class="kpi-label">PSI 분포 드리프트</div>
     <div class="kpi-val">
       {% if drift_report %}<span class="badge b-{{ drift_report.status.value }}">{{ drift_report.status.value }}</span>{% else %}-{% endif %}
@@ -32,10 +41,10 @@
 </div>
 
 <h2>1. 저장소 하드 게이트 감사 (H1~H7)</h2>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">
   {% for chk in gate_report.checks %}
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px">
+  <div class="gate-card {{ '' if chk.passed else ('gate-fail' if chk.severity == 'REJECT' else 'gate-warn') }}">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
       <code style="font-size:12px;font-weight:700">{{ chk.name }}</code>
       <span class="badge {{ 'b-PASS' if chk.passed else ('b-REJECT' if chk.severity == 'REJECT' else 'b-REVISE') }}">
         {{ "PASS" if chk.passed else chk.severity }}
@@ -109,25 +118,28 @@
 
 <h2>3. PSI 분포 드리프트 감시 (observe-only)</h2>
 {% if runs %}
-<form method="get" action="/watchdog" class="card" style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:12px">
+<form method="get" action="/watchdog" class="compare-bar">
   <input type="hidden" name="run_id" value="{{ selected_run_id }}">
-  <div>
-    <label for="w-base" style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">기준선 run (baseline)</label>
-    <select id="w-base" name="baseline" style="padding:5px 8px;border:1px solid var(--line);border-radius:4px;font-size:12px">
+  <div class="compare-field">
+    <label for="w-base">기준선 run (baseline)</label>
+    <select id="w-base" name="baseline">
       {% for r in runs %}
       <option value="{{ r.run_id }}" {% if r.run_id == base_id %}selected{% endif %}>{{ r.run_id }}</option>
       {% endfor %}
     </select>
   </div>
-  <div>
-    <label for="w-target" style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">대상 run (target)</label>
-    <select id="w-target" name="target" style="padding:5px 8px;border:1px solid var(--line);border-radius:4px;font-size:12px">
+  <span class="compare-vs" aria-hidden="true">VS</span>
+  <div class="compare-field">
+    <label for="w-target">대상 run (target)</label>
+    <select id="w-target" name="target">
       {% for r in runs %}
       <option value="{{ r.run_id }}" {% if r.run_id == target_id %}selected{% endif %}>{{ r.run_id }}</option>
       {% endfor %}
     </select>
   </div>
-  <button type="submit">드리프트 계측</button>
+  <div>
+    <button type="submit">드리프트 계측</button>
+  </div>
 </form>
 
 {% if drift_report %}
