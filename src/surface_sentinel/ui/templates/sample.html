@@ -1,28 +1,38 @@
 {% extends "base.html" %}
 {% block title %}{{ sample.sample_id }} — Surface Sentinel{% endblock %}
 {% block content %}
-<h1>샘플 상세</h1>
-<p class="meta num">{{ run.run_id }} / {{ sample.sample_id }} (원본 {{ sample.record.original_id }})</p>
-<div class="navlinks">
-  <a href="/runs/{{ run.run_id }}">run 요약</a>
-  <a href="/runs/{{ run.run_id }}/review">검토 큐</a>
-  <a href="/runs/{{ run.run_id }}/triage">트리아지</a>
-  <a href="/runs/{{ run.run_id }}/metrics">지표</a>
-  <a href="{{ sample.url }}/mask">마스크 뷰어</a>
+<div class="page-header">
+  <div>
+    <h1>샘플 상세 <span class="num">{{ sample.sample_id }}</span></h1>
+    <p class="page-sub num">{{ run.run_id }} · 원본 {{ sample.record.original_id }}</p>
+  </div>
+  <div class="navlinks" style="margin:0">
+    <a href="/runs/{{ run.run_id }}">run 요약</a>
+    <a href="/runs/{{ run.run_id }}/review">검토 큐</a>
+    <a href="/runs/{{ run.run_id }}/triage">트리아지</a>
+    <a href="/runs/{{ run.run_id }}/metrics">지표</a>
+    <a class="btn" href="{{ sample.url }}/mask">마스크 뷰어</a>
+  </div>
 </div>
+
 {% if saved %}<div class="okbox">검토 결정을 저장했습니다. (append-only, 마지막 결정이 최종)</div>{% endif %}
 
-<p>
-  기계 판정: <span class="badge b-{{ sample.machine_status }}">{{ sample.machine_status }}</span>
-  <span class="badge-note">{{ status_labels.get(sample.machine_status, "") }}</span>
-  {% if sample.machine_status == "REVIEW" %}
-  &nbsp;<span class="prio p-{{ sample.priority }}">{{ sample.priority }} ({{ "%.3f"|format(sample.priority_score) }})</span>
-  {% endif %}
-  {% if sample.decision %}
-  &nbsp;최종 상태: <span class="badge b-{{ sample.effective_status }}">{{ sample.effective_status }}</span>
-  <span class="badge-note">검토 반영 ({{ sample.decision.decided_at }})</span>
-  {% endif %}
-</p>
+<div class="card" style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+  <div>
+    기계 판정: <span class="badge b-{{ sample.machine_status }}">{{ sample.machine_status }}</span>
+    <span class="badge-note">{{ status_labels.get(sample.machine_status, "") }}</span>
+    {% if sample.machine_status == "REVIEW" %}
+    &nbsp;<span class="prio p-{{ sample.priority }}">{{ sample.priority }} ({{ "%.3f"|format(sample.priority_score) }})</span>
+    {% endif %}
+    {% if sample.decision %}
+    &nbsp;최종 상태: <span class="badge b-{{ sample.effective_status }}">{{ sample.effective_status }}</span>
+    <span class="badge-note">검토 반영 ({{ sample.decision.decided_at }})</span>
+    {% endif %}
+  </div>
+  <div class="meta num">
+    점수 <strong>{{ "%.6f"|format(sample.record.score) }}</strong> · 정답 라벨 <strong>{{ sample.record.label }}</strong> · 분할 {{ sample.record.split }}
+  </div>
+</div>
 
 {% set sc = sample.record.score|float %}
 {% set sc_clamped = sc if sc <= 1.5 else 1.5 %}
@@ -53,40 +63,41 @@
   </svg>
 </div>
 
-<div class="arg-card">
-  <div class="arg-head">
-    <div>
-      <strong style="font-size:14px">에이전트 트리아지 &amp; 4단 논증 영수증</strong>
-      <span class="prio p-{{ sample.priority }}" style="margin-left:6px">{{ sample.priority }}</span>
-      <span class="meta num" style="margin-left:6px">우선순위 점수 {{ "%.3f"|format(sample.priority_score) }} · 패턴 <code>{{ sample.geometry.pattern.value }}</code></span>
-    </div>
-    <div class="meta num">
-      후보 {{ sample.geometry.component_count }}개 · 직선성 R²={{ "%.3f"|format(sample.geometry.collinearity_r2) }} · 직교 RMS={{ "%.2f"|format(sample.geometry.orthogonal_rms_px) }}px · 경계비={{ "%.0f"|format(sample.geometry.border_touch_ratio * 100) }}%
-    </div>
-  </div>
-  <div class="arg-steps">
-    <div class="arg-step">
-      <div class="arg-step-title">1. 가설 (Hypothesis)</div>
-      <div class="arg-step-body">{{ sample.triage.argumentation.hypothesis }}</div>
-    </div>
-    <div class="arg-step">
-      <div class="arg-step-title">2. 검증 (Experiment)</div>
-      <div class="arg-step-body">{{ sample.triage.argumentation.experiment }}</div>
-    </div>
-    <div class="arg-step">
-      <div class="arg-step-title">3. 결론 (Verdict)</div>
-      <div class="arg-step-body">{{ sample.triage.argumentation.verdict }}</div>
-    </div>
-    <div class="arg-step">
-      <div class="arg-step-title">4. 작업자 지침 (Guidance)</div>
-      <div class="arg-step-body">{{ sample.triage.argumentation.operator_guidance }}</div>
-    </div>
-  </div>
+<h2>단계별 검사 이미지</h2>
+<div class="images">
+  <figure>
+    {% if has_original %}
+    <img src="{{ sample.original_url }}" alt="원본 이미지">
+    {% else %}
+    <div class="noimg">원본 없음 (raw-root 확인)</div>
+    {% endif %}
+    <figcaption>원본</figcaption>
+  </figure>
+  <figure>
+    {% if sample.record.overlay_path %}
+    <img src="{{ sample.overlay_url }}" alt="오버레이 이미지">
+    {% else %}
+    <div class="noimg">오버레이 없음</div>
+    {% endif %}
+    <figcaption>오버레이 (ROI·컴포넌트·판정 표시)</figcaption>
+  </figure>
+  {% if stages.response %}
+  <figure>
+    <img src="{{ stages.response }}" alt="response 이미지">
+    <figcaption>response (배경 보정 후 반응)</figcaption>
+  </figure>
+  {% endif %}
+  {% if stages.candidates %}
+  <figure>
+    <img src="{{ stages.candidates }}" alt="candidates 이미지">
+    <figcaption>candidates (후보 마스크)</figcaption>
+  </figure>
+  {% endif %}
 </div>
 
 {% set pd = counterfactual.phase_diagram_svg_data %}
 {% set plt = pd.plot %}
-<div class="card" style="margin:14px 0" id="counterfactual-panel">
+<div class="card" style="margin:16px 0" id="counterfactual-panel">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
     <strong style="font-size:14px">2D (면적 × 평균대비) 등위선 위상도 &amp; 반사실적 경계 해석</strong>
     <span class="meta num">NG 여유 <strong>{{ "%+.4f"|format(counterfactual.margin_to_ng) }}</strong> · REVIEW 상한 여유 <strong>{{ "%+.4f"|format(counterfactual.margin_to_review_band) }}</strong></span>
@@ -175,75 +186,44 @@
   });
 })();
 </script>
-<h2>이미지</h2>
-<div class="images">
-  <figure>
-    {% if has_original %}
-    <img src="{{ sample.original_url }}" alt="원본 이미지">
-    {% else %}
-    <div class="noimg">원본 없음 (raw-root 확인)</div>
-    {% endif %}
-    <figcaption>원본</figcaption>
-  </figure>
-  <figure>
-    {% if sample.record.overlay_path %}
-    <img src="{{ sample.overlay_url }}" alt="오버레이 이미지">
-    {% else %}
-    <div class="noimg">오버레이 없음</div>
-    {% endif %}
-    <figcaption>오버레이 (ROI·컴포넌트·판정 표시)</figcaption>
-  </figure>
-  {% if stages.response %}
-  <figure>
-    <img src="{{ stages.response }}" alt="response 이미지">
-    <figcaption>response (배경 보정 후 반응)</figcaption>
-  </figure>
-  {% endif %}
-  {% if stages.candidates %}
-  <figure>
-    <img src="{{ stages.candidates }}" alt="candidates 이미지">
-    <figcaption>candidates (후보 마스크)</figcaption>
-  </figure>
-  {% endif %}
+
+<div class="arg-card">
+  <div class="arg-head">
+    <div>
+      <strong style="font-size:14px">에이전트 트리아지 &amp; 4단 논증 영수증</strong>
+      <span class="prio p-{{ sample.priority }}" style="margin-left:6px">{{ sample.priority }}</span>
+      <span class="meta num" style="margin-left:6px">우선순위 점수 {{ "%.3f"|format(sample.priority_score) }} · 패턴 <code>{{ sample.geometry.pattern.value }}</code></span>
+    </div>
+    <div class="meta num">
+      후보 {{ sample.geometry.component_count }}개 · 직선성 R²={{ "%.3f"|format(sample.geometry.collinearity_r2) }} · 직교 RMS={{ "%.2f"|format(sample.geometry.orthogonal_rms_px) }}px · 경계비={{ "%.0f"|format(sample.geometry.border_touch_ratio * 100) }}%
+    </div>
+  </div>
+  <div class="arg-steps">
+    <div class="arg-step">
+      <div class="arg-step-title">1. 가설 (Hypothesis)</div>
+      <div class="arg-step-body">{{ sample.triage.argumentation.hypothesis }}</div>
+    </div>
+    <div class="arg-step">
+      <div class="arg-step-title">2. 검증 (Experiment)</div>
+      <div class="arg-step-body">{{ sample.triage.argumentation.experiment }}</div>
+    </div>
+    <div class="arg-step">
+      <div class="arg-step-title">3. 결론 (Verdict)</div>
+      <div class="arg-step-body">{{ sample.triage.argumentation.verdict }}</div>
+    </div>
+    <div class="arg-step">
+      <div class="arg-step-title">4. 작업자 지침 (Guidance)</div>
+      <div class="arg-step-body">{{ sample.triage.argumentation.operator_guidance }}</div>
+    </div>
+  </div>
 </div>
 
-<h2>판정 정보</h2>
-<table>
-  <tbody>
-    <tr><th>점수</th><td class="num">{{ "%.6f"|format(sample.record.score) }}</td>
-        <th>정답 라벨</th><td>{{ sample.record.label }}</td>
-        <th>분할</th><td>{{ sample.record.split }}</td></tr>
-    <tr><th>사유</th><td colspan="5">{{ sample.record.reasons|join(", ") or "-" }}</td></tr>
-    {% if sample.record.error_code %}
-    <tr><th>오류</th><td colspan="5"><code>{{ sample.record.error_code }}</code>
-        (단계: {{ sample.record.error_stage or "-" }}) — ERROR는 제품 판정이 아닙니다.</td></tr>
-    {% endif %}
-  </tbody>
-</table>
-
-{% if sample.record.quality %}
-<h2>입력 품질</h2>
-<table>
-  <tbody>
-    <tr><th>blur_variance</th><td class="num">{{ "%.4f"|format(sample.record.quality.blur_variance) }}</td>
-        <th>mean_gray</th><td class="num">{{ "%.4f"|format(sample.record.quality.mean_gray) }}</td>
-        <th>saturated_ratio</th><td class="num">{{ "%.4f"|format(sample.record.quality.saturated_ratio) }}</td></tr>
-    <tr><th>flags</th><td colspan="5">{{ sample.record.quality.flags|join(", ") or "-" }}</td></tr>
-  </tbody>
-</table>
-{% endif %}
-
-{% if sample.record.roi %}
-<h2>ROI</h2>
-<table>
-  <tbody>
-    <tr><th>mode</th><td>{{ sample.record.roi.mode }}</td>
-        <th>bbox</th><td class="num">{{ sample.record.roi.bbox }}</td>
-        <th>area_px</th><td class="num">{{ sample.record.roi.area_px }}</td></tr>
-    <tr><th>area_ratio</th><td class="num">{{ "%.4f"|format(sample.record.roi.area_ratio) }}</td>
-        <th>uncertain</th><td colspan="3">{{ sample.record.roi.uncertain }}</td></tr>
-  </tbody>
-</table>
+{% if sample.machine_status == "REVIEW" %}
+{% with return_to = "sample" %}{% include "_decision_form.html" %}{% endwith %}
+{% elif sample.machine_status == "ERROR" %}
+<div class="notice">ERROR는 판정이 아니므로 검토 대상이 아닙니다. 입력을 수정한 뒤 다시 실행하세요.</div>
+{% else %}
+<div class="notice">기계 판정 {{ sample.machine_status }}는 불변입니다. 검토로 바꿀 수 없습니다.</div>
 {% endif %}
 
 <h2>컴포넌트 ({{ sample.record.components|length }}개)</h2>
@@ -275,33 +255,52 @@
 <p class="meta">컴포넌트가 없습니다.</p>
 {% endif %}
 
-<h2>단계별 시간 (ms)</h2>
-<table>
-  <thead><tr><th style="width:180px">단계</th><th style="width:120px">시간 (ms)</th><th>비중</th></tr></thead>
-  <tbody>
-    {% for bar in timing_bars %}
-    <tr>
-      <th>{{ bar.name }}</th>
-      <td class="num">{{ "%.3f"|format(bar.ms) }}</td>
-      <td>
-        <div class="bar-track">
-          <div class="bar-fill" style="width:{{ bar.pct }}%;background:{{ 'var(--text)' if bar.name == 'total' else 'var(--accent)' }}"></div>
-        </div>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-<h2>해시·증거</h2>
-<table>
-  <tbody>
-    <tr><th>input_sha256</th><td class="hash">{{ sample.record.input_sha256 or "-" }}</td></tr>
-    <tr><th>mask_sha256</th><td class="hash">{{ sample.record.mask_sha256 or "-" }}</td></tr>
-    <tr><th>config_hash</th><td class="hash">{{ sample.record.config_hash or "-" }}</td></tr>
-    <tr><th>overlay_path</th><td class="hash">{{ sample.record.overlay_path or "-" }}</td></tr>
-  </tbody>
-</table>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-top:16px">
+  <div>
+    <h2 style="margin-top:0">단계별 시간 (ms)</h2>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th style="width:140px">단계</th><th style="width:100px">시간 (ms)</th><th>비중</th></tr></thead>
+      <tbody>
+        {% for bar in timing_bars %}
+        <tr>
+          <th>{{ bar.name }}</th>
+          <td class="num">{{ "%.3f"|format(bar.ms) }}</td>
+          <td>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:{{ bar.pct }}%;background:{{ 'var(--text)' if bar.name == 'total' else 'var(--accent)' }}"></div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  <div>
+    <h2 style="margin-top:0">판정 · 품질 · ROI</h2>
+    <div class="table-wrap">
+    <table>
+      <tbody>
+        <tr><th>점수</th><td class="num">{{ "%.6f"|format(sample.record.score) }}</td>
+            <th>정답 / 분할</th><td>{{ sample.record.label }} / {{ sample.record.split }}</td></tr>
+        <tr><th>사유</th><td colspan="3">{{ sample.record.reasons|join(", ") or "-" }}</td></tr>
+        {% if sample.record.error_code %}
+        <tr><th>오류</th><td colspan="3"><code>{{ sample.record.error_code }}</code> (단계: {{ sample.record.error_stage or "-" }}) — ERROR는 제품 판정이 아닙니다.</td></tr>
+        {% endif %}
+        {% if sample.record.quality %}
+        <tr><th>블러 / 밝기</th><td class="num">{{ "%.2f"|format(sample.record.quality.blur_variance) }} / {{ "%.1f"|format(sample.record.quality.mean_gray) }}</td>
+            <th>포화비율</th><td class="num">{{ "%.4f"|format(sample.record.quality.saturated_ratio) }} ({{ sample.record.quality.flags|join(", ") or "-" }})</td></tr>
+        {% endif %}
+        {% if sample.record.roi %}
+        <tr><th>ROI ({{ sample.record.roi.mode }})</th><td class="num">{{ sample.record.roi.bbox }}</td>
+            <th>면적 / 비율</th><td class="num">{{ sample.record.roi.area_px }}px ({{ "%.4f"|format(sample.record.roi.area_ratio) }}) · uncertain={{ sample.record.roi.uncertain }}</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
 
 <h2>검토 이력 ({{ history|length }}건)</h2>
 {% if history %}
@@ -329,11 +328,17 @@
 <p class="meta">아직 검토 결정이 없습니다.</p>
 {% endif %}
 
-{% if sample.machine_status == "REVIEW" %}
-{% with return_to = "sample" %}{% include "_decision_form.html" %}{% endwith %}
-{% elif sample.machine_status == "ERROR" %}
-<div class="notice">ERROR는 판정이 아니므로 검토 대상이 아닙니다. 입력을 수정한 뒤 다시 실행하세요.</div>
-{% else %}
-<div class="notice">기계 판정 {{ sample.machine_status }}는 불변입니다. 검토로 바꿀 수 없습니다.</div>
-{% endif %}
+<details class="tech-fold" open>
+  <summary>해시 · 증거 메타데이터</summary>
+  <div class="table-wrap">
+  <table>
+    <tbody>
+      <tr><th>input_sha256</th><td class="hash">{{ sample.record.input_sha256 or "-" }}</td></tr>
+      <tr><th>mask_sha256</th><td class="hash">{{ sample.record.mask_sha256 or "-" }}</td></tr>
+      <tr><th>config_hash</th><td class="hash">{{ sample.record.config_hash or "-" }}</td></tr>
+      <tr><th>overlay_path</th><td class="hash">{{ sample.record.overlay_path or "-" }}</td></tr>
+    </tbody>
+  </table>
+  </div>
+</details>
 {% endblock %}

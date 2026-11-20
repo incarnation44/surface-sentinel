@@ -5,13 +5,14 @@
 <p class="meta">SQLite 검사 기록(<code>inspections</code> · <code>engine_observations</code> · <code>agent_assessments</code>)을 읽기 전용으로 탐색합니다. DB: <span class="hash">{{ db.path }}</span></p>
 
 {% if api_enabled %}
-<div class="card live-workbench-card" style="margin:12px 0">
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-    <strong style="font-size:14px">실시간 이미지 검사 워크벤치 (POST /api/inspect)</strong>
+<div class="card live-workbench-card" style="margin:12px 0 18px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+    <strong style="font-size:15px">실시간 이미지 검사 워크벤치 (POST /api/inspect)</strong>
     <span class="mode-pill api-on">API 연결됨</span>
   </div>
+  <p class="meta" style="margin:0 0 10px">시연 팁: <code>data\raw\kolektorsdd2\train</code> 폴더의 샘플 이미지(.png)를 선택해 실시간 추론과 오버레이 생성을 바로 시연할 수 있습니다 (항상 <code>split=tune</code>으로 기록되어 봉인 데이터에 영향 없음).</p>
   <form id="live-inspect-form" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
-    <div style="flex:1;min-width:200px">
+    <div style="flex:1;min-width:220px">
       <label for="live-file" style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">이미지 파일 (.png/.jpg/.bmp/.tif)</label>
       <input type="file" id="live-file" name="file" accept=".png,.jpg,.jpeg,.bmp,.tif,.tiff" required style="font-size:12px">
     </div>
@@ -160,6 +161,19 @@
         link.style.fontWeight = "700";
         box.appendChild(link);
         out.appendChild(box);
+        if (typeof d.overlay_url === "string" && d.overlay_url.charAt(0) === "/") {
+          var previewWrap = document.createElement("div");
+          previewWrap.style.marginTop = "8px";
+          var img = document.createElement("img");
+          img.src = d.overlay_url;
+          img.alt = "검사 #" + d.inspection_id + " 오버레이 미리보기";
+          img.style.maxHeight = "220px";
+          img.style.maxWidth = "100%";
+          img.style.borderRadius = "6px";
+          img.style.border = "1px solid var(--line)";
+          previewWrap.appendChild(img);
+          out.appendChild(previewWrap);
+        }
       })
       .catch(function (err) {
         btn.disabled = false;

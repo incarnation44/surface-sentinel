@@ -1,29 +1,37 @@
 {# 검토 결정 폼. sample.html과 review.html이 include한다.
    문맥: run(RunEntry), sample(sample_view), return_to("sample"|"review") #}
 <form class="decision" method="post" action="/runs/{{ run.run_id }}/review/{{ sample.sample_id }}">
-  <h2 style="margin-top:0">검토 결정</h2>
-  <p class="meta">
-    기계 판정 <span class="badge b-REVIEW">REVIEW</span>만 검토로 덮어쓸 수 있습니다.
-    OK/NG는 불변입니다. 결정은 추가만 되고(append-only) 마지막 결정이 최종 상태입니다.
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+    <h2 style="margin:0">검토 결정</h2>
+    <span class="meta">append-only 기록 · 마지막 결정이 최종 상태</span>
+  </div>
+  <p class="meta" style="margin-top:0">
+    기계 판정 <span class="badge b-REVIEW">REVIEW</span>만 검토로 덮어쓸 수 있으며, OK/NG 기계 판정은 불변입니다.
   </p>
   <input type="hidden" name="return_to" value="{{ return_to }}">
   {% if sort_mode is defined and sort_mode %}<input type="hidden" name="sort" value="{{ sort_mode }}">{% endif %}
   <label>최종 상태 (필수)</label>
-  <div class="radios">
-    <label><input type="radio" name="final_status" value="OK" required> OK — 정상 확인</label>
-    <label><input type="radio" name="final_status" value="NG" required> NG — 불량 확인</label>
-    <label><input type="radio" name="final_status" value="REVIEW" required> REVIEW — 보류</label>
+  <div class="radio-cards">
+    <label class="radio-card"><input type="radio" name="final_status" value="OK" required> <span class="badge b-OK">OK</span> 정상 확인</label>
+    <label class="radio-card"><input type="radio" name="final_status" value="NG" required> <span class="badge b-NG">NG</span> 불량 확인</label>
+    <label class="radio-card"><input type="radio" name="final_status" value="REVIEW" required> <span class="badge b-REVIEW">REVIEW</span> 보류</label>
   </div>
-  <label for="reason_code">사유 (필수)</label>
-  <select id="reason_code" name="reason_code" required>
-    <option value="" disabled selected>사유를 선택하세요</option>
-    {% for code, label in reason_labels.items() %}
-    <option value="{{ code }}">{{ label }} ({{ code }})</option>
-    {% endfor %}
-  </select>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+    <div>
+      <label for="reason_code">사유 (필수)</label>
+      <select id="reason_code" name="reason_code" required>
+        <option value="" disabled selected>사유를 선택하세요</option>
+        {% for code, label in reason_labels.items() %}
+        <option value="{{ code }}">{{ label }} ({{ code }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="reviewer">검토자</label>
+      <input type="text" id="reviewer" name="reviewer" value="local" required>
+    </div>
+  </div>
   <label for="note">메모 (OTHER 선택 시 필수)</label>
-  <textarea id="note" name="note" rows="3" placeholder="판단 근거를 적어 두면 감사에 도움이 됩니다."></textarea>
-  <label for="reviewer">검토자</label>
-  <input type="text" id="reviewer" name="reviewer" value="local" required>
-  <p><button type="submit">결정 저장</button></p>
+  <textarea id="note" name="note" rows="2" placeholder="판단 근거를 적어 두면 감사에 도움이 됩니다."></textarea>
+  <p style="margin-bottom:0"><button type="submit">결정 저장</button></p>
 </form>

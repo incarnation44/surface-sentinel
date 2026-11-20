@@ -43,7 +43,10 @@
   <tbody>
     {% for name, ratio in ratios.items() %}
     <tr>
-      <td><code>{{ name }}</code></td>
+      <td>
+        <code>{{ name }}</code>
+        {% if metric_labels.get(name) %}<div class="meta" style="font-size:11px">{{ metric_labels.get(name) }}</div>{% endif %}
+      </td>
       <td class="num">{{ ratio.formatted() }}</td>
       <td>
         {% if ratio.value is not none and ratio.ci_low is not none and ratio.ci_high is not none %}

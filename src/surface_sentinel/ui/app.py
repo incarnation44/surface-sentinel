@@ -76,7 +76,26 @@ MASK_LAYERS: tuple[tuple[str, str], ...] = (
 )
 
 #: 상태 배지 → 한국어 뜻. 배지 텍스트(영어)와 나란히 표시한다.
-STATUS_LABELS = {"OK": "정상", "NG": "불량", "REVIEW": "보류", "ERROR": "오류(판정 아님)"}
+STATUS_LABELS = {
+    "OK": "정상",
+    "NG": "불량",
+    "REVIEW": "보류",
+    "ERROR": "오류(판정 아님)",
+    "COMPLETE": "완료",
+    "DONE": "완료",
+    "PARTIAL": "부분 완료",
+}
+
+#: 평가 지표 코드명 → 한국어 설명.
+METRIC_LABELS = {
+    "defect_escape_rate": "결함 누출률 (Escape)",
+    "good_false_ng_rate": "정상 오판률 (False-NG)",
+    "review_rate": "검토 보류율 (Review)",
+    "error_rate": "오류율 (Error)",
+    "decided_rate": "자동 판정률 (Decided)",
+    "defect_recall_on_decided": "판정 내 결함 재현율 (Recall)",
+    "ng_precision": "NG 정밀도 (Precision)",
+}
 
 #: 검토 사유 코드 → 한국어 설명. 어휘 정의는 ``review.store``가 정본이다.
 REASON_LABELS = {
@@ -396,6 +415,7 @@ def create_app(
     templates.env.globals["version"] = __version__
     templates.env.globals["status_labels"] = STATUS_LABELS
     templates.env.globals["reason_labels"] = REASON_LABELS
+    templates.env.globals["metric_labels"] = METRIC_LABELS
 
     def render(
         request: Request,
@@ -528,12 +548,40 @@ def create_app(
         total_samples = sum(
             int((e.payload.get("counts") or {}).get("samples") or 0) for e in entries
         )
+        preview_samples: list[dict[str, Any]] = []
+        if entries:
+            latest_entry = entries[0]
+            try:
+                records = load_results(latest_entry.run_dir)
+                latest = ReviewStore(latest_entry.run_dir).latest()
+                ng_min, review_band_max = _run_scoring_bounds(latest_entry)
+                priority_order = {"REVIEW": 0, "NG": 1, "OK": 2, "ERROR": 3}
+                with_overlay = [r for r in records if r.get("overlay_path")]
+                with_overlay.sort(
+                    key=lambda rec: (
+                        priority_order.get(str(rec.get("status", "")), 9),
+                        -float(rec.get("score", 0.0)),
+                    )
+                )
+                for record in with_overlay[:6]:
+                    preview_samples.append(
+                        sample_view(
+                            latest_entry,
+                            record,
+                            latest,
+                            ng_min=ng_min,
+                            review_band_max=review_band_max,
+                        )
+                    )
+            except (UiInputError, ReviewStorageError, KeyError, TypeError, ValueError):
+                preview_samples = []
         return render(
             request,
             "runs.html",
             {
                 "runs": entries,
                 "total_samples": total_samples,
+                "preview_samples": preview_samples,
             },
         )
 

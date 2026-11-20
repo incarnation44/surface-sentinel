@@ -40,7 +40,10 @@
   <tbody>
     {% for row in rows %}
     <tr>
-      <td><code>{{ row.name }}</code></td>
+      <td>
+        <code>{{ row.name }}</code>
+        {% if metric_labels.get(row.name) %}<div class="meta" style="font-size:11px">{{ metric_labels.get(row.name) }}</div>{% endif %}
+      </td>
       <td class="num">{{ row.base.formatted() }}</td>
       <td class="num">{{ row.target.formatted() }}</td>
       <td class="num">

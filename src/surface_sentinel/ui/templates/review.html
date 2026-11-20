@@ -1,16 +1,20 @@
 {% extends "base.html" %}
 {% block title %}검토 큐 — {{ run.run_id }} — Surface Sentinel{% endblock %}
 {% block content %}
-<h1>검토 큐 (REVIEW {{ queue|length }}건)</h1>
-<div class="navlinks">
-  <a href="/runs/{{ run.run_id }}">run 요약</a>
-  <a href="/runs/{{ run.run_id }}/triage">에이전트 트리아지</a>
-  <a href="/runs/{{ run.run_id }}/metrics">지표</a>
+<div class="page-header">
+  <div>
+    <h1>검토 큐 (REVIEW {{ queue|length }}건)</h1>
+    <p class="keyhint" style="margin:4px 0 0">
+      키보드: <kbd>J</kbd> 다음 샘플 · <kbd>K</kbd> 이전 샘플 (입력창 포커스 중 제외) · 기계 판정 REVIEW만 검토 가능하며 결정은 append-only로 저장됩니다.
+    </p>
+  </div>
+  <div class="navlinks" style="margin:0">
+    <a href="/runs/{{ run.run_id }}">run 요약</a>
+    <a href="/runs/{{ run.run_id }}/triage">에이전트 트리아지</a>
+    <a href="/runs/{{ run.run_id }}/metrics">지표</a>
+  </div>
 </div>
-<p class="keyhint">
-  키보드: <kbd>J</kbd> 다음 샘플 · <kbd>K</kbd> 이전 샘플 (입력창에 포커스가 있으면 동작하지 않습니다).
-  기계 판정 REVIEW만 검토할 수 있고, 결정은 append-only로 남습니다.
-</p>
+
 {% if saved %}<div class="okbox">검토 결정을 저장했습니다. 마지막 결정이 최종 상태입니다.</div>{% endif %}
 
 {% if not queue %}
@@ -42,34 +46,28 @@
   </aside>
   <section>
     {% if current %}
-    <h2 style="margin-top:0" class="num">{{ current.sample_id }}
-      <span class="badge b-{{ current.machine_status }}">{{ current.machine_status }}</span>
-      <span class="prio p-{{ current.priority }}">{{ current.priority }} ({{ "%.3f"|format(current.priority_score) }})</span>
-      {% if current.decision %}
-      → 최종 <span class="badge b-{{ current.effective_status }}">{{ current.effective_status }}</span>
-      {% endif %}
-    </h2>
-    <p class="meta num">
-      점수 {{ "%.4f"|format(current.record.score) }} · 정답 {{ current.record.label }} ·
-      패턴 <code>{{ current.geometry.pattern.value }}</code> ·
-      사유 {{ current.record.reasons|join(", ") or "-" }} ·
-      <a href="{{ current.url }}">상세 보기</a>
-    </p>
-    <div class="navlinks">
-      {% if prev_url %}<a href="{{ prev_url }}">← 이전 (K)</a>{% else %}<span class="meta">이전 없음</span>{% endif %}
-      {% if next_url %}<a href="{{ next_url }}">다음 (J) →</a>{% else %}<span class="meta">다음 없음</span>{% endif %}
-    </div>
-
-    <div class="arg-card">
-      <div class="arg-head">
-        <strong style="font-size:13px">에이전트 3단 논증 &amp; 작업자 지침</strong>
-        <span class="meta num">직선성 R²={{ "%.2f"|format(current.geometry.collinearity_r2) }} · 경계비={{ "%.0f"|format(current.geometry.border_touch_ratio * 100) }}%</span>
-      </div>
-      <div class="arg-steps">
-        <div class="arg-step"><div class="arg-step-title">가설</div><div class="arg-step-body">{{ current.triage.argumentation.hypothesis }}</div></div>
-        <div class="arg-step"><div class="arg-step-title">검증</div><div class="arg-step-body">{{ current.triage.argumentation.experiment }}</div></div>
-        <div class="arg-step"><div class="arg-step-title">결론</div><div class="arg-step-body">{{ current.triage.argumentation.verdict }}</div></div>
-        <div class="arg-step"><div class="arg-step-title">지침</div><div class="arg-step-body">{{ current.triage.argumentation.operator_guidance }}</div></div>
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <h2 style="margin:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap" class="num">
+            <span>{{ current.sample_id }}</span>
+            <span class="badge b-{{ current.machine_status }}">{{ current.machine_status }}</span>
+            <span class="prio p-{{ current.priority }}">{{ current.priority }} ({{ "%.3f"|format(current.priority_score) }})</span>
+            {% if current.decision %}
+            <span class="meta">→ 최종</span> <span class="badge b-{{ current.effective_status }}">{{ current.effective_status }}</span>
+            {% endif %}
+          </h2>
+          <p class="meta num" style="margin:6px 0 0">
+            점수 <strong>{{ "%.4f"|format(current.record.score) }}</strong> · 정답 {{ current.record.label }} ·
+            패턴 <code>{{ current.geometry.pattern.value }}</code> ·
+            사유 {{ current.record.reasons|join(", ") or "-" }}
+          </p>
+        </div>
+        <div class="navlinks" style="margin:0">
+          {% if prev_url %}<a href="{{ prev_url }}">← 이전 (K)</a>{% else %}<span class="meta">이전 없음</span>{% endif %}
+          {% if next_url %}<a href="{{ next_url }}">다음 (J) →</a>{% else %}<span class="meta">다음 없음</span>{% endif %}
+          <a href="{{ current.url }}">상세 보기</a>
+        </div>
       </div>
     </div>
 
@@ -93,13 +91,29 @@
       {% if stages.response %}
       <figure>
         <img src="{{ stages.response }}" alt="response 이미지">
-        <figcaption>response</figcaption>
+        <figcaption>response (반응 맵)</figcaption>
       </figure>
       {% endif %}
     </div>
 
+    {% with sample = current, return_to = "review" %}{% include "_decision_form.html" %}{% endwith %}
+
+    <div class="arg-card">
+      <div class="arg-head">
+        <strong style="font-size:13px">에이전트 3단 논증 &amp; 작업자 지침</strong>
+        <span class="meta num">직선성 R²={{ "%.2f"|format(current.geometry.collinearity_r2) }} · 경계비={{ "%.0f"|format(current.geometry.border_touch_ratio * 100) }}%</span>
+      </div>
+      <div class="arg-steps">
+        <div class="arg-step"><div class="arg-step-title">가설</div><div class="arg-step-body">{{ current.triage.argumentation.hypothesis }}</div></div>
+        <div class="arg-step"><div class="arg-step-title">검증</div><div class="arg-step-body">{{ current.triage.argumentation.experiment }}</div></div>
+        <div class="arg-step"><div class="arg-step-title">결론</div><div class="arg-step-body">{{ current.triage.argumentation.verdict }}</div></div>
+        <div class="arg-step"><div class="arg-step-title">지침</div><div class="arg-step-body">{{ current.triage.argumentation.operator_guidance }}</div></div>
+      </div>
+    </div>
+
     {% if history %}
     <h2>검토 이력 ({{ history|length }}건)</h2>
+    <div class="table-wrap">
     <table>
       <thead>
         <tr><th>시각(UTC)</th><th>최종 상태</th><th>사유</th><th>메모</th><th>검토자</th></tr>
@@ -116,9 +130,8 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
     {% endif %}
-
-    {% with sample = current, return_to = "review" %}{% include "_decision_form.html" %}{% endwith %}
     {% endif %}
   </section>
 </div>

@@ -1,16 +1,48 @@
 {% extends "base.html" %}
 {% block title %}run 목록 — Surface Sentinel{% endblock %}
 {% block content %}
-<h1>run 목록</h1>
-<div class="navlinks">
-  <a href="/stats">검사 통계</a>
-  <a href="/compare">run 비교</a>
-  <a href="/watchdog">Watchdog 관제</a>
-  <a href="/inspections">교차증거 DB</a>
+<div class="page-header">
+  <div>
+    <h1>Surface Sentinel 검사 관제 허브</h1>
+    <p class="page-sub">runs 디렉터리 배치 실행 결과와 실시간 검사 콘솔을 한눈에 탐색합니다 (기계 판정 불변).</p>
+  </div>
+  <div class="navlinks" style="margin:0">
+    <a href="/inspections">실시간 검사 · DB</a>
+    <a href="/watchdog">Watchdog 관제</a>
+    <a href="/stats">검사 통계</a>
+    <a href="/compare">run 비교</a>
+  </div>
 </div>
-<p class="meta">runs 디렉터리에서 run_id 형식의 디렉터리만 최신순으로 표시합니다.</p>
+
 {% if runs %}
 {% set latest_run = runs[0] %}
+{% set latest_status = latest_run.payload.get("status", "ERROR") %}
+{% set latest_counts = latest_run.payload.get("counts", {}) %}
+
+<h2>빠른 시연 동선 (추천 순서)</h2>
+<div class="demo-grid">
+  <a class="demo-card" href="/runs/{{ latest_run.run_id }}">
+    <span class="demo-step">STEP 1 · 결과 갤러리</span>
+    <div class="demo-title">배치 요약 &amp; 샘플 오버레이</div>
+    <div class="demo-desc">최신 run({{ latest_counts.get("samples", 0) }}장)의 OK·NG·REVIEW 필터와 결함 오버레이 이미지를 한눈에 확인합니다.</div>
+  </a>
+  <a class="demo-card" href="/runs/{{ latest_run.run_id }}/review?sort=priority">
+    <span class="demo-step">STEP 2 · 작업자 검토</span>
+    <div class="demo-title">위험도순 REVIEW 검토 큐</div>
+    <div class="demo-desc">에이전트 P0→P3 우선순위 정렬과 J/K 단축키로 애매한 경계 샘플만 빠르게 검토·기록합니다.</div>
+  </a>
+  <a class="demo-card" href="/runs/{{ latest_run.run_id }}/triage">
+    <span class="demo-step">STEP 3 · Lift 분석</span>
+    <div class="demo-title">에이전트 트리아지 &amp; 회수 곡선</div>
+    <div class="demo-desc">우선순위 정렬이 무작위 대비 결함을 얼마나 일찍 잡아내는지 Gain 곡선과 Lift 배수로 확인합니다.</div>
+  </a>
+  <a class="demo-card" href="/inspections">
+    <span class="demo-step">STEP 4 · 실시간 · 감사</span>
+    <div class="demo-title">실시간 이미지 검사 &amp; 교차증거</div>
+    <div class="demo-desc">train 샘플을 직접 업로드해 즉시 추론·오버레이 결과를 확인하고 DB 이력을 조회합니다.</div>
+  </a>
+</div>
+
 <div class="kpi-strip">
   <div class="kpi">
     <div class="kpi-label">총 Run 수</div>
@@ -24,37 +56,72 @@
   </div>
   <div class="kpi">
     <div class="kpi-label">최근 Run 상태</div>
-    <div class="kpi-val"><span class="badge b-{{ latest_run.payload.get('status', 'ERROR') }}">{{ latest_run.payload.get("status", "-") }}</span></div>
-    <div class="kpi-sub">{{ latest_run.run_id }}</div>
+    <div class="kpi-val" style="display:flex;align-items:center;gap:6px;margin-top:4px">
+      <span class="badge b-{{ latest_status }}">{{ latest_status }}</span>
+      <span class="badge-note">{{ status_labels.get(latest_status, "") }}</span>
+    </div>
+    <div class="kpi-sub num">{{ latest_run.run_id }}</div>
   </div>
   <div class="kpi">
-    <div class="kpi-label">최근 시작(UTC)</div>
-    <div class="kpi-val" style="font-size:14px">{{ latest_run.payload.get("started_at", "-") }}</div>
-    <div class="kpi-sub">분할: {{ latest_run.payload.get("split", "-") }}</div>
+    <div class="kpi-label">최근 실행 시각</div>
+    <div class="kpi-val num" style="font-size:15px">{{ (latest_run.payload.get("started_at", "-")|string).replace("T", " ").replace("Z", " UTC") }}</div>
+    <div class="kpi-sub">분할: {{ latest_run.payload.get("split", "-") }} · p50 {{ (latest_run.payload.get("timing") or {}).get("p50_ms", "-") }}ms</div>
   </div>
 </div>
+
+{% if preview_samples %}
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:22px">
+  <h2 style="margin:0">최근 Run 오버레이 미리보기 ({{ latest_run.run_id }})</h2>
+  <a class="pill-link" href="/runs/{{ latest_run.run_id }}">전체 {{ latest_counts.get("samples", "") }}장 갤러리 보기 →</a>
+</div>
+<div class="preview-grid">
+  {% for item in preview_samples %}
+  <a class="preview-card" href="{{ item.url }}">
+    <img src="{{ item.overlay_url }}" alt="{{ item.sample_id }} 오버레이" loading="lazy">
+    <div class="preview-meta">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:4px">
+        <strong class="num" style="font-size:13px">{{ item.sample_id }}</strong>
+        {% if item.machine_status == "REVIEW" %}
+        <span class="prio p-{{ item.priority }}">{{ item.priority }}</span>
+        {% endif %}
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:4px">
+        <span><span class="badge b-{{ item.machine_status }}">{{ item.machine_status }}</span><span class="badge-note">{{ status_labels.get(item.machine_status, "") }}</span></span>
+        <span class="meta num">{{ "%.2f"|format(item.record.score) }}</span>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<h2>배치 Run 목록 ({{ runs|length }}건)</h2>
 <div class="table-wrap">
 <table>
   <thead>
     <tr>
       <th>run_id</th><th>상태</th><th>분할</th><th>샘플</th>
-      <th>OK</th><th>NG</th><th>REVIEW</th><th>ERROR</th><th>분포</th><th>바로가기</th><th>시작(UTC)</th>
+      <th>OK</th><th>NG</th><th>REVIEW</th><th>ERROR</th><th>판정 분포</th><th>화면 바로가기</th><th>시작(UTC)</th>
     </tr>
   </thead>
   <tbody>
     {% for run in runs %}
     {% set counts = run.payload.get("counts", {}) %}
     {% set s_total = counts.get("samples", 0)|int %}
+    {% set r_status = run.payload.get("status", "ERROR") %}
     <tr>
-      <td class="num"><a href="/runs/{{ run.run_id }}">{{ run.run_id }}</a></td>
-      <td><span class="badge b-{{ run.payload.get('status', 'ERROR') }}">{{ run.payload.get("status", "-") }}</span></td>
-      <td>{{ run.payload.get("split", "-") }}</td>
+      <td class="num"><a href="/runs/{{ run.run_id }}"><strong>{{ run.run_id }}</strong></a></td>
+      <td style="white-space:nowrap">
+        <span class="badge b-{{ r_status }}">{{ r_status }}</span>
+        {% if status_labels.get(r_status) %}<span class="badge-note">{{ status_labels.get(r_status) }}</span>{% endif %}
+      </td>
+      <td><code>{{ run.payload.get("split", "-") }}</code></td>
       <td class="num">{{ counts.get("samples", "-") }}</td>
       <td class="num">{{ counts.get("ok", "-") }}</td>
       <td class="num">{{ counts.get("ng", "-") }}</td>
       <td class="num">{{ counts.get("review", "-") }}</td>
       <td class="num">{{ counts.get("error", "-") }}</td>
-      <td style="min-width:110px">
+      <td style="min-width:120px">
         {% if s_total > 0 %}
         <div class="stack-bar" title="OK {{ counts.get('ok', 0) }} / NG {{ counts.get('ng', 0) }} / REVIEW {{ counts.get('review', 0) }} / ERROR {{ counts.get('error', 0) }}">
           <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('ok', 0)|int / s_total) * 100) }}%;background:var(--ok)"></div>
@@ -65,12 +132,14 @@
         {% else %}-{% endif %}
       </td>
       <td style="white-space:nowrap">
-        <a href="/runs/{{ run.run_id }}">요약</a> ·
-        <a href="/runs/{{ run.run_id }}/triage">트리아지</a> ·
-        <a href="/runs/{{ run.run_id }}/review">검토 큐</a> ·
-        <a href="/runs/{{ run.run_id }}/metrics">지표</a>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <a class="pill-link" href="/runs/{{ run.run_id }}">요약</a>
+          <a class="pill-link" href="/runs/{{ run.run_id }}/triage">트리아지</a>
+          <a class="pill-link" href="/runs/{{ run.run_id }}/review">검토 큐</a>
+          <a class="pill-link" href="/runs/{{ run.run_id }}/metrics">지표</a>
+        </div>
       </td>
-      <td class="meta">{{ run.payload.get("started_at", "-") }}</td>
+      <td class="meta num">{{ (run.payload.get("started_at", "-")|string).replace("T", " ").replace("Z", "") }}</td>
     </tr>
     {% endfor %}
   </tbody>
