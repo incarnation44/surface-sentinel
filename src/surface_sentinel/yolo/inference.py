@@ -144,6 +144,12 @@ def nms(
     return keep
 
 
+#: 출력 텐서 shape 자동 추론 상한(전치 export ``[1, N, 4+nc]`` 오디코드 방어).
+MAX_INFERRED_CLASSES = 1000
+MAX_AUTO_TRANSPOSE_ROWS = 128
+MAX_PROTO_CHANNELS = 256
+
+
 def decode_det(
     raw: np.ndarray,
     *,
@@ -166,9 +172,21 @@ def decode_det(
 
     rows, columns = pred.shape
     if num_classes is None:
-        num_classes = rows - 4
+        inferred = rows - 4
+        if inferred > MAX_INFERRED_CLASSES or (
+            rows > MAX_AUTO_TRANSPOSE_ROWS and columns < rows
+        ):
+            raise ValueError(
+                "출력 텐서가 전치([1, N, 4+nc])됐거나 클래스 수가 비정상적으로 큽니다: "
+                f"rows={rows} columns={columns}"
+            )
+        num_classes = inferred
     if num_classes < 1 or rows < 4 + num_classes:
         raise ValueError(f"출력 행이 부족합니다: rows={rows} num_classes={num_classes}")
+    if rows > 4 + num_classes + MAX_PROTO_CHANNELS:
+        raise ValueError(
+            f"출력 행이 비정상적으로 많습니다: rows={rows} num_classes={num_classes}"
+        )
 
     centers = pred[:4].T  # (N, 4) cx, cy, w, h
     class_scores = pred[4 : 4 + num_classes]  # (nc, N)
@@ -240,6 +258,10 @@ def decode_seg_masks(
         raise ValueError(f"원본 크기가 0입니다: orig_w={orig_w} orig_h={orig_h}")
 
     channels, proto_h, proto_w = proto_array.shape
+    if coeff_array.shape[1] < channels:
+        raise ValueError(
+            f"마스크 계수 채널이 부족합니다: coeffs={coeff_array.shape[1]} < proto={channels}"
+        )
     coeff_array = coeff_array[:, :channels]
     logits = coeff_array @ proto_array.reshape(channels, -1)
     probs = 1.0 / (1.0 + np.exp(-logits))
@@ -309,11 +331,22 @@ def decode_seg(
 
     proto_array = np.asarray(proto, dtype=np.float32)
     proto_channels = int(proto_array.shape[1] if proto_array.ndim == 4 else proto_array.shape[0])
+    if proto_channels < 1 or proto_channels > MAX_PROTO_CHANNELS:
+        raise ValueError(f"proto 채널 수가 비정상입니다: proto_channels={proto_channels}")
     if num_classes is None:
-        num_classes = pred.shape[0] - 4 - proto_channels
-    if num_classes < 1:
+        inferred = pred.shape[0] - 4 - proto_channels
+        if inferred > MAX_INFERRED_CLASSES or (
+            pred.shape[0] > MAX_AUTO_TRANSPOSE_ROWS and pred.shape[1] < pred.shape[0]
+        ):
+            raise ValueError(
+                "segmentation 출력 텐서가 전치([1, N, 4+nc+C])됐거나 채널 합이 비정상입니다: "
+                f"rows={pred.shape[0]} columns={pred.shape[1]} proto_channels={proto_channels}"
+            )
+        num_classes = inferred
+    if num_classes < 1 or pred.shape[0] != 4 + num_classes + proto_channels:
         raise ValueError(
-            f"클래스 수를 유도할 수 없습니다: rows={pred.shape[0]} proto_channels={proto_channels}"
+            f"클래스 수/채널 합이 맞지 않습니다: rows={pred.shape[0]} "
+            f"num_classes={num_classes} proto_channels={proto_channels}"
         )
 
     boxes, scores = decode_det(

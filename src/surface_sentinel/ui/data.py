@@ -150,94 +150,122 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _parse_bbox(raw: Any, *, field_name: str) -> tuple[int, int, int, int]:
+    if not isinstance(raw, (list, tuple)) or len(raw) != 4:
+        raise UiInputError(f"손상된 {field_name} 형식입니다: {raw!r}")
+    try:
+        return (int(raw[0]), int(raw[1]), int(raw[2]), int(raw[3]))
+    except (TypeError, ValueError) as exc:
+        raise UiInputError(f"손상된 {field_name} 좌표입니다: {raw!r}") from exc
+
+
 def sample_result_from_record(rec: dict[str, Any]) -> SampleResult:
     """``results.jsonl`` 딕셔너리를 ``SampleResult``로 복원한다(읽기 전용 분석용)."""
 
-    raw_comps = rec.get("components") or []
-    components = tuple(
-        ComponentFeature(
-            index=int(c.get("index", idx)),
-            area_px=int(c.get("area_px", 0)),
-            bbox=tuple(int(x) for x in c.get("bbox", (0, 0, 0, 0))),  # type: ignore[arg-type]
-            area_ratio=float(c.get("area_ratio", 0.0)),
-            aspect_ratio=float(c.get("aspect_ratio", 1.0)),
-            elongation=float(c.get("elongation", 1.0)),
-            solidity=float(c.get("solidity", 1.0)),
-            mean_contrast_gray=float(c.get("mean_contrast_gray", 0.0)),
-            max_contrast_gray=float(c.get("max_contrast_gray", 0.0)),
-            integrated_contrast=float(c.get("integrated_contrast", 0.0)),
-            border_distance_px=float(c.get("border_distance_px", 100.0)),
-            touches_roi_border=bool(c.get("touches_roi_border", False)),
-            evidence=float(c.get("evidence", 0.0)),
+    if not isinstance(rec, dict):
+        raise UiInputError("손상된 results.jsonl 레코드입니다.")
+    try:
+        raw_comps = rec.get("components") or []
+        if not isinstance(raw_comps, list):
+            raise UiInputError("results.jsonl components 필드가 배열이 아닙니다.")
+        components = tuple(
+            ComponentFeature(
+                index=int(c.get("index", idx)),
+                area_px=int(c.get("area_px", 0)),
+                bbox=_parse_bbox(c.get("bbox", (0, 0, 0, 0)), field_name="component.bbox"),
+                area_ratio=float(c.get("area_ratio", 0.0)),
+                aspect_ratio=float(c.get("aspect_ratio", 1.0)),
+                elongation=float(c.get("elongation", 1.0)),
+                solidity=float(c.get("solidity", 1.0)),
+                mean_contrast_gray=float(c.get("mean_contrast_gray", 0.0)),
+                max_contrast_gray=float(c.get("max_contrast_gray", 0.0)),
+                integrated_contrast=float(c.get("integrated_contrast", 0.0)),
+                border_distance_px=float(c.get("border_distance_px", 100.0)),
+                touches_roi_border=bool(c.get("touches_roi_border", False)),
+                evidence=float(c.get("evidence", 0.0)),
+            )
+            for idx, c in enumerate(raw_comps)
+            if isinstance(c, dict)
         )
-        for idx, c in enumerate(raw_comps)
-        if isinstance(c, dict)
-    )
-    q = rec.get("quality")
-    quality = None
-    if isinstance(q, dict):
-        q_flags: list[ReasonCode] = []
-        for val in q.get("flags") or []:
+        q = rec.get("quality")
+        quality = None
+        if isinstance(q, dict):
+            q_flags: list[ReasonCode] = []
+            for val in q.get("flags") or []:
+                try:
+                    q_flags.append(ReasonCode(val))
+                except ValueError:
+                    continue
+            quality = QualityInfo(
+                blur_variance=float(q.get("blur_variance", 0.0)),
+                mean_gray=float(q.get("mean_gray", 0.0)),
+                saturated_ratio=float(q.get("saturated_ratio", 0.0)),
+                flags=tuple(q_flags),
+            )
+        r = rec.get("roi")
+        roi = (
+            RoiInfo(
+                mode=str(r.get("mode", "auto")),
+                bbox=_parse_bbox(r.get("bbox", (0, 0, 0, 0)), field_name="roi.bbox"),
+                area_px=int(r.get("area_px", 0)),
+                area_ratio=float(r.get("area_ratio", 0.0)),
+                uncertain=bool(r.get("uncertain", False)),
+            )
+            if isinstance(r, dict)
+            else None
+        )
+        reasons: list[ReasonCode] = []
+        for val in rec.get("reasons") or []:
             try:
-                q_flags.append(ReasonCode(val))
+                reasons.append(ReasonCode(val))
             except ValueError:
                 continue
-        quality = QualityInfo(
-            blur_variance=float(q.get("blur_variance", 0.0)),
-            mean_gray=float(q.get("mean_gray", 0.0)),
-            saturated_ratio=float(q.get("saturated_ratio", 0.0)),
-            flags=tuple(q_flags),
+        error_code = None
+        if rec.get("error_code"):
+            try:
+                error_code = ErrorCode(rec["error_code"])
+            except ValueError:
+                error_code = None
+        error_stage = None
+        if rec.get("error_stage"):
+            try:
+                error_stage = Stage(rec["error_stage"])
+            except ValueError:
+                error_stage = None
+        raw_status = str(rec.get("status", "REVIEW"))
+        try:
+            parsed_status = Status(raw_status)
+        except ValueError as exc:
+            raise UiInputError(
+                f"results.jsonl의 status 값이 유효하지 않습니다: {raw_status!r}"
+            ) from exc
+        raw_timing = rec.get("timing_ms") or {}
+        if not isinstance(raw_timing, dict):
+            raise UiInputError("results.jsonl timing_ms 필드가 객체가 아닙니다.")
+        return SampleResult(
+            run_id=str(rec.get("run_id", "")),
+            sample_id=str(rec.get("sample_id", "")),
+            original_id=str(rec.get("original_id", rec.get("sample_id", ""))),
+            split=str(rec.get("split", "tune")),
+            label=str(rec.get("label", "unknown")),
+            status=parsed_status,
+            score=float(rec.get("score", 0.0)),
+            reasons=tuple(reasons),
+            components=components,
+            quality=quality,
+            roi=roi,
+            timing_ms={str(k): float(v) for k, v in raw_timing.items()},
+            error_code=error_code,
+            error_stage=error_stage,
+            input_sha256=str(rec.get("input_sha256", "")),
+            mask_sha256=str(rec.get("mask_sha256", "")),
+            overlay_path=str(rec.get("overlay_path", "")),
+            config_hash=str(rec.get("config_hash", "")),
         )
-    r = rec.get("roi")
-    roi = (
-        RoiInfo(
-            mode=str(r.get("mode", "auto")),
-            bbox=tuple(int(x) for x in r.get("bbox", (0, 0, 0, 0))),  # type: ignore[arg-type]
-            area_px=int(r.get("area_px", 0)),
-            area_ratio=float(r.get("area_ratio", 0.0)),
-            uncertain=bool(r.get("uncertain", False)),
-        )
-        if isinstance(r, dict)
-        else None
-    )
-    reasons: list[ReasonCode] = []
-    for val in rec.get("reasons") or []:
-        try:
-            reasons.append(ReasonCode(val))
-        except ValueError:
-            continue
-    error_code = None
-    if rec.get("error_code"):
-        try:
-            error_code = ErrorCode(rec["error_code"])
-        except ValueError:
-            error_code = None
-    error_stage = None
-    if rec.get("error_stage"):
-        try:
-            error_stage = Stage(rec["error_stage"])
-        except ValueError:
-            error_stage = None
-    return SampleResult(
-        run_id=str(rec.get("run_id", "")),
-        sample_id=str(rec.get("sample_id", "")),
-        original_id=str(rec.get("original_id", rec.get("sample_id", ""))),
-        split=str(rec.get("split", "tune")),
-        label=str(rec.get("label", "unknown")),
-        status=Status(str(rec.get("status", "REVIEW"))),
-        score=float(rec.get("score", 0.0)),
-        reasons=tuple(reasons),
-        components=components,
-        quality=quality,
-        roi=roi,
-        timing_ms={str(k): float(v) for k, v in (rec.get("timing_ms") or {}).items()},
-        error_code=error_code,
-        error_stage=error_stage,
-        input_sha256=str(rec.get("input_sha256", "")),
-        mask_sha256=str(rec.get("mask_sha256", "")),
-        overlay_path=str(rec.get("overlay_path", "")),
-        config_hash=str(rec.get("config_hash", "")),
-    )
+    except UiInputError:
+        raise
+    except (TypeError, ValueError) as exc:
+        raise UiInputError(f"results.jsonl 레코드 복원에 실패했습니다: {exc}") from exc
 
 
 def row_overlay_path(row: dict[str, Any], runs_dir: Path) -> Path | None:

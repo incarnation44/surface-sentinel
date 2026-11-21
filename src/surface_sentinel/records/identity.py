@@ -19,7 +19,7 @@ canonical JSON 으로 해시한 것이 ``inspection_fingerprint`` 이고, 이미
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .fingerprint import PREPROCESSING_VERSION, inspection_fingerprint
 
@@ -39,6 +39,8 @@ class EngineSpec:
     code_dirty: bool = False
     #: 추적용 모델 파일 경로(fingerprint 미포함).
     onnx_path: str = ""
+    #: ERROR 재검사 provenance 태그(비어 있으면 기본 신원과 동일).
+    recheck_tag: str = ""
 
     @property
     def fingerprint(self) -> str:
@@ -54,7 +56,16 @@ class EngineSpec:
             preprocessing_version=self.preprocessing_version,
             code_sha=self.code_sha,
             code_dirty=self.code_dirty,
+            recheck_tag=self.recheck_tag,
         )
+
+    def with_recheck_tag(self, tag: str) -> EngineSpec:
+        """``recheck_tag`` 를 부여한 새 :class:`EngineSpec` 을 돌려준다."""
+
+        cleaned = str(tag).strip()
+        if not cleaned:
+            raise ValueError("recheck_tag 는 비어 있을 수 없습니다.")
+        return replace(self, recheck_tag=cleaned)
 
     @property
     def provenance_complete(self) -> bool:

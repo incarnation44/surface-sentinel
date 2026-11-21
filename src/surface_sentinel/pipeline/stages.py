@@ -23,6 +23,12 @@ from ..contracts import (
     Stage,
     Status,
 )
+from ..io.image_guard import (
+    ImageHeaderError,
+    ImagePixelLimitError,
+    check_decoded_pixel_budget,
+    check_image_pixel_budget,
+)
 from .errors import PipelineError
 from .types import (
     AnalyzeResult,
@@ -92,6 +98,22 @@ def _channels(image: np.ndarray) -> int:
 
 def _read_image_file(path: Path, stage: Stage) -> tuple[np.ndarray, str]:
     try:
+        check_image_pixel_budget(path)
+    except ImagePixelLimitError as exc:
+        raise PipelineError(ErrorCode.E_INPUT_SIZE, stage, str(exc)) from exc
+    except ImageHeaderError as exc:
+        raise PipelineError(
+            ErrorCode.E_INPUT_DECODE,
+            stage,
+            f"이미지 디코드에 실패했습니다({exc}): {path}",
+        ) from exc
+    except OSError as exc:
+        raise PipelineError(
+            ErrorCode.E_INPUT_DECODE,
+            stage,
+            f"이미지 파일을 읽지 못했습니다: {path}",
+        ) from exc
+    try:
         buffer = np.fromfile(str(path), dtype=np.uint8)
     except OSError as exc:
         raise PipelineError(
@@ -113,6 +135,10 @@ def _read_image_file(path: Path, stage: Stage) -> tuple[np.ndarray, str]:
             stage,
             f"이미지 디코드에 실패했습니다: {path}",
         )
+    try:
+        check_decoded_pixel_budget(int(image.shape[1]), int(image.shape[0]))
+    except ImagePixelLimitError as exc:
+        raise PipelineError(ErrorCode.E_INPUT_SIZE, stage, str(exc)) from exc
     return image, digest
 
 

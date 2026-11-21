@@ -1645,6 +1645,54 @@ def _add_worker_parser(subparsers: Any) -> None:
         default=2.0,
         help="감시 주기 초 (기본 2.0, --once면 무시).",
     )
+    recheck = worker_subparsers.add_parser(
+        "recheck",
+        help="ERROR로만 기록된 이미지를 새 provenance 태그로 재검사합니다(append-only).",
+        description=(
+            "기존 ERROR 행을 수정·삭제하지 않고 recheck 태그가 반영된 새 행을 추가합니다. "
+            "이미 OK/NG/REVIEW 행이 있는 이미지는 건너뜁니다."
+        ),
+    )
+    recheck.add_argument(
+        "--incoming",
+        type=Path,
+        default=Path("data/incoming"),
+        help="재검사 대상 이미지 디렉터리 (기본 data/incoming).",
+    )
+    recheck.add_argument(
+        "--db",
+        type=Path,
+        default=Path("data/derived/records.db"),
+        help="기록 DB 경로 (기본 data/derived/records.db).",
+    )
+    recheck.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/base.toml"),
+        help="설정 TOML 경로 (기본 configs/base.toml).",
+    )
+    recheck.add_argument(
+        "--engine",
+        default="opencv",
+        help="엔진 (opencv/yolo-det/yolo-seg/combined, 기본 opencv).",
+    )
+    recheck.add_argument(
+        "--max-retries",
+        type=int,
+        default=3,
+        help="재검사 ERROR 시 최대 시도 횟수 (기본 3, 최소 1회는 시도).",
+    )
+    recheck.add_argument(
+        "--ok-sample-rate",
+        type=int,
+        default=1,
+        help="OK 오버레이 보관 비율 1/N (기본 1=전량, 0=보관 안 함).",
+    )
+    recheck.add_argument(
+        "--tag",
+        default=None,
+        help="재검사 provenance 태그(생략 시 ERROR 건수 기반 결정론적 자동 부여).",
+    )
 
 
 def _cmd_worker_run(args: argparse.Namespace) -> int:
@@ -1701,10 +1749,53 @@ def _cmd_worker_run(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _cmd_worker_recheck(args: argparse.Namespace) -> int:
+    from .agent.worker import WorkerError, audit_log_path, recheck_errors
+    from .config import ConfigError, load_config
+    from .records.db import DatabaseError
+
+    try:
+        config = load_config(args.config)
+    except ConfigError as exc:
+        _print_error(f"설정을 불러오지 못했습니다: {exc}")
+        return EXIT_USAGE
+
+    try:
+        counts = recheck_errors(
+            incoming=args.incoming,
+            db_path=args.db,
+            config=config,
+            engine=args.engine,
+            max_retries=args.max_retries,
+            ok_sample_rate=args.ok_sample_rate,
+            tag=args.tag,
+        )
+    except WorkerError as exc:
+        _print_error(str(exc))
+        return EXIT_USAGE
+    except DatabaseError as exc:
+        _print_error(f"기록 DB 오류: {exc}")
+        return EXIT_STORAGE
+    except OSError as exc:
+        _print_error(f"기록을 저장하지 못했습니다: {exc}")
+        return EXIT_STORAGE
+
+    print(
+        f"재검사: {counts['rechecked']}건 "
+        f"(복구 {counts['resolved']} · 재오류 {counts['still_error']} · "
+        f"건너뜀 {counts['skipped']} · 읽기오류 {counts['error']})"
+    )
+    print(f"감사 로그: {audit_log_path(args.db)}")
+    print(f"기록: {args.db}")
+    return EXIT_OK
+
+
 def _run_worker_command(args: argparse.Namespace) -> int:
     if args.worker_command == "run":
         return _cmd_worker_run(args)
-    print("worker 하위 명령이 필요합니다: run", file=sys.stderr)
+    if args.worker_command == "recheck":
+        return _cmd_worker_recheck(args)
+    print("worker 하위 명령이 필요합니다: run, recheck", file=sys.stderr)
     return EXIT_USAGE
 
 

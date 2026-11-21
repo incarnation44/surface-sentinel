@@ -22,6 +22,11 @@ import numpy as np
 
 from ..config import REVIEW_BAND_MAX, AppConfig, ConfigError, default_config, load_config
 from ..contracts import STAGE_ORDER
+from ..io.image_guard import (
+    MAX_IMAGE_PIXELS,
+    check_decoded_pixel_budget,
+    check_image_pixel_budget,
+)
 from ..pipeline.inspect import inspect_image
 from .data import (
     UiInputError,
@@ -34,8 +39,8 @@ from .data import (
 #: 시네마 업로드 최대 크기 (10 MiB, API 와 동일).
 MAX_CINEMA_UPLOAD_BYTES = 10 * 1024 * 1024
 
-#: 시네마 업로드 최대 해상도 픽셀 수 (2,500만 픽셀 — 디코드 메모리 폭주 방어).
-MAX_CINEMA_IMAGE_PIXELS = 25_000_000
+#: 시네마 업로드 최대 해상도 픽셀 수 (공통 가드 상한과 동일 — 디코드 메모리 폭주 방어).
+MAX_CINEMA_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
 #: 업로드 청크 크기 (64 KiB).
 CINEMA_UPLOAD_CHUNK_BYTES = 64 * 1024
@@ -392,15 +397,7 @@ def run_cinema_trace(
 ) -> dict[str, Any]:
     """실제 10단계 OpenCV 파이프라인을 임시 디렉터리에서 실행해 시네마 JSON을 생성한다."""
 
-    bgr = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
-    if bgr is None:
-        raise ValueError("이미지를 디코드하지 못했습니다.")
-    height, width = int(bgr.shape[0]), int(bgr.shape[1])
-    if width * height > MAX_CINEMA_IMAGE_PIXELS:
-        raise ValueError(
-            f"이미지 해상도({width}x{height})가 허용 상한"
-            f"({MAX_CINEMA_IMAGE_PIXELS:,}px)을 초과했습니다."
-        )
+    check_image_pixel_budget(image_path, max_pixels=MAX_CINEMA_IMAGE_PIXELS)
 
     with tempfile.TemporaryDirectory(prefix="ss-cinema-") as tmp_dir:
         tmp_path = Path(tmp_dir)
@@ -415,6 +412,15 @@ def run_cinema_trace(
         )
         result = outcome.result
         debug = outcome.debug
+
+        if debug is not None and debug.bgr is not None:
+            bgr = debug.bgr
+        else:
+            bgr = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
+            if bgr is None:
+                raise ValueError("이미지를 디코드하지 못했습니다.")
+        height, width = int(bgr.shape[0]), int(bgr.shape[1])
+        check_decoded_pixel_budget(width, height, max_pixels=MAX_CINEMA_IMAGE_PIXELS)
 
         overlay_bgr = bgr
         if result.overlay_path:

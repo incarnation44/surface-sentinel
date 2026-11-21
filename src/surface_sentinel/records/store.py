@@ -44,6 +44,10 @@ STABILITY_LEVELS: tuple[str, ...] = ("STABLE", "SENSITIVE", "UNSTABLE")
 
 STATUS_ORDER: tuple[str, ...] = ("OK", "NG", "REVIEW", "ERROR")
 
+#: 사람 판정 입력 길이 상한(API·UI ReviewStore와 동일).
+MAX_REVIEWER_LENGTH = 128
+MAX_REASON_LENGTH = 2000
+
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -222,6 +226,16 @@ def append_review(
     """
 
     decision_value = _decision_value(decision)
+    reviewer_clean = str(reviewer).strip()
+    reason_clean = str(reason).strip()
+    if len(reviewer_clean) > MAX_REVIEWER_LENGTH:
+        raise RecordsError(
+            f"검토자(reviewer)는 최대 {MAX_REVIEWER_LENGTH}자까지 입력할 수 있습니다."
+        )
+    if len(reason_clean) > MAX_REASON_LENGTH:
+        raise RecordsError(
+            f"사유(reason)는 최대 {MAX_REASON_LENGTH}자까지 입력할 수 있습니다."
+        )
     row = connection.execute(
         "SELECT id FROM inspections WHERE id = ?",
         (int(inspection_id),),
@@ -237,8 +251,8 @@ def append_review(
             (
                 int(inspection_id),
                 decision_value,
-                str(reviewer).strip(),
-                str(reason).strip(),
+                reviewer_clean,
+                reason_clean,
                 utc_now_iso(),
             ),
         )
@@ -268,6 +282,39 @@ def find_inspection_id(
             (sha, fingerprint),
         ).fetchone()
     return None if row is None else int(row["id"])
+
+
+def list_inspections_for_image(
+    connection: sqlite3.Connection,
+    image_sha256: str,
+    *,
+    engine: str | None = None,
+    config_hash: str | None = None,
+    task: str | None = None,
+    model_sha256: str | None = None,
+) -> list[dict[str, Any]]:
+    """같은 이미지 SHA 의 검사 기록을 ``id`` 오름차순으로 조회한다(재검사 판별용)."""
+
+    sha = normalize_sha256(image_sha256)
+    clauses = ["image_sha256 = ?"]
+    params: list[Any] = [sha]
+    if engine is not None:
+        engine_name = str(engine).strip()
+        if engine_name not in ENGINES:
+            raise RecordsError(f"알 수 없는 엔진입니다: {engine!r} (가능: {ENGINES})")
+        clauses.append("engine = ?")
+        params.append(engine_name)
+    if config_hash is not None:
+        clauses.append("config_hash = ?")
+        params.append(str(config_hash))
+    if task is not None:
+        clauses.append("task = ?")
+        params.append(str(task))
+    if model_sha256 is not None:
+        clauses.append("model_sha256 = ?")
+        params.append(str(model_sha256))
+    sql = f"SELECT * FROM inspections WHERE {' AND '.join(clauses)} ORDER BY id ASC"
+    return [dict(row) for row in connection.execute(sql, params).fetchall()]
 
 
 def list_inspections(
@@ -493,13 +540,31 @@ def _scalar(connection: sqlite3.Connection, sql: str, params: tuple[Any, ...] = 
     return 0 if row is None else int(row[0])
 
 
+#: 재검사로 대체된 과거 ERROR 행을 제외하는 WHERE 조건(별칭 ``i``).
+#: append-only 원장의 모든 행은 그대로 보존하되, 같은 이미지·엔진·설정·모델로
+#: 더 최신 행이 기록된 ERROR 행만 통계·엔진 집계에서 중복 제외한다.
+EFFECTIVE_INSPECTIONS_WHERE = (
+    "NOT ("
+    "i.status = 'ERROR' AND EXISTS ("
+    "SELECT 1 FROM inspections newer "
+    "WHERE newer.image_sha256 = i.image_sha256 "
+    "AND newer.engine = i.engine "
+    "AND newer.task = i.task "
+    "AND newer.config_hash = i.config_hash "
+    "AND newer.model_sha256 = i.model_sha256 "
+    "AND newer.id > i.id"
+    "))"
+)
+
+
 def stats(connection: sqlite3.Connection) -> dict[str, Any]:
     """상태 분포·리뷰·오버레이 통계를 **분모와 함께** 돌려준다."""
 
     counts = {
         str(row["status"]): int(row["n"])
         for row in connection.execute(
-            "SELECT status, COUNT(*) AS n FROM inspections GROUP BY status"
+            f"SELECT i.status, COUNT(*) AS n FROM inspections i "
+            f"WHERE {EFFECTIVE_INSPECTIONS_WHERE} GROUP BY i.status"
         ).fetchall()
     }
     by_status = {name: counts.get(name, 0) for name in STATUS_ORDER}
@@ -512,7 +577,8 @@ def stats(connection: sqlite3.Connection) -> dict[str, Any]:
     )
     overlays = _scalar(
         connection,
-        "SELECT COUNT(*) FROM inspections WHERE overlay_path <> ''",
+        f"SELECT COUNT(*) FROM inspections i "
+        f"WHERE {EFFECTIVE_INSPECTIONS_WHERE} AND i.overlay_path <> ''",
     )
     agree = _scalar(
         connection,
@@ -561,7 +627,10 @@ def stats_payload(connection: sqlite3.Connection) -> dict[str, Any]:
 
 __all__ = [
     "DECISIONS",
+    "EFFECTIVE_INSPECTIONS_WHERE",
     "ENGINES",
+    "MAX_REASON_LENGTH",
+    "MAX_REVIEWER_LENGTH",
     "RECOMMENDED_ACTIONS",
     "REVIEW_PRIORITIES",
     "RecordsError",
@@ -577,6 +646,7 @@ __all__ = [
     "list_agent_assessments",
     "list_engine_observations",
     "list_inspections",
+    "list_inspections_for_image",
     "normalize_sha256",
     "stats",
     "stats_payload",

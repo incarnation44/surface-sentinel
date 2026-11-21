@@ -312,11 +312,28 @@ def inspect_with_yolo(
 
     if not path.is_file():
         return fail(ErrorCode.E_INPUT_MISSING, Stage.VALIDATE_INPUT)
+    from ..io.image_guard import (  # noqa: PLC0415
+        ImageHeaderError,
+        ImagePixelLimitError,
+        check_decoded_pixel_budget,
+        check_image_pixel_budget,
+    )
+
+    try:
+        check_image_pixel_budget(path)
+    except ImagePixelLimitError:
+        return fail(ErrorCode.E_INPUT_SIZE, Stage.VALIDATE_INPUT)
+    except (ImageHeaderError, OSError):
+        return fail(ErrorCode.E_INPUT_DECODE, Stage.LOAD_IMAGE)
     started = time.perf_counter()
     bgr = cv2.imread(str(path), cv2.IMREAD_COLOR)
     timings["load_ms"] = (time.perf_counter() - started) * 1000.0
     if bgr is None:
         return fail(ErrorCode.E_INPUT_DECODE, Stage.LOAD_IMAGE)
+    try:
+        check_decoded_pixel_budget(int(bgr.shape[1]), int(bgr.shape[0]))
+    except ImagePixelLimitError:
+        return fail(ErrorCode.E_INPUT_SIZE, Stage.VALIDATE_INPUT)
 
     started = time.perf_counter()
     try:

@@ -22,6 +22,7 @@ import hashlib
 import importlib
 import json
 import os
+import re
 import sqlite3
 import time
 from collections.abc import Callable, Iterator
@@ -42,12 +43,16 @@ from ..records.store import (
     find_inspection_id,
     insert_engine_observation,
     insert_inspection,
+    list_inspections_for_image,
     utc_now_iso,
 )
 from .evidence import assess_cross_evidence
 
 #: 감시 대상 확장자(소문자 비교).
 IMAGE_SUFFIXES: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")
+
+#: 재검사 태그 허용 패턴(문자·숫자·._:- 최대 64자).
+_RECHECK_TAG_RE = re.compile(r"^[A-Za-z0-9._:-]{1,64}$")
 
 #: 감사 로그 위치: ``<db 부모>/.work/worker_audit.jsonl``.
 AUDIT_DIRNAME = ".work"
@@ -523,6 +528,288 @@ def run_worker(
         connection.close()
 
 
+def _validate_recheck_tag(tag: str | None) -> str | None:
+    if tag is None:
+        return None
+    cleaned = str(tag).strip()
+    if not cleaned or not _RECHECK_TAG_RE.fullmatch(cleaned):
+        raise WorkerError(
+            "재검사 태그(--tag)는 1~64자의 영문·숫자·'.'·'_'·':'·'-'만 허용합니다: "
+            f"{tag!r}"
+        )
+    return cleaned
+
+
+def _recheck_one(
+    connection: sqlite3.Connection,
+    path: Path,
+    *,
+    run_id: str,
+    config: AppConfig,
+    engine: str,
+    db_path: Path,
+    audit_path: Path,
+    max_retries: int,
+    ok_sample_rate: int,
+    yolo_entry: Callable[..., InspectionOutcome] | None,
+    model_version: str,
+    spec: EngineSpec,
+    tag: str | None,
+    registry: Any = None,
+) -> str:
+    """ERROR 행만 남아 있는 이미지를 새 provenance 태그로 재검사한다(append-only)."""
+
+    sample_id = path.stem or path.name
+    try:
+        sha256 = file_sha256(path)
+    except OSError as exc:
+        _append_audit(
+            audit_path,
+            {
+                "event": "recheck_error",
+                "run_id": run_id,
+                "sample_id": sample_id,
+                "path": str(path),
+                "message": f"파일을 읽지 못했습니다: {exc}",
+            },
+        )
+        return "error"
+
+    existing = list_inspections_for_image(
+        connection,
+        sha256,
+        engine=engine,
+        config_hash=spec.config_hash,
+        task=spec.task,
+        model_sha256=spec.model_sha256,
+    )
+    if not existing:
+        _append_audit(
+            audit_path,
+            {
+                "event": "recheck_skip",
+                "run_id": run_id,
+                "sample_id": sample_id,
+                "sha256": sha256,
+                "path": str(path),
+                "reason": "not_recorded",
+            },
+        )
+        return "skip"
+    if any(str(row["status"]) != Status.ERROR.value for row in existing):
+        _append_audit(
+            audit_path,
+            {
+                "event": "recheck_skip",
+                "run_id": run_id,
+                "sample_id": sample_id,
+                "sha256": sha256,
+                "path": str(path),
+                "reason": "already_resolved",
+            },
+        )
+        return "skip"
+
+    recheck_tag = f"recheck:{tag}" if tag is not None else f"recheck-{len(existing)}"
+    recheck_spec = spec.with_recheck_tag(recheck_tag)
+    if find_inspection_id(connection, sha256, recheck_spec.fingerprint) is not None:
+        _append_audit(
+            audit_path,
+            {
+                "event": "recheck_skip",
+                "run_id": run_id,
+                "sample_id": sample_id,
+                "sha256": sha256,
+                "path": str(path),
+                "recheck_tag": recheck_tag,
+                "reason": "duplicate_recheck_tag",
+            },
+        )
+        return "skip"
+
+    attempts = max(1, max_retries)
+    target = overlay_dir(db_path, run_id)
+    result: SampleResult | None = None
+    observations: tuple[Any, ...] = ()
+    for attempt in range(1, attempts + 1):
+        outcome = _inspect(
+            path,
+            config,
+            engine=engine,
+            output_dir=target,
+            yolo_entry=yolo_entry,
+            registry=registry,
+        )
+        result = outcome.result
+        observations = outcome.engine_observations
+        if result.status is not Status.ERROR:
+            break
+        code = result.error_code.value if result.error_code is not None else "E_PROCESS_INTERNAL"
+        _append_audit(
+            audit_path,
+            {
+                "event": "recheck_attempt_error",
+                "run_id": run_id,
+                "sample_id": sample_id,
+                "sha256": sha256,
+                "path": str(path),
+                "recheck_tag": recheck_tag,
+                "attempt": attempt,
+                "message": code,
+            },
+        )
+
+    assert result is not None
+    overlay_path = result.overlay_path
+    if not keep_overlay(result.status, sha256, ok_sample_rate):
+        _discard_artifacts(target, sample_id)
+        overlay_path = ""
+    record = replace(result, run_id=run_id, split=WORKER_SPLIT, overlay_path=overlay_path)
+
+    inspection_id = insert_inspection(
+        connection,
+        record,
+        engine=engine,
+        image_sha256=sha256,
+        model_version=model_version,
+        fingerprint=recheck_spec.fingerprint,
+        task=recheck_spec.task,
+        model_sha256=recheck_spec.model_sha256,
+        provenance_complete=1 if recheck_spec.provenance_complete else 0,
+    )
+    for observation in observations:
+        insert_engine_observation(
+            connection,
+            inspection_id,
+            observation.result,
+            engine=observation.engine,
+            task=observation.task,
+            model_sha256="" if observation.engine == "opencv" else recheck_spec.model_sha256,
+        )
+    if len(observations) >= 2:
+        try:
+            assessment = assess_cross_evidence(observations[0], observations[1])
+            append_agent_assessment(
+                connection,
+                inspection_id,
+                assessment_hash=assessment.assessment_hash,
+                policy_hash=assessment.policy_hash,
+                flags=[flag.value for flag in assessment.flags],
+                recommended_action=assessment.recommended_action,
+                diagnostics=assessment.to_dict(),
+            )
+        except Exception as exc:  # noqa: BLE001 - 증거 실패는 검사 기록과 격리
+            _append_audit(
+                audit_path,
+                {
+                    "event": "evidence_error",
+                    "run_id": run_id,
+                    "sample_id": sample_id,
+                    "sha256": sha256,
+                    "path": str(path),
+                    "inspection_id": inspection_id,
+                    "message": str(exc),
+                },
+            )
+    _append_audit(
+        audit_path,
+        {
+            "event": "recheck",
+            "run_id": run_id,
+            "sample_id": sample_id,
+            "sha256": sha256,
+            "path": str(path),
+            "recheck_tag": recheck_tag,
+            "previous_inspection_ids": [int(row["id"]) for row in existing],
+            "status": record.status.value,
+            "inspection_id": inspection_id,
+            "overlay": overlay_path,
+        },
+    )
+    return "still_error" if record.status is Status.ERROR else "resolved"
+
+
+def recheck_errors(
+    *,
+    incoming: Path,
+    db_path: Path,
+    config: AppConfig,
+    engine: str = "opencv",
+    max_retries: int = 3,
+    ok_sample_rate: int = 1,
+    tag: str | None = None,
+) -> dict[str, int]:
+    """기존 ``ERROR`` 기록이 남은 이미지만 재검사해 새 append-only 행으로 기록한다.
+
+    기존 ``ERROR`` 행은 수정·삭제하지 않으며(원장 불변 유지), ``recheck`` 태그가
+    반영된 별도 ``inspection_fingerprint`` 로 새 행을 추가한다. 이미 정상 판정
+    (``OK``/``NG``/``REVIEW``) 행이 있는 이미지는 건너뛴다.
+    """
+
+    incoming_path = Path(incoming)
+    db_file = Path(db_path)
+    _validate_options(
+        incoming=incoming_path,
+        engine=engine,
+        max_retries=max_retries,
+        ok_sample_rate=ok_sample_rate,
+        poll_seconds=1.0,
+        once=True,
+    )
+    clean_tag = _validate_recheck_tag(tag)
+    if not incoming_path.is_dir():
+        raise WorkerError(f"incoming 디렉터리가 없습니다: {incoming_path}")
+
+    from ..evaluation import recalibration  # noqa: PLC0415 - 진입점 1회 계산
+
+    code_sha, code_dirty = recalibration.git_code_identity()
+    yolo_entry = _resolve_yolo_entry(engine) if engine != "opencv" else None
+    model_version = _model_version(engine)
+    spec = _resolve_spec(engine, config, code_sha=code_sha, code_dirty=code_dirty)
+    registry: Any = None
+    if engine != "opencv":
+        from ..yolo.runtime import YoloEngineRegistry  # noqa: PLC0415
+
+        registry = YoloEngineRegistry()
+    run_id = new_run_id(config)
+    audit_path = audit_log_path(db_file)
+
+    counts = {"rechecked": 0, "resolved": 0, "still_error": 0, "skipped": 0, "error": 0}
+    connection = connect(db_file)
+    try:
+        init_db(connection)
+        for path in _iter_images(incoming_path):
+            outcome = _recheck_one(
+                connection,
+                path,
+                run_id=run_id,
+                config=config,
+                engine=engine,
+                db_path=db_file,
+                audit_path=audit_path,
+                max_retries=max_retries,
+                ok_sample_rate=ok_sample_rate,
+                yolo_entry=yolo_entry,
+                model_version=model_version,
+                spec=spec,
+                tag=clean_tag,
+                registry=registry,
+            )
+            if outcome == "resolved":
+                counts["rechecked"] += 1
+                counts["resolved"] += 1
+            elif outcome == "still_error":
+                counts["rechecked"] += 1
+                counts["still_error"] += 1
+            elif outcome == "skip":
+                counts["skipped"] += 1
+            else:
+                counts["error"] += 1
+    finally:
+        connection.close()
+    return counts
+
+
 __all__ = [
     "AUDIT_DIRNAME",
     "AUDIT_FILENAME",
@@ -535,5 +822,6 @@ __all__ = [
     "keep_overlay",
     "new_run_id",
     "overlay_dir",
+    "recheck_errors",
     "run_worker",
 ]

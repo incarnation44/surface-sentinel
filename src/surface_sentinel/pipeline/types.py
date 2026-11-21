@@ -142,6 +142,7 @@ class PipelineDebug:
     z_map: np.ndarray
     candidate_mask: np.ndarray
     refined_mask: np.ndarray
+    bgr: np.ndarray | None = None
 
 
 @dataclass(frozen=True, eq=False)

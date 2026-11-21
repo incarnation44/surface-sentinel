@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import cv2
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.concurrency import run_in_threadpool
 
@@ -42,11 +42,20 @@ from ..agent.review import assess_review_triage
 from ..agent.stability import analyze_weak_geometry, arbitrate_patches
 from ..config import REVIEW_BAND_MAX, AppConfig, default_config, load_config
 from ..contracts import Status
+from ..io.image_guard import ImagePixelLimitError, check_image_pixel_budget
+from ..io.limits import (
+    CsrfOriginError,
+    async_pipeline_slot,
+    configure_opencv_threads,
+    pipeline_slot,
+    validate_same_origin,
+)
 from ..pipeline import InspectionOutcome, inspect_image
 from ..pipeline.stages import VALID_LABELS, VALID_SPLITS
 from ..records.db import DatabaseError, connect, init_db
 from ..records.identity import EngineSpec, opencv_spec
 from ..records.store import (
+    EFFECTIVE_INSPECTIONS_WHERE,
     ENGINES,
     STATUS_ORDER,
     RecordsError,
@@ -107,7 +116,8 @@ def engine_status_counts(connection: sqlite3.Connection) -> dict[str, dict[str, 
 
     counts: dict[str, dict[str, int]] = {}
     rows = connection.execute(
-        "SELECT engine, status, COUNT(*) AS n FROM inspections GROUP BY engine, status"
+        f"SELECT i.engine, i.status, COUNT(*) AS n FROM inspections i "
+        f"WHERE {EFFECTIVE_INSPECTIONS_WHERE} GROUP BY i.engine, i.status"
     ).fetchall()
     for row in rows:
         engine = str(row["engine"])
@@ -469,11 +479,19 @@ def create_inspection_app(
     app.state.db_path = db_file
     app.state.raw_root = Path(raw_root) if raw_root is not None else None
     app.state.config = config
+    configure_opencv_threads()
     try:
         runtime = importlib.import_module("surface_sentinel.yolo.runtime")
         app.state.yolo_registry = runtime.YoloEngineRegistry()
     except ImportError:
         app.state.yolo_registry = None
+
+    def _check_origin(request: Request) -> None:
+        host = request.headers.get("host") or request.url.netloc
+        try:
+            validate_same_origin(request.headers, host)
+        except CsrfOriginError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
 
     @contextmanager
     def open_db() -> Iterator[sqlite3.Connection]:
@@ -500,6 +518,7 @@ def create_inspection_app(
 
     @app.post("/api/inspect", response_model=InspectResponse)
     async def inspect(
+        request: Request,
         file: Annotated[UploadFile, File()],
         engine: Annotated[EngineName, Query()] = EngineName.OPENCV,
         label: Annotated[str, Form()] = "unknown",
@@ -523,6 +542,7 @@ def create_inspection_app(
         = 원래 실행과 같은 진단 값). 내부 경로·stack trace 는 응답에 넣지 않는다.
         """
 
+        _check_origin(request)
         _validate_label_split(label, split)
 
         try:
@@ -537,104 +557,128 @@ def create_inspection_app(
                 status_code=400,
                 detail=f"이미지 확장자만 업로드할 수 있습니다: {suffix or '(없음)'}",
             )
+        try:
+            check_image_pixel_budget(payload, require_dimensions=False)
+        except ImagePixelLimitError as exc:
+            raise HTTPException(status_code=413, detail=str(exc)) from exc
 
         sha256 = hashlib.sha256(payload).hexdigest()
-        image_path = _store_upload(directory / UPLOAD_DIRNAME, payload, sha256, suffix)
         output_dir = directory / OUTPUT_DIRNAME / f"{sha256[:16]}-{engine.value}"
 
-        outcome = await run_in_threadpool(
-            _inspect,
-            image_path,
-            config,
-            engine=engine,
-            output_dir=output_dir,
-            label=label,
-            split=split,
-            registry=getattr(app.state, "yolo_registry", None),
-        )
-        result = outcome.result
-        model_version = _model_version(engine.value)
-        spec = await run_in_threadpool(
-            _inspection_spec,
-            engine.value,
-            config,
-            code_sha=code_sha,
-            code_dirty=code_dirty,
-            allow_minimal_fallback=(result.status is Status.ERROR),
-        )
-
-        with open_db() as connection:
-            inspection_id, deduplicated = insert_inspection_with_dedup(
-                connection,
-                result,
-                engine=engine.value,
-                image_sha256=sha256,
-                model_version=model_version,
-                fingerprint=spec.fingerprint,
-                task=spec.task,
-                model_sha256=spec.model_sha256,
-                provenance_complete=1 if spec.provenance_complete else 0,
-            )
-            for observation in outcome.engine_observations:
-                insert_engine_observation(
-                    connection,
-                    inspection_id,
-                    observation.result,
-                    engine=observation.engine,
-                    task=observation.task,
-                    model_sha256="" if observation.engine == "opencv" else spec.model_sha256,
+        def _run_and_persist() -> tuple[
+            InspectionOutcome,
+            str,
+            EngineSpec,
+            int,
+            bool,
+            dict[str, Any] | None,
+            list[dict[str, Any]],
+        ]:
+            image_path = _store_upload(directory / UPLOAD_DIRNAME, payload, sha256, suffix)
+            with pipeline_slot():
+                outcome = _inspect(
+                    image_path,
+                    config,
+                    engine=engine,
+                    output_dir=output_dir,
+                    label=label,
+                    split=split,
+                    registry=getattr(app.state, "yolo_registry", None),
                 )
-            if len(outcome.engine_observations) >= 2:
-                # 교차 증거(Phase 1/2, observe-only): 별도 증거·트리아지만 append 한다.
-                # 기계 판정은 건드리지 않으며, 증거 실패는 검사 응답을 막지
-                # 않도록 격리한다(워커와 같은 계약).
-                try:
-                    obs_a = outcome.engine_observations[0]
-                    obs_b = outcome.engine_observations[1]
-                    assessment = assess_cross_evidence(obs_a, obs_b)
-                    arbitration = None
-                    try:
-                        bgr = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
-                        if bgr is not None:
-                            arbitration = arbitrate_patches(bgr, obs_a, obs_b)
-                    except Exception:  # noqa: BLE001 - 패치 중재 실패 시 교차 증거는 유지
-                        arbitration = None
-                    geom = analyze_weak_geometry(result.components, result.roi)
-                    triage = assess_review_triage(
-                        result,
-                        geometry=geom,
-                        cross_assessment=assessment,
-                        arbitration=arbitration,
-                        ng_min=config.scoring.ng_min,
-                        review_band_max=REVIEW_BAND_MAX,
-                    )
-                    diagnostics = {
-                        **assessment.to_dict(),
-                        "triage": triage.to_dict(),
-                        "arbitration": (
-                            arbitration.to_dict() if arbitration is not None else None
-                        ),
-                    }
-                    append_agent_assessment(
-                        connection,
-                        inspection_id,
-                        assessment_hash=assessment.assessment_hash,
-                        policy_hash=assessment.policy_hash,
-                        flags=[flag.value for flag in assessment.flags],
-                        recommended_action=assessment.recommended_action,
-                        diagnostics=diagnostics,
-                        review_priority=triage.priority.value,
-                    )
-                except Exception:  # noqa: BLE001 - 증거 실패는 검사 기록과 격리
-                    _logger.warning(
-                        "교차 증거 기록 실패(검사 기록은 유지): inspection_id=%s",
-                        inspection_id,
-                        exc_info=True,
-                    )
-            row = get_inspection(connection, inspection_id)
-            observation_rows = (
-                list_engine_observations(connection, inspection_id) if deduplicated else []
+            result_local = outcome.result
+            model_ver = _model_version(engine.value)
+            spec_local = _inspection_spec(
+                engine.value,
+                config,
+                code_sha=code_sha,
+                code_dirty=code_dirty,
+                allow_minimal_fallback=(result_local.status is Status.ERROR),
             )
+            with open_db() as connection:
+                insp_id, dedup = insert_inspection_with_dedup(
+                    connection,
+                    result_local,
+                    engine=engine.value,
+                    image_sha256=sha256,
+                    model_version=model_ver,
+                    fingerprint=spec_local.fingerprint,
+                    task=spec_local.task,
+                    model_sha256=spec_local.model_sha256,
+                    provenance_complete=1 if spec_local.provenance_complete else 0,
+                )
+                for observation in outcome.engine_observations:
+                    insert_engine_observation(
+                        connection,
+                        insp_id,
+                        observation.result,
+                        engine=observation.engine,
+                        task=observation.task,
+                        model_sha256=(
+                            "" if observation.engine == "opencv" else spec_local.model_sha256
+                        ),
+                    )
+                if len(outcome.engine_observations) >= 2:
+                    # 교차 증거(Phase 1/2, observe-only): 별도 증거·트리아지만 append 한다.
+                    # 기계 판정은 건드리지 않으며, 증거 실패는 검사 응답을 막지
+                    # 않도록 격리한다(워커와 같은 계약).
+                    try:
+                        obs_a = outcome.engine_observations[0]
+                        obs_b = outcome.engine_observations[1]
+                        assessment = assess_cross_evidence(obs_a, obs_b)
+                        arbitration = None
+                        try:
+                            bgr = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
+                            if bgr is not None:
+                                arbitration = arbitrate_patches(bgr, obs_a, obs_b)
+                        except Exception:  # noqa: BLE001 - 패치 중재 실패 시 교차 증거는 유지
+                            arbitration = None
+                        geom = analyze_weak_geometry(result_local.components, result_local.roi)
+                        triage = assess_review_triage(
+                            result_local,
+                            geometry=geom,
+                            cross_assessment=assessment,
+                            arbitration=arbitration,
+                            ng_min=config.scoring.ng_min,
+                            review_band_max=REVIEW_BAND_MAX,
+                        )
+                        diagnostics = {
+                            **assessment.to_dict(),
+                            "triage": triage.to_dict(),
+                            "arbitration": (
+                                arbitration.to_dict() if arbitration is not None else None
+                            ),
+                        }
+                        append_agent_assessment(
+                            connection,
+                            insp_id,
+                            assessment_hash=assessment.assessment_hash,
+                            policy_hash=assessment.policy_hash,
+                            flags=[flag.value for flag in assessment.flags],
+                            recommended_action=assessment.recommended_action,
+                            diagnostics=diagnostics,
+                            review_priority=triage.priority.value,
+                        )
+                    except Exception:  # noqa: BLE001 - 증거 실패는 검사 기록과 격리
+                        _logger.warning(
+                            "교차 증거 기록 실패(검사 기록은 유지): inspection_id=%s",
+                            insp_id,
+                            exc_info=True,
+                        )
+                saved_row = get_inspection(connection, insp_id)
+                obs_rows = list_engine_observations(connection, insp_id) if dedup else []
+            return outcome, model_ver, spec_local, insp_id, dedup, saved_row, obs_rows
+
+        async with async_pipeline_slot():
+            (
+                outcome,
+                model_version,
+                spec,
+                inspection_id,
+                deduplicated,
+                row,
+                observation_rows,
+            ) = await run_in_threadpool(_run_and_persist)
+        result = outcome.result
 
         overlay_url = None
         if row is not None and _row_overlay_path(row, directory) is not None:
@@ -756,9 +800,10 @@ def create_inspection_app(
         "/api/inspections/{inspection_id}/review",
         response_model=ReviewResponse,
     )
-    def review(inspection_id: int, body: ReviewRequest) -> ReviewResponse:
+    def review(request: Request, inspection_id: int, body: ReviewRequest) -> ReviewResponse:
         """사람 판정을 append한다. 기계 판정(``status``)은 바꾸지 않는다."""
 
+        _check_origin(request)
         with open_db() as connection:
             row = get_inspection(connection, inspection_id)
             if row is None:

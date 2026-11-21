@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Annotated, Any
 from urllib.parse import quote
 
-from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
@@ -39,6 +39,13 @@ from ..api.app import create_inspection_app, engine_status_counts
 from ..config import REVIEW_BAND_MAX, ConfigError, default_config, load_config
 from ..evaluation.metrics import Confusion, image_metrics, ratio
 from ..io.artifacts import CONFIG_SNAPSHOT
+from ..io.limits import (
+    CsrfOriginError,
+    async_pipeline_slot,
+    configure_opencv_threads,
+    pipeline_slot,
+    validate_same_origin,
+)
 from ..pipeline.evidence import sanitize_sample_id
 from ..records.store import STATUS_ORDER, get_inspection, stats
 from ..review import ReviewError, ReviewStorageError, ReviewStore
@@ -411,6 +418,14 @@ def create_app(
     app.state.repo_root = (
         Path(repo_root) if repo_root is not None else _resolve_repo_root()
     )
+    configure_opencv_threads()
+
+    def _check_origin(request: Request) -> None:
+        host = request.headers.get("host") or request.url.netloc
+        try:
+            validate_same_origin(request.headers, host)
+        except CsrfOriginError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
 
     if app.state.api_enabled:
         api_app = create_inspection_app(
@@ -547,10 +562,15 @@ def create_app(
     ) -> HTMLResponse | JSONResponse:
         if request.url.path.startswith(("/api/", "/cinema/preset/", "/cinema/inspect")):
             return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+        message = (
+            "요청한 페이지가 없습니다."
+            if exc.status_code == 404
+            else str(exc.detail or "요청을 처리할 수 없습니다.")
+        )
         return render(
             request,
             "error.html",
-            {"code": exc.status_code, "message": "요청한 페이지가 없습니다."},
+            {"code": exc.status_code, "message": message},
             exc.status_code,
         )
 
@@ -821,6 +841,7 @@ def create_app(
 
     @app.post("/runs/{run_id}/review/{sample_id}")
     def review_submit(
+        request: Request,
         run_id: str,
         sample_id: str,
         final_status: str = Form(...),
@@ -830,6 +851,7 @@ def create_app(
         return_to: str = Form("review"),
         sort: str = Form(""),
     ) -> RedirectResponse:
+        _check_origin(request)
         entry = load_run(app.state.runs_dir, run_id)
         record = find_sample(load_results(entry.run_dir), sample_id)
         if str(record["status"]) != "REVIEW":
@@ -1215,18 +1237,22 @@ def create_app(
             )
         cfg = load_cinema_config(app.state.repo_root)
         try:
-            payload = run_cinema_preset(preset, config=cfg)
+            with pipeline_slot():
+                payload = run_cinema_preset(preset, config=cfg)
         except (OSError, ValueError, RuntimeError) as exc:
             return JSONResponse({"detail": str(exc)}, status_code=400)
         return JSONResponse(payload)
 
     @app.post("/cinema/inspect")
-    async def cinema_inspect_upload(file: Annotated[UploadFile, File(...)]) -> JSONResponse:
+    async def cinema_inspect_upload(
+        request: Request, file: Annotated[UploadFile, File(...)]
+    ) -> JSONResponse:
         """업로드 이미지의 실제 10단계 OpenCV 파이프라인을 임시 실행해 시네마 프레임을 반환한다.
 
         DB 및 runs 디렉터리에는 아무 파일도 남기지 않으며 항상 ``split="tune"`` 으로만 실행한다.
         """
 
+        _check_origin(request)
         filename = Path(file.filename or "upload.png").name
         suffix = Path(filename).suffix.lower()
         if suffix not in ALLOWED_CINEMA_EXTENSIONS:
@@ -1262,7 +1288,10 @@ def create_app(
         sample_id = sanitize_sample_id(Path(filename).stem or "upload")
 
         def _run() -> dict[str, Any]:
-            with tempfile.TemporaryDirectory(prefix="ss-cinema-up-") as tmp_dir:
+            with (
+                pipeline_slot(),
+                tempfile.TemporaryDirectory(prefix="ss-cinema-up-") as tmp_dir,
+            ):
                 target = Path(tmp_dir) / f"{sample_id}{suffix}"
                 target.write_bytes(payload_bytes)
                 return run_cinema_trace(
@@ -1274,7 +1303,8 @@ def create_app(
                 )
 
         try:
-            data = await run_in_threadpool(_run)
+            async with async_pipeline_slot():
+                data = await run_in_threadpool(_run)
         except (OSError, ValueError, RuntimeError) as exc:
             return JSONResponse({"detail": f"이미지 검사 실패: {exc}"}, status_code=400)
         return JSONResponse(data)

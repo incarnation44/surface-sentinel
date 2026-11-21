@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -18,6 +19,25 @@ from pathlib import Path
 from typing import Any
 
 REVIEW_DECISIONS_JSONL = "review_decisions.jsonl"
+
+#: 메모(note) 최대 길이(문자 수). 로그 비대화·남용을 막는다.
+MAX_NOTE_LENGTH = 2000
+
+#: 검토자 이름(reviewer) 최대 길이(문자 수).
+MAX_REVIEWER_LENGTH = 128
+
+_APPEND_LOCKS_GUARD = threading.Lock()
+_APPEND_LOCKS: dict[Path, threading.Lock] = {}
+
+
+def _append_lock_for(path: Path) -> threading.Lock:
+    key = path.resolve()
+    with _APPEND_LOCKS_GUARD:
+        lock = _APPEND_LOCKS.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _APPEND_LOCKS[key] = lock
+        return lock
 
 #: ``review_decisions.jsonl`` 필드 순서. 설계 §5.3과 1:1로 고정한다.
 DECISION_FIELDS: tuple[str, ...] = (
@@ -111,6 +131,14 @@ class ReviewDecision:
             raise ReviewError("run_id가 비어 있습니다.")
         if not self.reviewer.strip():
             raise ReviewError("검토자(reviewer)가 비어 있습니다.")
+        if len(self.reviewer) > MAX_REVIEWER_LENGTH:
+            raise ReviewError(
+                f"검토자(reviewer)는 최대 {MAX_REVIEWER_LENGTH}자까지 입력할 수 있습니다."
+            )
+        if len(self.note) > MAX_NOTE_LENGTH:
+            raise ReviewError(
+                f"메모(note)는 최대 {MAX_NOTE_LENGTH}자까지 입력할 수 있습니다."
+            )
         if not _SHA256_HEX.fullmatch(self.config_hash):
             raise ReviewError("config_hash는 sha256 hex 64자여야 합니다.")
         if not _SHA256_HEX.fullmatch(self.overlay_sha256):
@@ -211,9 +239,10 @@ class ReviewStore:
         )
         decision.validate()
         line = json.dumps(decision.to_dict(), ensure_ascii=False) + "\n"
+        encoded = line.encode("utf-8")
         try:
-            with self.path.open("a", encoding="utf-8") as handle:
-                handle.write(line)
+            with _append_lock_for(self.path), self.path.open("ab") as handle:
+                handle.write(encoded)
                 handle.flush()
                 os.fsync(handle.fileno())
         except OSError as exc:
@@ -224,6 +253,8 @@ class ReviewStore:
 __all__ = [
     "DECISION_FIELDS",
     "FINAL_STATUSES",
+    "MAX_NOTE_LENGTH",
+    "MAX_REVIEWER_LENGTH",
     "REVIEW_DECISIONS_JSONL",
     "REVIEW_REASON_CODES",
     "ReviewDecision",

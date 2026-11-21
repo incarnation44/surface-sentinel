@@ -227,6 +227,7 @@ def inspect_image(
             z_map=pre.z_map,
             candidate_mask=candidate.mask,
             refined_mask=refined.combined_mask,
+            bgr=loaded.bgr,
         )
 
         current_stage = Stage.SAVE_EVIDENCE

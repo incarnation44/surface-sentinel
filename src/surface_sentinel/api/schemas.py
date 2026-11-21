@@ -13,7 +13,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from ..contracts import ComponentFeature, ReasonCode, Status
 
@@ -190,8 +190,8 @@ class ReviewRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     decision: ReviewDecision
-    reviewer: str = ""
-    reason: str = ""
+    reviewer: str = Field(default="", max_length=128)
+    reason: str = Field(default="", max_length=2000)
 
 
 class ReviewResponse(BaseModel):

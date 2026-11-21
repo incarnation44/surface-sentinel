@@ -60,22 +60,30 @@ def inspection_fingerprint(
     preprocessing_version: str = PREPROCESSING_VERSION,
     code_sha: str = "",
     code_dirty: bool = False,
+    recheck_tag: str = "",
 ) -> str:
-    """검사 신원 필드의 canonical SHA256. 이미지 SHA 는 포함하지 않는다."""
+    """검사 신원 필드의 canonical SHA256. 이미지 SHA 는 포함하지 않는다.
 
-    return canonical_json_sha256(
-        {
-            "engine": str(engine),
-            "task": str(task),
-            "model_sha256": str(model_sha256),
-            "config_hash": str(config_hash),
-            "yolo_policy_hash": str(yolo_policy_hash),
-            "combine_policy_hash": str(combine_policy_hash),
-            "preprocessing_version": str(preprocessing_version),
-            "code_sha": str(code_sha),
-            "code_dirty": bool(code_dirty),
-        }
-    )
+    ``recheck_tag`` 가 비어 있으면 기존 canonical 페이로드를 그대로 유지한다
+    (하위 호환). ``ERROR`` 재검사처럼 별도 append-only 행이 필요할 때만
+    비어 있지 않은 ``recheck_tag`` 를 페이로드에 포함한다.
+    """
+
+    payload: dict[str, Any] = {
+        "engine": str(engine),
+        "task": str(task),
+        "model_sha256": str(model_sha256),
+        "config_hash": str(config_hash),
+        "yolo_policy_hash": str(yolo_policy_hash),
+        "combine_policy_hash": str(combine_policy_hash),
+        "preprocessing_version": str(preprocessing_version),
+        "code_sha": str(code_sha),
+        "code_dirty": bool(code_dirty),
+    }
+    tag = str(recheck_tag).strip()
+    if tag:
+        payload["recheck_tag"] = tag
+    return canonical_json_sha256(payload)
 
 
 __all__ = [
