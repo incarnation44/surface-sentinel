@@ -231,3 +231,31 @@ def test_duplicate_upload_reads_stored_observation(
     assert second["components"][0]["bbox"] == [1, 2, 3, 4]
     assert second["error_code"] == "E_PROCESS_INTERNAL"
     assert second["error_stage"] == ""  # stage 는 저장하지 않는다
+
+
+def test_arbitrate_patches_failure_logs_warning_and_keeps_response(
+    runs_dir: Path,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    import logging
+
+    _stub_combined(
+        monkeypatch, combined_status=Status.NG, observations=_mismatched_observations()
+    )
+
+    def boom(*args: object, **kwargs: object) -> object:
+        raise RuntimeError("arbitration boom")
+
+    monkeypatch.setattr(app_module, "arbitrate_patches", boom)
+    with caplog.at_level(logging.WARNING, logger="surface_sentinel.api.app"):
+        response = upload(client, synthetic_png(seed=6), engine="combined")
+    assert response.status_code == 200
+    assert response.json()["status"] == "NG"
+    rows = _assessments(runs_dir)
+    assert len(rows) == 1
+    diagnostics = json.loads(str(rows[0]["diagnostics_json"]))
+    assert diagnostics["arbitration"] is None
+    assert any("패치 중재 실패" in rec.getMessage() for rec in caplog.records)
+    assert any(rec.exc_info is not None for rec in caplog.records)

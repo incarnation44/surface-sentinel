@@ -177,3 +177,16 @@ def test_runs_index_links_stats_and_compare(client: TestClient) -> None:
     text = client.get("/").text
     assert 'href="/stats"' in text
     assert 'href="/compare"' in text
+
+
+def test_inspection_overlay_handles_corrupted_db_without_500(
+    env: tuple[Path, Path, Path],
+) -> None:
+    runs_dir, raw_root, _ = env
+    (runs_dir / "records.db").write_bytes(b"not-a-valid-sqlite-database")
+    client = TestClient(
+        create_app(runs_dir=runs_dir, raw_root=raw_root),
+        raise_server_exceptions=False,
+    )
+    response = client.get("/inspections/1/overlay.png")
+    assert response.status_code == 404

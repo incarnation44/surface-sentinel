@@ -8,6 +8,7 @@ import threading
 import weakref
 from collections.abc import AsyncIterator, Iterator, Mapping
 from contextlib import asynccontextmanager, contextmanager
+from typing import Any
 from urllib.parse import urlparse
 
 #: API·시네마 동시 파이프라인 실행 기본 상한(2 OCPU / 12GB VM OOM·스레싱 방어).
@@ -105,6 +106,40 @@ class CsrfOriginError(ValueError):
     """교차 출처(Cross-Site) 또는 비허용 Host POST 요청이 감지됐을 때 발생한다."""
 
 
+class UploadTooLargeError(ValueError):
+    """업로드 바이트가 설정된 상한을 초과했을 때 발생한다."""
+
+
+async def read_upload_bounded(
+    upload: Any,
+    *,
+    max_bytes: int,
+    chunk_bytes: int = 64 * 1024,
+) -> bytes:
+    """업로드를 청크 단위로 ``max_bytes`` 상한까지만 읽고 핸들을 닫는다."""
+
+    if max_bytes < 0:
+        raise ValueError(f"max_bytes는 0 이상이어야 합니다: {max_bytes}")
+    if chunk_bytes <= 0:
+        raise ValueError(f"chunk_bytes는 1 이상이어야 합니다: {chunk_bytes}")
+    chunks: list[bytes] = []
+    total = 0
+    close_fn = getattr(upload, "close", None)
+    try:
+        while True:
+            chunk = await upload.read(chunk_bytes)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > max_bytes:
+                raise UploadTooLargeError(f"업로드 용량 상한({max_bytes} bytes)을 초과했습니다.")
+            chunks.append(chunk)
+    finally:
+        if callable(close_fn):
+            await close_fn()
+    return b"".join(chunks)
+
+
 def _allowed_hostnames() -> frozenset[str]:
     extra_raw = os.environ.get("SURFACE_SENTINEL_ALLOWED_HOSTS", "").strip()
     if not extra_raw:
@@ -172,9 +207,11 @@ __all__ = [
     "DEFAULT_OPENCV_THREADS",
     "LOCAL_ALLOWED_HOSTS",
     "CsrfOriginError",
+    "UploadTooLargeError",
     "async_pipeline_slot",
     "configure_opencv_threads",
     "max_pipeline_concurrency",
     "pipeline_slot",
+    "read_upload_bounded",
     "validate_same_origin",
 ]

@@ -396,3 +396,268 @@ def test_targets_are_the_agreed_numbers() -> None:
     assert grid.TARGET_REVIEW == 0.40
     assert grid.TARGET_LOCALIZATION_RECALL == 0.50
     assert math.isclose(grid.TARGET_ESCAPE, 0.15)
+
+
+# ------------------------------------------------------------------ 캐시 보안
+
+
+_PICKLE_PROBE_EXECUTED = False
+
+
+def _mark_pickle_probe() -> dict[str, object]:
+    global _PICKLE_PROBE_EXECUTED
+    _PICKLE_PROBE_EXECUTED = True
+    return {"meta": {}, "samples": []}
+
+
+class _PickleBomb:
+    def __reduce__(self) -> tuple[object, tuple[()]]:
+        return (_mark_pickle_probe, ())
+
+
+def test_load_cache_rejects_pickle_payload_without_executing(tmp_path: Path) -> None:
+    import pickle
+
+    from surface_sentinel.evaluation.cache import CACHE_VERSION, CacheMeta, load_cache
+
+    global _PICKLE_PROBE_EXECUTED
+    _PICKLE_PROBE_EXECUTED = False
+
+    target = tmp_path / "evil.sscache"
+    target.write_bytes(pickle.dumps(_PickleBomb(), protocol=4))
+    meta = CacheMeta(
+        version=CACHE_VERSION,
+        config_hash="a" * 64,
+        split="tune",
+        split_sha256="b" * 64,
+        sample_ids_sha256="c" * 64,
+        samples=0,
+    )
+    with pytest.raises(ValueError):
+        load_cache(target, meta)
+    assert _PICKLE_PROBE_EXECUTED is False
+
+
+def test_save_and_load_cache_roundtrip_preserves_masks_and_fields(tmp_path: Path) -> None:
+    import numpy as np
+
+    from surface_sentinel.contracts import Status
+    from surface_sentinel.evaluation.cache import (
+        CACHE_VERSION,
+        CachedComponent,
+        CachedSample,
+        CacheMeta,
+        cache_path,
+        load_cache,
+        save_cache,
+    )
+
+    mask = np.array([[0, 255, 0], [255, 255, 0]], dtype=np.uint8)
+    gt_mask = np.array([[255, 255]], dtype=np.uint8)
+    comp = CachedComponent(
+        area_px=3,
+        bbox=(10, 20, 3, 2),
+        mean_contrast_gray=12.5,
+        max_contrast_gray=25.0,
+        integrated_contrast=37.5,
+        border_distance_px=4.0,
+        touches_roi_border=True,
+        mask=mask,
+    )
+    gt_comp = CachedComponent(
+        area_px=2,
+        bbox=(11, 20, 2, 1),
+        mean_contrast_gray=0.0,
+        max_contrast_gray=0.0,
+        integrated_contrast=0.0,
+        border_distance_px=0.0,
+        touches_roi_border=False,
+        mask=gt_mask,
+    )
+    sample = CachedSample(
+        sample_id="s1",
+        original_id="orig1",
+        label="defect",
+        split="tune",
+        source_split="train",
+        image_path="train/s1.png",
+        mask_path="train/s1_GT.png",
+        defect_pixels=2,
+        status=Status.NG,
+        score=0.82,
+        reasons=("DEFECT_EVIDENCE_STRONG",),
+        quality_flags=(),
+        blur_variance=120.5,
+        mean_gray=130.2,
+        saturated_ratio=0.01,
+        roi_uncertain=False,
+        truncated=False,
+        components=(comp,),
+        gt_components=(gt_comp,),
+        overlay="s1_overlay.png",
+        error_code=None,
+        error_stage=None,
+    )
+    meta = CacheMeta(
+        version=CACHE_VERSION,
+        config_hash="a" * 64,
+        split="tune",
+        split_sha256="b" * 64,
+        sample_ids_sha256="c" * 64,
+        samples=1,
+    )
+    path = cache_path(meta, tmp_path)
+    assert path.suffix != ".pkl"
+    saved = save_cache([sample], meta, path)
+    loaded = load_cache(saved, meta)
+    assert len(loaded) == 1
+    got = loaded[0]
+    assert got.sample_id == "s1"
+    assert got.status is Status.NG
+    assert got.reasons == ("DEFECT_EVIDENCE_STRONG",)
+    assert got.error_code is None
+    assert len(got.components) == 1
+    assert got.components[0].bbox == (10, 20, 3, 2)
+    assert got.components[0].touches_roi_border is True
+    assert np.array_equal(got.components[0].mask, mask)
+    assert got.components[0].mask.dtype == np.uint8
+    assert len(got.gt_components) == 1
+    assert np.array_equal(got.gt_components[0].mask, gt_mask)
+
+
+def test_save_cache_cleans_unique_temp_file_on_replace_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+
+    from surface_sentinel.evaluation.cache import CACHE_VERSION, CacheMeta, save_cache
+
+    meta = CacheMeta(
+        version=CACHE_VERSION,
+        config_hash="a" * 64,
+        split="tune",
+        split_sha256="b" * 64,
+        sample_ids_sha256="c" * 64,
+        samples=0,
+    )
+    target = tmp_path / "cache.sscache"
+
+    def fail_replace(src: object, dst: object) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr(os, "replace", fail_replace)
+    with pytest.raises(OSError):
+        save_cache([], meta, target)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_load_cache_rejects_zlib_bomb_and_oversized_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import zlib
+
+    from surface_sentinel.evaluation import cache as cache_mod
+    from surface_sentinel.evaluation.cache import CACHE_VERSION, CacheMeta, load_cache
+
+    meta = CacheMeta(
+        version=CACHE_VERSION,
+        config_hash="a" * 64,
+        split="tune",
+        split_sha256="b" * 64,
+        sample_ids_sha256="c" * 64,
+        samples=0,
+    )
+    # 1) 소형 zlib 폭탄 (압축 수 KB → 해제 1 MiB, 상한을 4096 B로 낮춰 검증)
+    bomb = tmp_path / "bomb.sscache"
+    bomb.write_bytes(b"SSCACHE2\n" + zlib.compress(b"A" * (1024 * 1024), level=9))
+    monkeypatch.setattr(cache_mod, "MAX_CACHE_DECOMPRESSED_BYTES", 4096)
+    with pytest.raises(ValueError, match="크기"):
+        load_cache(bomb, meta)
+
+    # 2) 압축 파일 자체 크기 상한 초과
+    monkeypatch.setattr(cache_mod, "MAX_CACHE_COMPRESSED_BYTES", 16)
+    with pytest.raises(ValueError, match="크기"):
+        load_cache(bomb, meta)
+
+
+def test_load_cache_rejects_abnormal_mask_shape_and_non_list_fields(tmp_path: Path) -> None:
+    import json
+    import zlib
+
+    from surface_sentinel.evaluation.cache import CACHE_VERSION, CacheMeta, load_cache
+
+    meta = CacheMeta(
+        version=CACHE_VERSION,
+        config_hash="a" * 64,
+        split="tune",
+        split_sha256="b" * 64,
+        sample_ids_sha256="c" * 64,
+        samples=1,
+    )
+
+    def _write(samples_payload: list[dict[str, object]], name: str) -> Path:
+        raw = json.dumps({"meta": meta.as_dict(), "samples": samples_payload}).encode("utf-8")
+        p = tmp_path / name
+        p.write_bytes(b"SSCACHE2\n" + zlib.compress(raw))
+        return p
+
+    base_sample: dict[str, object] = {
+        "sample_id": "s1",
+        "original_id": "s1",
+        "label": "defect",
+        "split": "tune",
+        "source_split": "train",
+        "image_path": "a.png",
+        "mask_path": "",
+        "defect_pixels": 0,
+        "status": "OK",
+        "score": 0.0,
+        "reasons": [],
+        "quality_flags": [],
+        "blur_variance": 1.0,
+        "mean_gray": 100.0,
+        "saturated_ratio": 0.0,
+        "roi_uncertain": False,
+        "truncated": False,
+        "components": [],
+        "gt_components": [],
+        "overlay": "",
+        "error_code": None,
+        "error_stage": None,
+    }
+
+    # (0, 1_000_000_000) 빈 바이트 shape 공격 거부
+    bad_shape = dict(base_sample)
+    bad_shape["components"] = [
+        {
+            "area_px": 0,
+            "bbox": [0, 0, 0, 0],
+            "mean_contrast_gray": 0.0,
+            "max_contrast_gray": 0.0,
+            "integrated_contrast": 0.0,
+            "border_distance_px": 0.0,
+            "touches_roi_border": False,
+            "mask_shape": [0, 1_000_000_000],
+            "mask_b64": "",
+        }
+    ]
+    with pytest.raises(ValueError):
+        load_cache(_write([bad_shape], "huge_zero.sscache"), meta)
+
+    # bool shape 거부
+    bool_shape = dict(base_sample)
+    bool_shape["components"] = [
+        {
+            **bad_shape["components"][0],  # type: ignore[index]
+            "mask_shape": [True, True],
+            "mask_b64": "AA==",
+        }
+    ]
+    with pytest.raises(ValueError):
+        load_cache(_write([bool_shape], "bool_shape.sscache"), meta)
+
+    # reasons 가 문자열이면 글자 분해 대신 거부
+    str_reasons = dict(base_sample)
+    str_reasons["reasons"] = "DEFECT_EVIDENCE_STRONG"
+    with pytest.raises(ValueError):
+        load_cache(_write([str_reasons], "str_reasons.sscache"), meta)

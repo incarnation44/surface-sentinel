@@ -185,3 +185,124 @@ def test_cinema_preset_discovery_collects_across_multiple_tune_runs(tmp_path: Pa
     badges = {p.badge for p in presets if p.source == "tune-run"}
     assert "NG" in badges
     assert "OK" in badges
+
+
+def test_cinema_upload_closes_upload_file_on_all_paths(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from starlette.datastructures import UploadFile
+
+    from surface_sentinel.ui import app as ui_app_mod
+
+    close_calls = 0
+    closed_before_trace = False
+    orig_close = UploadFile.close
+    orig_trace = ui_app_mod.run_cinema_trace
+
+    async def tracked_close(self: UploadFile) -> None:
+        nonlocal close_calls
+        close_calls += 1
+        await orig_close(self)
+
+    def tracked_trace(*args: object, **kwargs: object) -> dict[str, object]:
+        nonlocal closed_before_trace
+        closed_before_trace = close_calls >= 1
+        return orig_trace(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(UploadFile, "close", tracked_close)
+    monkeypatch.setattr(ui_app_mod, "run_cinema_trace", tracked_trace)
+
+    assert (
+        client.post(
+            "/cinema/inspect",
+            files={"file": ("demo.png", _make_defect_png_bytes(), "image/png")},
+        ).status_code
+        == 200
+    )
+    assert closed_before_trace is True
+
+
+def test_read_upload_bounded_validates_limits_and_always_closes() -> None:
+    import asyncio
+
+    from surface_sentinel.io.limits import UploadTooLargeError, read_upload_bounded
+
+    class _DummyUpload:
+        def __init__(self, chunks: list[bytes], *, fail_on_read: bool = False) -> None:
+            self._chunks = list(chunks)
+            self._fail = fail_on_read
+            self.closed = False
+
+        async def read(self, size: int) -> bytes:
+            if self._fail:
+                raise RuntimeError("read boom")
+            if not self._chunks:
+                return b""
+            return self._chunks.pop(0)
+
+        async def close(self) -> None:
+            self.closed = True
+
+    async def _exercise() -> None:
+        # 1) 경계값 거부
+        u_bad = _DummyUpload([b"abc"])
+        with pytest.raises(ValueError):
+            await read_upload_bounded(u_bad, max_bytes=-1, chunk_bytes=8)
+        with pytest.raises(ValueError):
+            await read_upload_bounded(u_bad, max_bytes=10, chunk_bytes=0)
+        with pytest.raises(ValueError):
+            await read_upload_bounded(u_bad, max_bytes=10, chunk_bytes=-1)
+
+        # 2) 정상 경로 close
+        u_ok = _DummyUpload([b"ab", b"cd"])
+        assert await read_upload_bounded(u_ok, max_bytes=4, chunk_bytes=2) == b"abcd"
+        assert u_ok.closed is True
+
+        # 3) 상한 초과 시 close
+        u_big = _DummyUpload([b"abc", b"def"])
+        with pytest.raises(UploadTooLargeError):
+            await read_upload_bounded(u_big, max_bytes=4, chunk_bytes=3)
+        assert u_big.closed is True
+
+        # 4) 읽기 예외 시 close
+        u_err = _DummyUpload([], fail_on_read=True)
+        with pytest.raises(RuntimeError, match="read boom"):
+            await read_upload_bounded(u_err, max_bytes=10, chunk_bytes=4)
+        assert u_err.closed is True
+
+    asyncio.run(_exercise())
+
+
+def test_cinema_rejects_oversize_pixels_before_writing_temp_file(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import tempfile
+
+    monkeypatch.setattr("surface_sentinel.ui.cinema.MAX_CINEMA_IMAGE_PIXELS", 1000)
+    temp_created = False
+    orig_tempdir = tempfile.TemporaryDirectory
+
+    def tracked_tempdir(*args: object, **kwargs: object):  # noqa: ANN202
+        nonlocal temp_created
+        temp_created = True
+        return orig_tempdir(*args, **kwargs)
+
+    monkeypatch.setattr(tempfile, "TemporaryDirectory", tracked_tempdir)
+    resp = client.post(
+        "/cinema/inspect",
+        files={"file": ("large_res.png", _make_defect_png_bytes(), "image/png")},
+    )
+    assert resp.status_code == 400
+    assert "해상도" in resp.json()["detail"]
+    assert temp_created is False
+
+
+def test_cinema_preset_route_is_async_handler(env: tuple[Path, Path, Path]) -> None:
+    import inspect
+
+    runs_dir, raw_root, _ = env
+    app = create_app(runs_dir=runs_dir, raw_root=raw_root)
+    route = next(
+        r for r in app.router.routes if getattr(r, "path", "") == "/cinema/preset/{preset_id}"
+    )
+    assert inspect.iscoroutinefunction(route.endpoint)

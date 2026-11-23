@@ -39,17 +39,21 @@ from ..api.app import create_inspection_app, engine_status_counts
 from ..config import REVIEW_BAND_MAX, ConfigError, default_config, load_config
 from ..evaluation.metrics import Confusion, image_metrics, ratio
 from ..io.artifacts import CONFIG_SNAPSHOT
+from ..io.image_guard import ImagePixelLimitError, check_image_pixel_budget
 from ..io.limits import (
     CsrfOriginError,
+    UploadTooLargeError,
     async_pipeline_slot,
     configure_opencv_threads,
     pipeline_slot,
+    read_upload_bounded,
     validate_same_origin,
 )
 from ..pipeline.evidence import sanitize_sample_id
 from ..records.store import STATUS_ORDER, get_inspection, stats
 from ..review import ReviewError, ReviewStorageError, ReviewStore
 from ..version import __version__
+from . import cinema as _cinema_mod
 from .cinema import (
     ALLOWED_CINEMA_EXTENSIONS,
     CINEMA_CHAPTERS,
@@ -1188,11 +1192,14 @@ def create_app(
     def inspection_overlay_image(inspection_id: int) -> FileResponse:
         if not app.state.db_path.is_file():
             raise UiInputError(NO_IMAGE_TEXT)
-        connection = _read_only_connection(app.state.db_path)
         try:
-            row = get_inspection(connection, inspection_id)
-        finally:
-            connection.close()
+            connection = _read_only_connection(app.state.db_path)
+            try:
+                row = get_inspection(connection, inspection_id)
+            finally:
+                connection.close()
+        except sqlite3.Error as exc:
+            raise UiInputError(f"검사 기록 DB를 읽지 못했습니다: {exc}") from exc
         if row is None:
             raise UiInputError(f"검사 기록을 찾을 수 없습니다: id={inspection_id}")
         path = row_overlay_path(row, app.state.runs_dir)
@@ -1220,25 +1227,35 @@ def create_app(
         )
 
     @app.get("/cinema/preset/{preset_id}")
-    def cinema_preset_payload(preset_id: str) -> JSONResponse:
+    async def cinema_preset_payload(preset_id: str) -> JSONResponse:
         """사전 등록된 tune/합성 프리셋의 실제 10단계 프레임·텔레메트리를 반환한다."""
 
-        presets = {
-            p.preset_id: p
-            for p in discover_cinema_presets(
-                app.state.runs_dir, app.state.raw_root, app.state.repo_root
-            )
-        }
-        preset = presets.get(preset_id)
+        def _load_preset_and_config() -> tuple[Any, Any]:
+            presets = {
+                p.preset_id: p
+                for p in discover_cinema_presets(
+                    app.state.runs_dir, app.state.raw_root, app.state.repo_root
+                )
+            }
+            preset_found = presets.get(preset_id)
+            if preset_found is None:
+                return None, None
+            return preset_found, load_cinema_config(app.state.repo_root)
+
+        preset, cfg = await run_in_threadpool(_load_preset_and_config)
         if preset is None:
             return JSONResponse(
                 {"detail": f"알 수 없는 시네마 프리셋입니다: {preset_id}"},
                 status_code=404,
             )
-        cfg = load_cinema_config(app.state.repo_root)
-        try:
+
+        def _run_preset() -> dict[str, Any]:
             with pipeline_slot():
-                payload = run_cinema_preset(preset, config=cfg)
+                return run_cinema_preset(preset, config=cfg)
+
+        try:
+            async with async_pipeline_slot():
+                payload = await run_in_threadpool(_run_preset)
         except (OSError, ValueError, RuntimeError) as exc:
             return JSONResponse({"detail": str(exc)}, status_code=400)
         return JSONResponse(payload)
@@ -1256,33 +1273,40 @@ def create_app(
         filename = Path(file.filename or "upload.png").name
         suffix = Path(filename).suffix.lower()
         if suffix not in ALLOWED_CINEMA_EXTENSIONS:
+            await file.close()
             return JSONResponse(
                 {"detail": f"지원하지 않는 이미지 확장자입니다: {suffix or '(없음)'}"},
                 status_code=400,
             )
 
-        chunks: list[bytes] = []
-        total_read = 0
-        while True:
-            chunk = await file.read(CINEMA_UPLOAD_CHUNK_BYTES)
-            if not chunk:
-                break
-            total_read += len(chunk)
-            if total_read > MAX_CINEMA_UPLOAD_BYTES:
-                return JSONResponse(
-                    {
-                        "detail": (
-                            f"업로드 용량이 제한({MAX_CINEMA_UPLOAD_BYTES // (1024 * 1024)}MiB)을 "
-                            "초과했습니다."
-                        )
-                    },
-                    status_code=413,
-                )
-            chunks.append(chunk)
+        try:
+            payload_bytes = await read_upload_bounded(
+                file,
+                max_bytes=MAX_CINEMA_UPLOAD_BYTES,
+                chunk_bytes=CINEMA_UPLOAD_CHUNK_BYTES,
+            )
+        except UploadTooLargeError:
+            return JSONResponse(
+                {
+                    "detail": (
+                        f"업로드 용량이 제한({MAX_CINEMA_UPLOAD_BYTES // (1024 * 1024)}MiB)을 "
+                        "초과했습니다."
+                    )
+                },
+                status_code=413,
+            )
 
-        payload_bytes = b"".join(chunks)
         if not payload_bytes:
             return JSONResponse({"detail": "빈 파일은 검사할 수 없습니다."}, status_code=400)
+
+        try:
+            check_image_pixel_budget(
+                payload_bytes,
+                max_pixels=_cinema_mod.MAX_CINEMA_IMAGE_PIXELS,
+                require_dimensions=False,
+            )
+        except ImagePixelLimitError as exc:
+            return JSONResponse({"detail": f"이미지 검사 실패: {exc}"}, status_code=400)
 
         cfg = load_cinema_config(app.state.repo_root)
         sample_id = sanitize_sample_id(Path(filename).stem or "upload")

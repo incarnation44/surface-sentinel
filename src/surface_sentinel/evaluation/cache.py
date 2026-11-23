@@ -18,10 +18,15 @@ decision 입력(품질 플래그, ``roi.uncertain``, ``refined.truncated``,
 
 from __future__ import annotations
 
+import base64
+import binascii
+import contextlib
 import hashlib
 import json
-import pickle
+import os
 import time
+import uuid
+import zlib
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -32,6 +37,7 @@ import numpy as np
 
 from ..config import AppConfig
 from ..contracts import STAGE_ORDER, SampleResult, Status
+from ..io.image_guard import MAX_IMAGE_DIMENSION, MAX_IMAGE_PIXELS
 from ..io.manifest import ManifestRow
 from ..pipeline.errors import PipelineError
 from ..pipeline.evidence import sanitize_sample_id, save_evidence
@@ -48,7 +54,12 @@ from ..pipeline.stages import (
 )
 from .sampling import SamplePlan, sample_ids
 
-CACHE_VERSION = "t05-cache-v1"
+CACHE_VERSION = "t05-cache-v2"
+_CACHE_MAGIC = b"SSCACHE2\n"
+#: 캐시 압축 파일 크기 상한(128 MiB, 무제한 메모리 읽기 방어).
+MAX_CACHE_COMPRESSED_BYTES = 128 * 1024 * 1024
+#: 캐시 압축 해제 크기 상한(512 MiB, zlib 폭탄 방어).
+MAX_CACHE_DECOMPRESSED_BYTES = 512 * 1024 * 1024
 CACHE_DIR = Path("data/derived/t05_cache")
 OVERLAY_DIR = Path("data/derived/t05_overlays")
 DEFAULT_RAW_ROOT = Path("data/raw/kolektorsdd2")
@@ -158,7 +169,10 @@ def cache_meta(plan: SamplePlan, config: AppConfig, *, split_sha256: str = "") -
 
 
 def cache_path(meta: CacheMeta, directory: str | Path = CACHE_DIR) -> Path:
-    name = f"{meta.version}-{meta.split}-{meta.config_hash[:12]}-{meta.sample_ids_sha256[:12]}.pkl"
+    name = (
+        f"{meta.version}-{meta.split}-{meta.config_hash[:12]}"
+        f"-{meta.sample_ids_sha256[:12]}.sscache"
+    )
     return Path(directory) / name
 
 
@@ -398,29 +412,220 @@ def build_cache(
     return tuple(samples)
 
 
+def _encode_component(component: CachedComponent) -> dict[str, Any]:
+    mask_u8 = np.ascontiguousarray(component.mask, dtype=np.uint8)
+    if mask_u8.ndim != 2:
+        raise ValueError(f"캐시 마스크는 2차원이어야 합니다: shape={mask_u8.shape}")
+    return {
+        "area_px": int(component.area_px),
+        "bbox": [int(v) for v in component.bbox],
+        "mean_contrast_gray": float(component.mean_contrast_gray),
+        "max_contrast_gray": float(component.max_contrast_gray),
+        "integrated_contrast": float(component.integrated_contrast),
+        "border_distance_px": float(component.border_distance_px),
+        "touches_roi_border": bool(component.touches_roi_border),
+        "mask_shape": [int(mask_u8.shape[0]), int(mask_u8.shape[1])],
+        "mask_b64": base64.b64encode(mask_u8.tobytes()).decode("ascii"),
+    }
+
+
+def _is_strict_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _decode_component(raw: Any) -> CachedComponent:
+    if not isinstance(raw, dict):
+        raise ValueError("캐시 컴포넌트 형식이 올바르지 않습니다.")
+    bbox_raw = raw.get("bbox")
+    shape_raw = raw.get("mask_shape")
+    mask_b64 = raw.get("mask_b64")
+    if (
+        not isinstance(bbox_raw, list)
+        or len(bbox_raw) != 4
+        or not all(_is_strict_int(v) for v in bbox_raw)
+        or not isinstance(shape_raw, list)
+        or len(shape_raw) != 2
+        or not all(_is_strict_int(v) for v in shape_raw)
+        or not isinstance(mask_b64, str)
+    ):
+        raise ValueError("캐시 컴포넌트 메타데이터가 손상됐습니다.")
+    h, w = shape_raw[0], shape_raw[1]
+    if (
+        h < 0
+        or w < 0
+        or h > MAX_IMAGE_DIMENSION
+        or w > MAX_IMAGE_DIMENSION
+        or h * w > MAX_IMAGE_PIXELS
+    ):
+        raise ValueError(f"캐시 마스크 크기가 허용 범위를 벗어났습니다: {(h, w)}")
+    expected_bytes = h * w
+    max_b64_len = ((expected_bytes + 2) // 3) * 4
+    if len(mask_b64) > max_b64_len:
+        raise ValueError("캐시 마스크 base64 길이가 shape 상한을 초과했습니다.")
+    try:
+        mask_bytes = base64.b64decode(mask_b64.encode("ascii"), validate=True)
+    except (UnicodeEncodeError, binascii.Error, ValueError) as exc:
+        raise ValueError("캐시 마스크 base64 디코딩에 실패했습니다.") from exc
+    if len(mask_bytes) != expected_bytes:
+        raise ValueError("캐시 마스크 바이트 길이가 shape와 일치하지 않습니다.")
+    mask = np.frombuffer(mask_bytes, dtype=np.uint8).reshape((h, w)).copy()
+    return CachedComponent(
+        area_px=int(raw["area_px"]),
+        bbox=(bbox_raw[0], bbox_raw[1], bbox_raw[2], bbox_raw[3]),
+        mean_contrast_gray=float(raw["mean_contrast_gray"]),
+        max_contrast_gray=float(raw["max_contrast_gray"]),
+        integrated_contrast=float(raw["integrated_contrast"]),
+        border_distance_px=float(raw["border_distance_px"]),
+        touches_roi_border=bool(raw["touches_roi_border"]),
+        mask=mask,
+    )
+
+
+def _encode_sample(sample: CachedSample) -> dict[str, Any]:
+    return {
+        "sample_id": str(sample.sample_id),
+        "original_id": str(sample.original_id),
+        "label": str(sample.label),
+        "split": str(sample.split),
+        "source_split": str(sample.source_split),
+        "image_path": str(sample.image_path),
+        "mask_path": str(sample.mask_path),
+        "defect_pixels": int(sample.defect_pixels),
+        "status": sample.status.value if isinstance(sample.status, Status) else str(sample.status),
+        "score": float(sample.score),
+        "reasons": [str(r) for r in sample.reasons],
+        "quality_flags": [str(f) for f in sample.quality_flags],
+        "blur_variance": float(sample.blur_variance),
+        "mean_gray": float(sample.mean_gray),
+        "saturated_ratio": float(sample.saturated_ratio),
+        "roi_uncertain": bool(sample.roi_uncertain),
+        "truncated": bool(sample.truncated),
+        "components": [_encode_component(c) for c in sample.components],
+        "gt_components": [_encode_component(c) for c in sample.gt_components],
+        "overlay": str(sample.overlay),
+        "error_code": None if sample.error_code is None else str(sample.error_code),
+        "error_stage": None if sample.error_stage is None else str(sample.error_stage),
+    }
+
+
+def _decode_sample(raw: Any) -> CachedSample:
+    if not isinstance(raw, dict):
+        raise ValueError("캐시 샘플 형식이 올바르지 않습니다.")
+    try:
+        comps_raw = raw["components"]
+        gt_raw = raw["gt_components"]
+        reasons_raw = raw["reasons"]
+        flags_raw = raw["quality_flags"]
+        if (
+            not isinstance(comps_raw, list)
+            or not isinstance(gt_raw, list)
+            or not isinstance(reasons_raw, list)
+            or not isinstance(flags_raw, list)
+        ):
+            raise ValueError("캐시 목록 필드가 배열이 아닙니다.")
+        return CachedSample(
+            sample_id=str(raw["sample_id"]),
+            original_id=str(raw["original_id"]),
+            label=str(raw["label"]),
+            split=str(raw["split"]),
+            source_split=str(raw["source_split"]),
+            image_path=str(raw["image_path"]),
+            mask_path=str(raw["mask_path"]),
+            defect_pixels=int(raw["defect_pixels"]),
+            status=Status(str(raw["status"])),
+            score=float(raw["score"]),
+            reasons=tuple(str(r) for r in reasons_raw),
+            quality_flags=tuple(str(f) for f in flags_raw),
+            blur_variance=float(raw["blur_variance"]),
+            mean_gray=float(raw["mean_gray"]),
+            saturated_ratio=float(raw["saturated_ratio"]),
+            roi_uncertain=bool(raw["roi_uncertain"]),
+            truncated=bool(raw["truncated"]),
+            components=tuple(_decode_component(c) for c in comps_raw),
+            gt_components=tuple(_decode_component(c) for c in gt_raw),
+            overlay=str(raw["overlay"]),
+            error_code=None if raw.get("error_code") is None else str(raw["error_code"]),
+            error_stage=None if raw.get("error_stage") is None else str(raw["error_stage"]),
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(f"캐시 샘플 역직렬화에 실패했습니다: {exc}") from exc
+
+
 def save_cache(
     samples: Sequence[CachedSample],
     meta: CacheMeta,
     path: str | Path,
 ) -> Path:
+    """안전한 JSON+zlib 포맷으로 캐시를 원자적으로 저장한다(pickle 미사용)."""
+
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"meta": meta.as_dict(), "samples": list(samples)}
-    temporary = target.with_suffix(".tmp")
-    with temporary.open("wb") as handle:
-        pickle.dump(payload, handle, protocol=4)
-    temporary.replace(target)
+    payload = {
+        "meta": meta.as_dict(),
+        "samples": [_encode_sample(sample) for sample in samples],
+    }
+    encoded = _CACHE_MAGIC + zlib.compress(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8"),
+        level=6,
+    )
+    temporary = target.with_name(f".{target.name}.tmp-{os.getpid()}-{uuid.uuid4().hex}")
+    try:
+        with temporary.open("wb") as handle:
+            handle.write(encoded)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, target)
+    except OSError:
+        with contextlib.suppress(OSError):
+            temporary.unlink()
+        raise
     return target
 
 
 def load_cache(path: str | Path, meta: CacheMeta) -> tuple[CachedSample, ...]:
+    """안전한 JSON+zlib 캐시를 크기·구조 검증 후 복원한다(임의 역직렬화·zlib 폭탄 불가)."""
+
     target = Path(path)
-    with target.open("rb") as handle:
-        payload = pickle.load(handle)  # noqa: S301 - 로컬에서 만든 캐시만 읽는다
+    file_size = target.stat().st_size
+    if file_size > MAX_CACHE_COMPRESSED_BYTES:
+        raise ValueError(
+            f"캐시 파일 크기 상한({MAX_CACHE_COMPRESSED_BYTES} bytes)을 초과했습니다: {target}"
+        )
+    raw = target.read_bytes()
+    if len(raw) > MAX_CACHE_COMPRESSED_BYTES:
+        raise ValueError(
+            f"캐시 파일 크기 상한({MAX_CACHE_COMPRESSED_BYTES} bytes)을 초과했습니다: {target}"
+        )
+    if not raw.startswith(_CACHE_MAGIC):
+        raise ValueError(f"지원하지 않거나 손상된 캐시 포맷입니다: {target}")
+    try:
+        decomp = zlib.decompressobj()
+        decompressed = decomp.decompress(
+            raw[len(_CACHE_MAGIC) :],
+            MAX_CACHE_DECOMPRESSED_BYTES + 1,
+        )
+        if (
+            len(decompressed) > MAX_CACHE_DECOMPRESSED_BYTES
+            or not decomp.eof
+            or decomp.unconsumed_tail
+            or decomp.unused_data
+        ):
+            raise ValueError(
+                f"캐시 압축 해제 크기 상한({MAX_CACHE_DECOMPRESSED_BYTES} bytes) 초과 "
+                f"또는 스트림 손상: {target}"
+            )
+        payload = json.loads(decompressed.decode("utf-8"))
+    except (zlib.error, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"캐시 파일이 손상됐습니다: {target}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"캐시 최상위 구조가 객체가 아닙니다: {target}")
     stored = payload.get("meta")
     if stored != meta.as_dict():
         raise ValueError(f"캐시 정체성이 다릅니다: {target}")
-    return tuple(payload["samples"])
+    samples_raw = payload.get("samples")
+    if not isinstance(samples_raw, list):
+        raise ValueError(f"캐시 samples 필드가 배열이 아닙니다: {target}")
+    return tuple(_decode_sample(item) for item in samples_raw)
 
 
 def cache_summary(samples: Sequence[CachedSample]) -> dict[str, Any]:

@@ -418,3 +418,141 @@ def test_yolo_engine_uses_stub_entry_point(
     assert detail["engine"] == "yolo-seg"
     assert detail["model_version"] == "yolo-seg"
     assert json.loads(json.dumps(detail["status"])) == "NG"
+
+
+def test_concurrent_same_image_inspect_avoids_output_dir_race(
+    runs_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import concurrent.futures
+    import threading
+    import time
+
+    from surface_sentinel.api import app as api_app_module
+
+    orig_inspect = api_app_module._inspect
+    active_lock = threading.Lock()
+    active_dirs: set[Path] = set()
+    overlap_detected = False
+
+    def tracked_inspect(*args: object, **kwargs: object) -> InspectionOutcome:
+        nonlocal overlap_detected
+        out_dir = Path(kwargs["output_dir"])  # type: ignore[arg-type]
+        with active_lock:
+            if out_dir in active_dirs:
+                overlap_detected = True
+            active_dirs.add(out_dir)
+        try:
+            time.sleep(0.08)
+            return orig_inspect(*args, **kwargs)  # type: ignore[arg-type]
+        finally:
+            with active_lock:
+                active_dirs.discard(out_dir)
+
+    monkeypatch.setattr(api_app_module, "_inspect", tracked_inspect)
+    app = create_inspection_app(runs_dir=runs_dir)
+    payload = synthetic_png(seed=42)
+
+    def send() -> dict[str, object]:
+        with TestClient(app) as local_client:
+            resp = upload(local_client, payload)
+            assert resp.status_code == 200
+            return resp.json()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        f1 = pool.submit(send)
+        f2 = pool.submit(send)
+        r1, r2 = f1.result(), f2.result()
+
+    assert overlap_detected is False
+    assert r1["inspection_id"] == r2["inspection_id"]
+    assert sorted([bool(r1["deduplicated"]), bool(r2["deduplicated"])]) == [False, True]
+
+
+def test_duplicate_key_waiters_do_not_starve_other_images(
+    runs_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """동일 이미지 대기 요청들이 async_pipeline_slot 을 고갈시키지 않아야 한다."""
+
+    import asyncio
+    import io
+    import threading
+
+    from starlette.datastructures import UploadFile
+    from starlette.requests import Request
+
+    from surface_sentinel.api import app as api_app_module
+
+    monkeypatch.setenv("SURFACE_SENTINEL_MAX_CONCURRENCY", "2")
+    orig_inspect = api_app_module._inspect
+    first_entered = threading.Event()
+    release_first = threading.Event()
+    other_finished = threading.Event()
+    same_payload = synthetic_png(seed=101)
+    other_payload = synthetic_png(seed=202)
+    same_prefix = hashlib.sha256(same_payload).hexdigest()[:16]
+
+    def gated_inspect(*args: object, **kwargs: object) -> InspectionOutcome:
+        out_dir = Path(kwargs["output_dir"])  # type: ignore[arg-type]
+        if out_dir.name.startswith(same_prefix) and not first_entered.is_set():
+            first_entered.set()
+            release_first.wait(timeout=5.0)
+        res = orig_inspect(*args, **kwargs)  # type: ignore[arg-type]
+        if not out_dir.name.startswith(same_prefix):
+            other_finished.set()
+        return res
+
+    monkeypatch.setattr(api_app_module, "_inspect", gated_inspect)
+    app = create_inspection_app(runs_dir=runs_dir)
+    route = next(r for r in app.router.routes if getattr(r, "path", "") == "/api/inspect")
+    endpoint = route.endpoint
+
+    def _make_req() -> Request:
+        scope = {
+            "type": "http",
+            "method": "POST",
+            "path": "/api/inspect",
+            "headers": [(b"host", b"testserver")],
+            "query_string": b"",
+            "scheme": "http",
+            "server": ("testserver", 80),
+        }
+        return Request(scope)
+
+    def _make_file(name: str, data: bytes) -> UploadFile:
+        return UploadFile(file=io.BytesIO(data), filename=name)
+
+    async def _run() -> list[int]:
+        t1 = asyncio.create_task(
+            endpoint(request=_make_req(), file=_make_file("a.png", same_payload))
+        )
+        for _ in range(100):
+            if first_entered.is_set():
+                break
+            await asyncio.sleep(0.01)
+        assert first_entered.is_set()
+
+        # 동일 이미지 중복 요청 2건 추가(슬롯=2인데 이 둘이 슬롯을 점유하면 안 됨)
+        t2 = asyncio.create_task(
+            endpoint(request=_make_req(), file=_make_file("a.png", same_payload))
+        )
+        t3 = asyncio.create_task(
+            endpoint(request=_make_req(), file=_make_file("a.png", same_payload))
+        )
+        await asyncio.sleep(0.05)
+
+        # 무관한 다른 이미지는 슬롯 2 중 남은 1개로 즉시 완료돼야 한다
+        try:
+            other_res = await asyncio.wait_for(
+                endpoint(request=_make_req(), file=_make_file("b.png", other_payload)),
+                timeout=1.5,
+            )
+        finally:
+            release_first.set()
+
+        assert other_finished.is_set()
+        r1, r2, r3 = await asyncio.gather(t1, t2, t3)
+        return [r1.inspection_id, r2.inspection_id, r3.inspection_id, other_res.inspection_id]
+
+    ids = asyncio.run(_run())
+    assert ids[0] == ids[1] == ids[2]
+    assert ids[3] != ids[0]
