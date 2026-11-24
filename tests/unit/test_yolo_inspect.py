@@ -680,3 +680,28 @@ def test_allow_sealed_opt_in_runs_on_synthetic_fixture(
     assert result.error_code is None
     assert len(engines) == 1
     assert len(engines[0].calls) == 1
+
+
+def test_inspect_with_yolo_propagates_import_error_and_syncs_sha_cache(
+    tmp_path: Path, image: Path
+) -> None:
+    """onnxruntime 미설치(ImportError)는 ERROR 결과가 아니라 예외로 전파된다(503).
+
+    표본 단위 실패(디코드·추론 오류)만 ERROR 결과로 남기고, 환경 문제는
+    호출자(API 503)가 처리하도록 멈춘다.
+    """
+
+    model = _model(tmp_path, "det")
+
+    def _no_runtime(*args: object, **kwargs: object) -> object:
+        raise ImportError("onnxruntime 미설치(재현)")
+
+    registry = YoloEngineRegistry(engine_factory=_no_runtime)
+    with pytest.raises(ImportError, match="onnxruntime"):
+        inspect_with_yolo(
+            image,
+            BASE_CONFIG,
+            engine="yolo-det",
+            onnx_path=model,
+            registry=registry,
+        )

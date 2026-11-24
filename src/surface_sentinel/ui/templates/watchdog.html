@@ -228,7 +228,7 @@
         <tbody>
           {% for h in calibration.hard_examples %}
           <tr>
-            <td class="num"><a href="/runs/{{ selected_run_id }}/samples/{{ h.sample_id }}">{{ h.sample_id }}</a></td>
+            <td class="num"><a href="/runs/{{ selected_run_id }}/samples/{{ h.sample_id | urlencode }}">{{ h.sample_id }}</a></td>
             <td><span class="badge {{ "b-NG" if h.kind == "BLINDSPOT_DEFECT" else ("b-REVIEW" if h.kind == "HIGH_PRIO_FALSE_ALARM" else "b-ERROR") }}">{{ h.kind }}</span></td>
             <td><span class="prio p-{{ h.priority }}">{{ h.priority }}</span></td>
             <td class="num">{{ "%.4f"|format(h.score) }}</td>

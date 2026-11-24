@@ -162,3 +162,49 @@ def test_replay_missing_start_is_not_deterministic() -> None:
     report = replay_trace([])
     assert report.deterministic is False
     assert report.audit_valid is False
+
+
+def test_audit_and_replay_trace_malformed_events_and_fixed_roi_clamp(tmp_path: Path) -> None:
+    """손상 이벤트는 미포착 예외 대신 오류 보고/비결정론 판정으로 수렴한다."""
+
+    from dataclasses import replace as dc_replace
+
+    import numpy as np
+
+    from surface_sentinel.config import default_config
+    from surface_sentinel.pipeline.stages import prepare_roi
+
+    writer = TraceWriter(None)
+    engine, _ = make_engine({"base": make_result(Status.OK)}, trace=writer)
+    events = list(engine.run().events)
+
+    # 1) 비정형 budget(int 변환 불가)도 예외 없이 오류 목록으로 수렴.
+    malformed_budget = [dict(event) for event in events]
+    malformed_budget[1]["budget"] = {"actions_used": "abc", "profiles_used": None}
+    errors = audit_trace(malformed_budget)
+    assert any("budget" in error for error in errors)
+
+    # 2) 비-dict args/result: 해시 계산 전 형태 검사 + replay 비결정론 보고.
+    malformed_args = [dict(event) for event in events]
+    for event in malformed_args:
+        if event.get("event") == "act":
+            event["args"] = ["not", "a", "dict"]
+            event["result"] = "not-a-dict"
+    errors = audit_trace(malformed_args)
+    assert any("args" in error or "result" in error for error in errors)
+    report = replay_trace(malformed_args)
+    assert report.deterministic is False
+
+    # 3) 컨텍스트 매니저 + 고정 줄바꿈(Windows CRLF 혼입 방지).
+    trace_path = tmp_path / "ctx_trace.jsonl"
+    with TraceWriter(trace_path) as ctx_writer:
+        ctx_writer.append({"event": "episode_start"})
+    assert b"\r\n" not in trace_path.read_bytes()
+
+    # 4) fixed ROI: 음수 너비/높이 대신 (0, 0, 0, 0) 클램프.
+    config = default_config()
+    fixed_roi = dc_replace(config.roi, mode="fixed", fixed_margin_px=50)
+    config = dc_replace(config, roi=fixed_roi)
+    roi = prepare_roi(np.zeros((10, 10), np.uint8), config)
+    assert roi.bbox == (0, 0, 0, 0)
+    assert roi.uncertain is True

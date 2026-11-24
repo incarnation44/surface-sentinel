@@ -139,6 +139,12 @@ def _read_image_file(path: Path, stage: Stage) -> tuple[np.ndarray, str]:
         check_decoded_pixel_budget(int(image.shape[1]), int(image.shape[0]))
     except ImagePixelLimitError as exc:
         raise PipelineError(ErrorCode.E_INPUT_SIZE, stage, str(exc)) from exc
+    except ImageHeaderError as exc:
+        raise PipelineError(
+            ErrorCode.E_INPUT_DECODE,
+            stage,
+            f"이미지 디코드에 실패했습니다({exc}): {path}",
+        ) from exc
     return image, digest
 
 
@@ -384,7 +390,7 @@ def _prepare_fixed_roi(gray: np.ndarray, config: AppConfig) -> RoiResult:
     area_px = int(np.count_nonzero(mask))
     area_ratio = area_px / float(height * width) if height * width else 0.0
     uncertain = (not valid) or area_ratio < config.roi.min_area_ratio
-    bbox = (inset, inset, rect_width, rect_height)
+    bbox = (inset, inset, rect_width, rect_height) if valid else (0, 0, 0, 0)
     return RoiResult(
         mode="fixed",
         mask=mask,

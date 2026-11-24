@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import os
 import threading
 import weakref
@@ -78,12 +79,13 @@ async def async_pipeline_slot() -> AsyncIterator[None]:
 
     loop = asyncio.get_running_loop()
     desired = max_pipeline_concurrency()
-    entry = _ASYNC_SEMAPHORES.get(loop)
-    if entry is None or entry[0] != desired:
-        sem = asyncio.Semaphore(desired)
-        _ASYNC_SEMAPHORES[loop] = (desired, sem)
-    else:
-        sem = entry[1]
+    with _LOCK:
+        entry = _ASYNC_SEMAPHORES.get(loop)
+        if entry is None or entry[0] != desired:
+            sem = asyncio.Semaphore(desired)
+            _ASYNC_SEMAPHORES[loop] = (desired, sem)
+        else:
+            sem = entry[1]
     async with sem:
         yield
 
@@ -118,14 +120,14 @@ async def read_upload_bounded(
 ) -> bytes:
     """업로드를 청크 단위로 ``max_bytes`` 상한까지만 읽고 핸들을 닫는다."""
 
-    if max_bytes < 0:
-        raise ValueError(f"max_bytes는 0 이상이어야 합니다: {max_bytes}")
-    if chunk_bytes <= 0:
-        raise ValueError(f"chunk_bytes는 1 이상이어야 합니다: {chunk_bytes}")
-    chunks: list[bytes] = []
-    total = 0
     close_fn = getattr(upload, "close", None)
     try:
+        if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes < 0:
+            raise ValueError(f"max_bytes는 0 이상의 정수여야 합니다: {max_bytes!r}")
+        if isinstance(chunk_bytes, bool) or not isinstance(chunk_bytes, int) or chunk_bytes <= 0:
+            raise ValueError(f"chunk_bytes는 1 이상의 정수여야 합니다: {chunk_bytes!r}")
+        chunks: list[bytes] = []
+        total = 0
         while True:
             chunk = await upload.read(chunk_bytes)
             if not chunk:
@@ -134,10 +136,12 @@ async def read_upload_bounded(
             if total > max_bytes:
                 raise UploadTooLargeError(f"업로드 용량 상한({max_bytes} bytes)을 초과했습니다.")
             chunks.append(chunk)
+        return b"".join(chunks)
     finally:
         if callable(close_fn):
-            await close_fn()
-    return b"".join(chunks)
+            closed = close_fn()
+            if inspect.isawaitable(closed):
+                await closed
 
 
 def _allowed_hostnames() -> frozenset[str]:
@@ -149,8 +153,51 @@ def _allowed_hostnames() -> frozenset[str]:
 
 
 def _hostname_of_netloc(netloc: str) -> str:
-    parsed = urlparse(f"http://{netloc.strip()}")
-    return (parsed.hostname or "").lower()
+    cleaned = netloc.strip()
+    if (
+        not cleaned
+        or any(ch.isspace() for ch in cleaned)
+        or any(ch in cleaned for ch in "@/\\")
+    ):
+        raise CsrfOriginError(f"유효하지 않은 Host 형식입니다: {netloc!r}")
+    try:
+        parsed = urlparse(f"http://{cleaned}")
+        hostname = (parsed.hostname or "").lower()
+        _ = parsed.port
+    except ValueError as exc:
+        raise CsrfOriginError(f"유효하지 않은 Host 형식입니다: {netloc!r}") from exc
+    if (
+        not hostname
+        or "@" in parsed.netloc
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.netloc.lower() != cleaned.lower()
+        or parsed.path
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise CsrfOriginError(f"유효하지 않은 Host 형식입니다: {netloc!r}")
+    return hostname
+
+
+def _parse_origin_url(raw: str, *, label: str) -> tuple[str, str]:
+    try:
+        parsed = urlparse(raw)
+        hostname = (parsed.hostname or "").lower()
+        _ = parsed.port
+    except ValueError as exc:
+        raise CsrfOriginError(f"유효하지 않은 {label} 형식입니다: {raw!r}") from exc
+    if (
+        parsed.scheme.lower() not in {"http", "https"}
+        or not parsed.netloc
+        or "@" in parsed.netloc
+        or parsed.username is not None
+        or parsed.password is not None
+        or not hostname
+    ):
+        raise CsrfOriginError(f"허용되지 않은 {label}입니다: {raw!r}")
+    return parsed.netloc.lower(), hostname
 
 
 def validate_same_origin(headers: Mapping[str, str], host: str) -> None:
@@ -168,21 +215,18 @@ def validate_same_origin(headers: Mapping[str, str], host: str) -> None:
 
     allowed = _allowed_hostnames()
     expected_host = host.strip().lower()
-    host_name = _hostname_of_netloc(expected_host) if expected_host else ""
-    if host_name and host_name not in allowed:
+    if not expected_host:
+        raise CsrfOriginError("Host 헤더가 비어 있습니다.")
+    host_name = _hostname_of_netloc(expected_host)
+    if host_name not in allowed:
         raise CsrfOriginError(f"허용되지 않은 Host입니다: {expected_host!r}")
 
     origin = lowered.get("origin", "")
     if origin:
         if origin.lower() == "null":
             raise CsrfOriginError("Origin이 null인 요청은 허용되지 않습니다.")
-        parsed = urlparse(origin)
-        origin_host = (parsed.hostname or "").lower()
-        if (
-            not parsed.netloc
-            or parsed.netloc.lower() != expected_host
-            or origin_host not in allowed
-        ):
+        origin_netloc, origin_host = _parse_origin_url(origin, label="Origin")
+        if origin_netloc != expected_host or origin_host not in allowed:
             raise CsrfOriginError(
                 f"허용되지 않은 Origin입니다: {origin!r} (기대 호스트: {expected_host})"
             )
@@ -190,13 +234,8 @@ def validate_same_origin(headers: Mapping[str, str], host: str) -> None:
 
     referer = lowered.get("referer", "")
     if referer:
-        parsed = urlparse(referer)
-        referer_host = (parsed.hostname or "").lower()
-        if (
-            not parsed.netloc
-            or parsed.netloc.lower() != expected_host
-            or referer_host not in allowed
-        ):
+        referer_netloc, referer_host = _parse_origin_url(referer, label="Referer")
+        if referer_netloc != expected_host or referer_host not in allowed:
             raise CsrfOriginError(
                 f"허용되지 않은 Referer입니다: {referer!r} (기대 호스트: {expected_host})"
             )

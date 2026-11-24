@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 import sqlite3
 from collections.abc import Mapping, Sequence
@@ -84,6 +85,15 @@ def _decision_value(value: str) -> str:
     return text
 
 
+def _finite_score(value: float) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise RecordsError(f"점수는 유한한 실수여야 합니다: {value!r}")
+    score = float(value)
+    if not math.isfinite(score):
+        raise RecordsError(f"점수는 유한한 실수여야 합니다: {value!r}")
+    return score
+
+
 def _reasons_json(result: SampleResult) -> str:
     return json.dumps([reason.value for reason in result.reasons], ensure_ascii=False)
 
@@ -117,6 +127,7 @@ def insert_inspection_with_dedup(
     if engine_name not in ENGINES:
         raise RecordsError(f"알 수 없는 엔진입니다: {engine!r} (가능: {ENGINES})")
     status = _status_value(result.status)
+    score = _finite_score(result.score)
     if fingerprint is None:
         fingerprint = inspection_fingerprint(
             engine=engine_name,
@@ -142,7 +153,7 @@ def insert_inspection_with_dedup(
         str(result.label),
         str(result.split),
         status,
-        float(result.score),
+        score,
         _reasons_json(result),
         engine_name,
         str(task),
@@ -371,6 +382,7 @@ def insert_engine_observation(
     if engine_name not in ENGINES:
         raise RecordsError(f"알 수 없는 엔진입니다: {engine!r} (가능: {ENGINES})")
     status = _status_value(result.status)
+    score = _finite_score(result.score)
 
     existing = connection.execute(
         "SELECT id FROM engine_observations WHERE inspection_id = ? AND engine = ?",
@@ -388,7 +400,7 @@ def insert_engine_observation(
         engine_name,
         str(task),
         status,
-        float(result.score),
+        score,
         _reasons_json(result),
         components_json,
         str(model_sha256),

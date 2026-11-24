@@ -88,7 +88,9 @@ def save_overlay(
         mask_alpha=mask_alpha,
         thickness=thickness,
     )
-    if not cv2.imwrite(str(target), overlay):
+    from ..io.imageio import imwrite_png_atomic  # noqa: PLC0415
+
+    if not imwrite_png_atomic(target, overlay):
         raise OSError(f"오버레이 저장 실패: {target}")
     return target
 

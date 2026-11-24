@@ -224,3 +224,30 @@ def test_invalidate_only_affects_given_path(
     registry.infer(b, task="det", bgr=_bgr())  # b 는 캐시 유지 → 해시 없음
 
     assert len(calls) == 2
+
+
+def test_invalidate_resolves_paths_and_syncs_inspect_sha_cache(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """상대 경로 무효화도 resolve 키로 동작하고 inspect SHA 캐시와 연동된다."""
+
+    from surface_sentinel.yolo import inspect as yolo_inspect
+
+    model = _model(tmp_path, "a.onnx", b"model-a")
+    calls = _count_sha(monkeypatch)
+    registry = YoloEngineRegistry(engine_factory=_StubEngine)
+    registry.infer(model, task="det", bgr=_bgr())
+    assert len(calls) == 1
+
+    # inspect 진입점 캐시도 채운 뒤, 상대 경로로 무효화한다.
+    yolo_inspect._cached_model_sha(model)
+    resolved = str(model.resolve())
+    assert any(key[0] == resolved for key in yolo_inspect._MODEL_SHA_CACHE)
+
+    relative = Path(os.path.relpath(model, Path.cwd()))
+    registry.invalidate(relative)
+
+    # inspect 캐시가 함께 비워졌는지(연동), 재해시가 트리거되는지(resolve 키).
+    assert not any(key[0] == resolved for key in yolo_inspect._MODEL_SHA_CACHE)
+    registry.infer(model, task="det", bgr=_bgr())
+    assert len(calls) == 2

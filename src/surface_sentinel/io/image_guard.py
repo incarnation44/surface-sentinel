@@ -96,7 +96,7 @@ def _probe_jpeg(data: bytes) -> tuple[int, int] | None:
         if seg_len < 2:
             return None
         if marker in _JPEG_SOF_MARKERS:
-            if offset + 7 > size:
+            if seg_len < 7 or offset + 7 > size:
                 return None
             height, width = struct.unpack(">HH", data[offset + 3 : offset + 7])
             return int(width), int(height)
@@ -110,10 +110,14 @@ def _probe_bmp(data: bytes) -> tuple[int, int] | None:
     header_size = struct.unpack("<I", data[14:18])[0]
     if header_size == 12:
         width, height = struct.unpack("<HH", data[18:22])
+        if width <= 0 or height == 0:
+            return None
         return int(width), int(height)
     if header_size >= 40:
         width, height = struct.unpack("<ii", data[18:26])
-        return abs(int(width)), abs(int(height))
+        if width <= 0 or height == 0:
+            return None
+        return int(width), abs(int(height))
     return None
 
 
@@ -236,6 +240,8 @@ def probe_image_dimensions(data: bytes) -> tuple[int, int] | None:
     ):
         dims = parser(data)
         if dims is not None:
+            if dims[0] <= 0 or dims[1] <= 0:
+                return None
             return dims
     return None
 
@@ -259,7 +265,10 @@ def probe_image_file_dimensions(path: str | Path) -> tuple[int, int] | None:
             if len(ifd_chunk) >= 2:
                 # 가짜 8바이트 TIFF 헤더 + 읽은 IFD 블록으로 재파싱한다.
                 synthetic = head[:4] + struct.pack(f"{endian}I", 8) + ifd_chunk
-                return _probe_tiff(synthetic)
+                tiff_dims = _probe_tiff(synthetic)
+                if tiff_dims is None or tiff_dims[0] <= 0 or tiff_dims[1] <= 0:
+                    return None
+                return tiff_dims
     return None
 
 
@@ -273,7 +282,7 @@ def check_decoded_pixel_budget(
     """가로·세로가 허용 픽셀/최대 변 상한 이내인지 검증한다."""
 
     if width <= 0 or height <= 0:
-        return
+        raise ImageHeaderError(f"유효하지 않은 이미지 치수입니다: {width}x{height}")
     if width > max_dimension or height > max_dimension or width * height > max_pixels:
         raise ImagePixelLimitError(
             width,

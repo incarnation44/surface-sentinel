@@ -377,3 +377,163 @@ def test_inspection_spec_fallback_is_limited_to_error_outcomes(
     assert minimal.engine == "yolo-det"
     assert minimal.model_sha256 == ""
     assert minimal.provenance_complete is False
+
+
+def test_api_db_error_returns_503_json_and_handles_corrupt_json_columns(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sqlite3
+    import types
+
+    from starlette.datastructures import UploadFile
+
+    from surface_sentinel.config import default_config
+    from surface_sentinel.records.identity import opencv_spec
+
+    runs_dir = tmp_path / "runs"
+    runs_dir.mkdir()
+    app = create_inspection_app(runs_dir=runs_dir)
+    client = TestClient(app, raise_server_exceptions=False)
+
+    # 1) DB 오류는 내부 경로 없이 503 JSON으로 변환된다.
+    orig_connect = app_module.connect
+
+    def _boom_connect(*args: object, **kwargs: object) -> sqlite3.Connection:
+        raise sqlite3.OperationalError("unable to open database: /secret/host/records.db")
+
+    monkeypatch.setattr(app_module, "connect", _boom_connect)
+    r_err = client.get("/api/inspections")
+    assert r_err.status_code == 503
+    assert r_err.json() == {"detail": "검사 기록 데이터베이스를 처리할 수 없습니다."}
+    assert "/secret/host" not in r_err.text
+    monkeypatch.setattr(app_module, "connect", orig_connect)
+
+    # 2) 모델 FileNotFoundError 503 응답도 내부 경로를 노출하지 않는다.
+    fake_yolo = types.ModuleType("surface_sentinel.yolo.inspect")
+
+    def _missing(*args: object, **kwargs: object) -> object:
+        raise FileNotFoundError("/secret/internal/best.onnx")
+
+    fake_yolo.inspect_with_yolo = _missing  # type: ignore[attr-defined]
+    monkeypatch.setitem(__import__("sys").modules, "surface_sentinel.yolo.inspect", fake_yolo)
+    r_model = client.post(
+        "/api/inspect",
+        params={"engine": "yolo-det"},
+        files={"file": ("probe.png", synthetic_png(seed=31), "image/png")},
+        data={"label": "unknown", "split": "tune"},
+    )
+    assert r_model.status_code == 503
+    assert r_model.json()["detail"] == "yolo-det 엔진 모델 파일이 없습니다."
+    assert "/secret/internal" not in r_model.text
+
+    # 3) DB JSON 컬럼이 손상돼도 /api/inspections 및 상세 조회가 500 대신 안전하게 200을 반환한다.
+    cfg_hash = default_config().config_hash
+    spec = opencv_spec(cfg_hash, code_sha="test-sha", code_dirty=False)
+    conn = connect(runs_dir / "records.db")
+    try:
+        with conn:
+            cur = conn.execute(
+                "INSERT INTO inspections ("
+                "run_id, sample_id, image_sha256, inspection_fingerprint, label, split,"
+                " status, score, reasons, engine, task, config_hash, model_sha256,"
+                " model_version, provenance_complete, overlay_path, timing_ms, created_at"
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    "corrupt-run",
+                    "corrupt-1",
+                    "c" * 64,
+                    spec.fingerprint,
+                    "unknown",
+                    "tune",
+                    "OK",
+                    0.1,
+                    "{not-valid-json",
+                    "opencv",
+                    "",
+                    cfg_hash,
+                    "",
+                    "opencv-test",
+                    1,
+                    str(runs_dir / "records.db"),
+                    "{broken-timing",
+                    "2026-01-01T00:00:00Z",
+                ),
+            )
+            insp_id = int(cur.lastrowid or 0)
+            conn.execute(
+                "INSERT INTO engine_observations ("
+                "inspection_id, engine, task, status, score, reasons, components,"
+                " model_sha256, overlay_path, error_code, timing_ms, created_at"
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    insp_id,
+                    "opencv",
+                    "",
+                    "OK",
+                    0.1,
+                    "bad-json",
+                    "bad-json",
+                    "",
+                    "",
+                    "",
+                    "bad-json",
+                    "2026-01-01T00:00:00Z",
+                ),
+            )
+            conn.execute(
+                "INSERT INTO agent_assessments ("
+                "inspection_id, assessment_hash, policy_hash, flags_json,"
+                " review_priority, stability, recommended_action, diagnostics_json,"
+                " trace_path, created_at"
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    insp_id,
+                    "d" * 64,
+                    "e" * 64,
+                    "bad-flags",
+                    None,
+                    None,
+                    "NONE",
+                    "bad-diag",
+                    "",
+                    "2026-01-01T00:00:00Z",
+                ),
+            )
+    finally:
+        conn.close()
+
+    r_list = client.get("/api/inspections")
+    assert r_list.status_code == 200
+    assert r_list.json()["items"][0]["reasons"] == []
+    assert r_list.json()["items"][0]["overlay_url"] is None
+
+    r_detail = client.get(f"/api/inspections/{insp_id}")
+    assert r_detail.status_code == 200
+    detail = r_detail.json()
+    assert detail["timing_ms"] == {}
+    assert detail["observations"][0]["components"] == []
+    assert detail["assessments"][0]["flags"] == []
+    assert detail["assessments"][0]["diagnostics"] == {}
+
+    # 4) _row_overlay_path는 비-PNG와 NUL 바이트를 거부한다.
+    db_overlay = {"overlay_path": str(runs_dir / "records.db")}
+    assert app_module._row_overlay_path(db_overlay, runs_dir) is None
+    assert app_module._row_overlay_path({"overlay_path": "bad\x00.png"}, runs_dir) is None
+
+    # 5) /api/inspect 조기 403/422 거부 경로에서도 UploadFile.close()가 호출된다.
+    close_calls = 0
+    orig_close = UploadFile.close
+
+    async def tracked_close(self: UploadFile) -> None:
+        nonlocal close_calls
+        close_calls += 1
+        await orig_close(self)
+
+    monkeypatch.setattr(UploadFile, "close", tracked_close)
+    r_422 = client.post(
+        "/api/inspect",
+        files={"file": ("ok.png", synthetic_png(seed=32), "image/png")},
+        data={"label": "INVALID_LABEL", "split": "tune"},
+    )
+    assert r_422.status_code == 422
+    assert close_calls >= 1

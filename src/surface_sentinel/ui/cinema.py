@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import base64
+import math
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -171,24 +172,25 @@ def _encode_data_uri(bgr: np.ndarray) -> str:
 def _render_roi_frame(bgr: np.ndarray, roi_mask: np.ndarray) -> np.ndarray:
     canvas = (bgr.astype(np.float32) * 0.25).astype(np.uint8)
     inside = roi_mask > 0
-    canvas[inside] = bgr[inside]
-    tint = np.zeros_like(canvas)
-    tint[:, :] = (129, 185, 16)  # BGR emerald
-    canvas[inside] = cv2.addWeighted(canvas[inside], 0.88, tint[inside], 0.12, 0.0)
-    contours, _ = cv2.findContours(roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if contours:
-        cv2.drawContours(canvas, contours, -1, (140, 235, 60), 2)
+    if np.any(inside):
+        canvas[inside] = bgr[inside]
+        tint = np.zeros_like(canvas)
+        tint[:, :] = (129, 185, 16)  # BGR emerald
+        canvas[inside] = cv2.addWeighted(canvas[inside], 0.88, tint[inside], 0.12, 0.0)
+        contours, _ = cv2.findContours(roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if contours:
+            cv2.drawContours(canvas, contours, -1, (140, 235, 60), 2)
     return canvas
 
 
 def _render_response_frame(response: np.ndarray, roi_mask: np.ndarray) -> np.ndarray:
-    finite = response[np.isfinite(response)]
-    max_val = float(np.max(finite)) if finite.size else 0.0
+    resp_clean = np.where(np.isfinite(response), np.maximum(response, 0.0), 0.0)
+    max_val = float(np.max(resp_clean)) if resp_clean.size else 0.0
     if max_val <= 0.0:
         norm = np.zeros(response.shape, dtype=np.uint8)
     else:
         scale_max = max(max_val, 24.0)
-        norm = np.clip(response.astype(np.float32) * (255.0 / scale_max), 0.0, 255.0).astype(
+        norm = np.clip(resp_clean.astype(np.float32) * (255.0 / scale_max), 0.0, 255.0).astype(
             np.uint8
         )
     colored = cv2.applyColorMap(norm, cv2.COLORMAP_INFERNO)
@@ -247,6 +249,16 @@ def _make_fallback_synthetic(kind: str) -> np.ndarray:
     return bgr
 
 
+def _safe_score(value: Any) -> float:
+    if value is None or isinstance(value, bool):
+        return 0.0
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    return out if math.isfinite(out) else 0.0
+
+
 def discover_cinema_presets(
     runs_dir: Path,
     raw_root: Path,
@@ -283,7 +295,7 @@ def discover_cinema_presets(
             if not candidates:
                 continue
             reverse = status_want != "OK"
-            candidates.sort(key=lambda rec: float(rec.get("score", 0.0)), reverse=reverse)
+            candidates.sort(key=lambda rec: _safe_score(rec.get("score")), reverse=reverse)
             for rec in candidates:
                 sid = str(rec.get("sample_id", ""))
                 mrow = manifest.get(sid)
@@ -413,10 +425,12 @@ def run_cinema_trace(
         result = outcome.result
         debug = outcome.debug
 
+        from ..io.imageio import imread_unicode  # noqa: PLC0415
+
         if debug is not None and debug.bgr is not None:
             bgr = debug.bgr
         else:
-            bgr = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
+            bgr = imread_unicode(image_path)
             if bgr is None:
                 raise ValueError("이미지를 디코드하지 못했습니다.")
         height, width = int(bgr.shape[0]), int(bgr.shape[1])
@@ -426,7 +440,7 @@ def run_cinema_trace(
         if result.overlay_path:
             ov_path = Path(result.overlay_path)
             if ov_path.is_file():
-                loaded_ov = cv2.imread(str(ov_path), cv2.IMREAD_COLOR)
+                loaded_ov = imread_unicode(ov_path)
                 if loaded_ov is not None:
                     overlay_bgr = loaded_ov
 
@@ -591,7 +605,10 @@ def run_cinema_preset(preset: CinemaPreset, *, config: AppConfig) -> dict[str, A
     with tempfile.TemporaryDirectory(prefix="ss-cinema-synth-") as tmp_dir:
         synth_path = Path(tmp_dir) / f"{preset.preset_id}.png"
         bgr = _make_fallback_synthetic(preset.synthetic_kind or "defect")
-        cv2.imwrite(str(synth_path), bgr)
+        from ..io.imageio import imwrite_png_atomic  # noqa: PLC0415
+
+        if not imwrite_png_atomic(synth_path, bgr):
+            raise OSError(f"합성 이미지 저장 실패: {synth_path}")
         return run_cinema_trace(
             synth_path,
             sample_id=preset.preset_id,

@@ -18,14 +18,14 @@
 from __future__ import annotations
 
 import os
+import threading
 import time
 from dataclasses import replace
 from pathlib import Path
 
-import cv2
-
 from ..config import AppConfig
 from ..contracts import EngineObservation, ErrorCode, ReasonCode, SampleResult, Stage, Status
+from ..io.imageio import imread_unicode
 from ..pipeline import InspectionOutcome, inspect_image
 from ..pipeline.evidence import sanitize_sample_id
 from ..pipeline.stages import SEALED_SPLITS
@@ -111,21 +111,39 @@ def _overlay_target(output_dir: Path, sample_id: str) -> Path:
     return Path(output_dir) / f"{sanitize_sample_id(sample_id)}{OVERLAY_SUFFIX}"
 
 
-#: 모델 바이트 SHA 캐시. 키는 (경로, mtime_ns, size) — 파일이 바뀌면 다시 해시한다.
-#: 모델 ONNX 는 크므로 이미지마다 재해시하지 않는다(결정론·subprocess 없음).
-_MODEL_SHA_CACHE: dict[tuple[str, int, int], str] = {}
+#: 모델 바이트 SHA 캐시. 키는 (resolve 경로, mtime_ns, ctime_ns, size, ino) —
+#: 파일이 바뀌면 다시 해시한다. 모델 ONNX 는 크므로 이미지마다 재해시하지 않는다
+#: (결정론·subprocess 없음). 스레드 락으로 보호하고 runtime.invalidate 와 연동한다.
+_MODEL_SHA_CACHE: dict[tuple[str, int, int, int, int], str] = {}
+_MODEL_SHA_LOCK = threading.Lock()
 
 
 def _cached_model_sha(path: Path) -> str:
-    """모델 파일 바이트 SHA256(경로·mtime·size 키로 캐시)."""
+    """모델 파일 바이트 SHA256(resolve 경로·4-튜플 stat 키로 캐시)."""
 
     stat = path.stat()
-    key = (str(path.resolve()), int(stat.st_mtime_ns), int(stat.st_size))
-    cached = _MODEL_SHA_CACHE.get(key)
-    if cached is None:
-        cached = file_sha256(path)
-        _MODEL_SHA_CACHE[key] = cached
+    key = (
+        str(path.resolve()),
+        int(stat.st_mtime_ns),
+        int(stat.st_ctime_ns),
+        int(stat.st_size),
+        int(stat.st_ino),
+    )
+    with _MODEL_SHA_LOCK:
+        cached = _MODEL_SHA_CACHE.get(key)
+        if cached is None:
+            cached = file_sha256(path)
+            _MODEL_SHA_CACHE[key] = cached
     return cached
+
+
+def invalidate_model_sha_cache(path: str | Path) -> None:
+    """모델 교체 알림 시 해당 경로의 SHA 캐시를 버린다(runtime.invalidate 연동)."""
+
+    resolved = str(Path(path).resolve())
+    with _MODEL_SHA_LOCK:
+        for key in [k for k in _MODEL_SHA_CACHE if k[0] == resolved]:
+            del _MODEL_SHA_CACHE[key]
 
 
 def inspection_identity(
@@ -326,7 +344,7 @@ def inspect_with_yolo(
     except (ImageHeaderError, OSError):
         return fail(ErrorCode.E_INPUT_DECODE, Stage.LOAD_IMAGE)
     started = time.perf_counter()
-    bgr = cv2.imread(str(path), cv2.IMREAD_COLOR)
+    bgr = imread_unicode(path)
     timings["load_ms"] = (time.perf_counter() - started) * 1000.0
     if bgr is None:
         return fail(ErrorCode.E_INPUT_DECODE, Stage.LOAD_IMAGE)
@@ -334,6 +352,8 @@ def inspect_with_yolo(
         check_decoded_pixel_budget(int(bgr.shape[1]), int(bgr.shape[0]))
     except ImagePixelLimitError:
         return fail(ErrorCode.E_INPUT_SIZE, Stage.VALIDATE_INPUT)
+    except ImageHeaderError:
+        return fail(ErrorCode.E_INPUT_DECODE, Stage.LOAD_IMAGE)
 
     started = time.perf_counter()
     try:
@@ -343,6 +363,8 @@ def inspect_with_yolo(
         else:
             yolo_engine = YoloOnnxEngine(model_path, task=task)
             detections = yolo_engine.infer(bgr)
+    except ImportError:
+        raise  # onnxruntime 미설치 등 환경 문제는 예외로 전파(API 503)
     except Exception:  # 표본 단위 실패는 ERROR 결과로 남긴다(워커 재시도 대상)
         timings["infer_ms"] = (time.perf_counter() - started) * 1000.0
         return fail(ErrorCode.E_PROCESS_INTERNAL, Stage.ANALYZE_COMPONENTS)
@@ -391,5 +413,6 @@ __all__ = [
     "engine_task",
     "inspect_with_yolo",
     "inspection_identity",
+    "invalidate_model_sha_cache",
     "resolve_onnx_path",
 ]

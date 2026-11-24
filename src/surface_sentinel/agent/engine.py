@@ -630,11 +630,17 @@ class AgentEngine:
                     ErrorCode.E_TOOL_FAILED.value,
                     "arbitrate_patches는 입력 이미지(image_bgr)가 필요합니다",
                 )
-            arbitration = arbitrate_patches(
-                self._image_bgr,
-                self._observations[0],
-                self._observations[1],
-            )
+            try:
+                arbitration = arbitrate_patches(
+                    self._image_bgr,
+                    self._observations[0],
+                    self._observations[1],
+                )
+            except ValueError as exc:
+                raise ToolError(
+                    ErrorCode.E_TOOL_FAILED.value,
+                    f"패치 중재 입력이 잘못됐습니다: {exc}",
+                ) from exc
             self._arbitration = arbitration
             self._arbitration_done = True
             return arbitration.to_dict()

@@ -23,6 +23,7 @@ import binascii
 import contextlib
 import hashlib
 import json
+import math
 import os
 import time
 import uuid
@@ -37,7 +38,13 @@ import numpy as np
 
 from ..config import AppConfig
 from ..contracts import STAGE_ORDER, SampleResult, Status
-from ..io.image_guard import MAX_IMAGE_DIMENSION, MAX_IMAGE_PIXELS
+from ..io.image_guard import (
+    MAX_IMAGE_DIMENSION,
+    MAX_IMAGE_PIXELS,
+    ImageHeaderError,
+    ImagePixelLimitError,
+    check_image_pixel_budget,
+)
 from ..io.manifest import ManifestRow
 from ..pipeline.errors import PipelineError
 from ..pipeline.evidence import sanitize_sample_id, save_evidence
@@ -178,8 +185,9 @@ def cache_path(meta: CacheMeta, directory: str | Path = CACHE_DIR) -> Path:
 
 def _read_mask(path: Path) -> np.ndarray | None:
     try:
+        check_image_pixel_budget(path)
         buffer = np.fromfile(str(path), dtype=np.uint8)
-    except OSError:
+    except (OSError, ImageHeaderError, ImagePixelLimitError):
         return None
     if buffer.size == 0:
         return None
@@ -189,6 +197,21 @@ def _read_mask(path: Path) -> np.ndarray | None:
     if decoded.ndim == 3:
         decoded = np.any(decoded != 0, axis=2).astype(np.uint8) * 255
     return (decoded > 0).astype(np.uint8) * 255
+
+
+def _resolve_raw_path(raw_root: Path, relative: str, *, field: str) -> Path:
+    rel = Path(relative)
+    if not relative or rel.is_absolute() or rel.anchor or rel.drive:
+        raise ValueError(
+            f"manifest {field}는 raw_root 내부 상대 경로만 허용합니다: {relative!r}"
+        )
+    base = raw_root.resolve()
+    candidate = (base / rel).resolve()
+    if not candidate.is_relative_to(base):
+        raise ValueError(
+            f"manifest {field}가 raw_root 밖을 가리킵니다: {relative!r}"
+        )
+    return candidate
 
 
 def _cropped(mask: np.ndarray, bbox: tuple[int, int, int, int]) -> np.ndarray:
@@ -237,6 +260,7 @@ def _error_sample(
     *,
     split: str,
     error: PipelineError,
+    mask_path: Path | None = None,
 ) -> CachedSample:
     return CachedSample(
         sample_id=row.sample_id,
@@ -257,9 +281,7 @@ def _error_sample(
         roi_uncertain=True,
         truncated=False,
         components=(),
-        gt_components=_gt_components(row.mask_path)
-        if row.mask_path
-        else (),
+        gt_components=_gt_components(str(mask_path)) if mask_path is not None else (),
         overlay="",
         error_code=str(error.error_code),
         error_stage=str(error.error_stage),
@@ -278,8 +300,12 @@ def inspect_once(
     """한 샘플을 10단계로 한 번 검사하고 재계산 재료를 남긴다."""
 
     root = Path(raw_root)
-    image_path = root / row.image_path
-    mask_path = root / row.mask_path if row.mask_path else None
+    image_path = _resolve_raw_path(root, row.image_path, field="image_path")
+    mask_path = (
+        _resolve_raw_path(root, row.mask_path, field="mask_path")
+        if row.mask_path
+        else None
+    )
     try:
         metadata, decoded = validate_input(
             image_path,
@@ -298,7 +324,7 @@ def inspect_once(
         scored = calculate_score(analyzed.components, config)
         decision = decide_status(scored, pre.quality, roi, refined, config)
     except PipelineError as exc:
-        return _error_sample(row, split=split, error=exc)
+        return _error_sample(row, split=split, error=exc, mask_path=mask_path)
 
     overlay = ""
     if overlay_dir is not None:
@@ -433,6 +459,21 @@ def _is_strict_int(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
+def _require_non_negative_int(value: Any, field: str) -> int:
+    if not _is_strict_int(value) or value < 0:
+        raise ValueError(f"캐시 정수 필드가 유효하지 않습니다({field}): {value!r}")
+    return value
+
+
+def _require_finite_float(value: Any, field: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"캐시 실수 필드가 유효하지 않습니다({field}): {value!r}")
+    out = float(value)
+    if not math.isfinite(out):
+        raise ValueError(f"캐시 실수 필드가 유한하지 않습니다({field}): {value!r}")
+    return out
+
+
 def _decode_component(raw: Any) -> CachedComponent:
     if not isinstance(raw, dict):
         raise ValueError("캐시 컴포넌트 형식이 올바르지 않습니다.")
@@ -470,12 +511,20 @@ def _decode_component(raw: Any) -> CachedComponent:
         raise ValueError("캐시 마스크 바이트 길이가 shape와 일치하지 않습니다.")
     mask = np.frombuffer(mask_bytes, dtype=np.uint8).reshape((h, w)).copy()
     return CachedComponent(
-        area_px=int(raw["area_px"]),
+        area_px=_require_non_negative_int(raw["area_px"], "area_px"),
         bbox=(bbox_raw[0], bbox_raw[1], bbox_raw[2], bbox_raw[3]),
-        mean_contrast_gray=float(raw["mean_contrast_gray"]),
-        max_contrast_gray=float(raw["max_contrast_gray"]),
-        integrated_contrast=float(raw["integrated_contrast"]),
-        border_distance_px=float(raw["border_distance_px"]),
+        mean_contrast_gray=_require_finite_float(
+            raw["mean_contrast_gray"], "mean_contrast_gray"
+        ),
+        max_contrast_gray=_require_finite_float(
+            raw["max_contrast_gray"], "max_contrast_gray"
+        ),
+        integrated_contrast=_require_finite_float(
+            raw["integrated_contrast"], "integrated_contrast"
+        ),
+        border_distance_px=_require_finite_float(
+            raw["border_distance_px"], "border_distance_px"
+        ),
         touches_roi_border=bool(raw["touches_roi_border"]),
         mask=mask,
     )
@@ -531,14 +580,14 @@ def _decode_sample(raw: Any) -> CachedSample:
             source_split=str(raw["source_split"]),
             image_path=str(raw["image_path"]),
             mask_path=str(raw["mask_path"]),
-            defect_pixels=int(raw["defect_pixels"]),
+            defect_pixels=_require_non_negative_int(raw["defect_pixels"], "defect_pixels"),
             status=Status(str(raw["status"])),
-            score=float(raw["score"]),
+            score=_require_finite_float(raw["score"], "score"),
             reasons=tuple(str(r) for r in reasons_raw),
             quality_flags=tuple(str(f) for f in flags_raw),
-            blur_variance=float(raw["blur_variance"]),
-            mean_gray=float(raw["mean_gray"]),
-            saturated_ratio=float(raw["saturated_ratio"]),
+            blur_variance=_require_finite_float(raw["blur_variance"], "blur_variance"),
+            mean_gray=_require_finite_float(raw["mean_gray"], "mean_gray"),
+            saturated_ratio=_require_finite_float(raw["saturated_ratio"], "saturated_ratio"),
             roi_uncertain=bool(raw["roi_uncertain"]),
             truncated=bool(raw["truncated"]),
             components=tuple(_decode_component(c) for c in comps_raw),
@@ -586,12 +635,8 @@ def load_cache(path: str | Path, meta: CacheMeta) -> tuple[CachedSample, ...]:
     """안전한 JSON+zlib 캐시를 크기·구조 검증 후 복원한다(임의 역직렬화·zlib 폭탄 불가)."""
 
     target = Path(path)
-    file_size = target.stat().st_size
-    if file_size > MAX_CACHE_COMPRESSED_BYTES:
-        raise ValueError(
-            f"캐시 파일 크기 상한({MAX_CACHE_COMPRESSED_BYTES} bytes)을 초과했습니다: {target}"
-        )
-    raw = target.read_bytes()
+    with target.open("rb") as handle:
+        raw = handle.read(MAX_CACHE_COMPRESSED_BYTES + 1)
     if len(raw) > MAX_CACHE_COMPRESSED_BYTES:
         raise ValueError(
             f"캐시 파일 크기 상한({MAX_CACHE_COMPRESSED_BYTES} bytes)을 초과했습니다: {target}"

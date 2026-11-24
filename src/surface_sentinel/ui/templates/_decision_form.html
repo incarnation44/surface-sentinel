@@ -1,6 +1,6 @@
 {# 검토 결정 폼. sample.html과 review.html이 include한다.
    문맥: run(RunEntry), sample(sample_view), return_to("sample"|"review") #}
-<form class="decision" method="post" action="/runs/{{ run.run_id }}/review/{{ sample.sample_id }}">
+<form class="decision" method="post" action="/runs/{{ run.run_id }}/review/{{ sample.sample_id | urlencode }}">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
     <h2 style="margin:0">검토 결정</h2>
     <span class="meta">append-only 기록 · 마지막 결정이 최종 상태</span>

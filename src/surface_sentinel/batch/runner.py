@@ -29,6 +29,7 @@ from ..config import CONFIG_SCHEMA_VERSION, ConfigError, load_config
 from ..contracts import RunStatus, Status
 from ..io import artifacts
 from ..io.atomic import AtomicWriteError, atomic_directory
+from ..io.limits import configure_opencv_threads
 from ..io.manifest import MANIFEST_COLUMNS, ManifestError, ManifestRow, load_manifest
 from ..pipeline import inspect_image
 from ..pipeline.evidence import sanitize_sample_id
@@ -248,12 +249,31 @@ def _check_manifest(manifest_path: Path) -> None:
         )
 
 
+def _safe_raw_path(raw_root: Path, relative: str, *, field: str) -> Path:
+    rel = Path(relative)
+    if not relative or rel.is_absolute() or rel.anchor or rel.drive:
+        raise BatchInputError(
+            f"manifest {field}는 raw_root 내부 상대 경로만 허용합니다: {relative!r}"
+        )
+    base = raw_root.resolve()
+    candidate = (base / rel).resolve()
+    if not candidate.is_relative_to(base):
+        raise BatchInputError(
+            f"manifest {field}가 raw_root 밖을 가리킵니다: {relative!r}"
+        )
+    return candidate
+
+
 def _resolve_sample_paths(
     raw_root: Path,
     row: ManifestRow,
 ) -> tuple[Path, Path | None]:
-    image_path = raw_root / row.image_path
-    mask_path = raw_root / row.mask_path if row.mask_path else None
+    image_path = _safe_raw_path(raw_root, row.image_path, field="image_path")
+    mask_path = (
+        _safe_raw_path(raw_root, row.mask_path, field="mask_path")
+        if row.mask_path
+        else None
+    )
     return image_path, mask_path
 
 
@@ -315,6 +335,7 @@ def run_batch(
     _validate_request(
         split=split, limit=limit, run_id=run_id, allow_sealed=allow_sealed
     )
+    configure_opencv_threads()
 
     config_file = Path(config_path)
     try:

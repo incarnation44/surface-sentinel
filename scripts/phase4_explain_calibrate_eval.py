@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import json
-import pickle
 import random
 from datetime import date
 from pathlib import Path
@@ -34,15 +33,45 @@ from surface_sentinel.contracts import (
     SampleResult,
     Status,
 )
+from surface_sentinel.evaluation.cache import (
+    CACHE_DIR,
+    DEFAULT_RAW_ROOT,
+    CachedSample,
+    build_cache,
+    cache_meta,
+    cache_path,
+    load_cache,
+    save_cache,
+)
+from surface_sentinel.evaluation.fullverify import FULLVERIFY_GOOD_TARGET
 from surface_sentinel.evaluation.metrics import ratio
-from surface_sentinel.evaluation.runner import load_split_rows
+from surface_sentinel.evaluation.runner import DEFAULT_SPLITS_DIR, load_split_rows, split_sha256
+from surface_sentinel.evaluation.sampling import DEFAULT_SEED, build_sample_plan
 from surface_sentinel.pipeline.stages import _component_evidence
 
 REPO = Path(__file__).resolve().parents[1]
 BASE_CONFIG_PATH = REPO / "configs/base.toml"
-TUNE_CACHE_PATH = REPO / "data/derived/t05_cache/t05-cache-v1-tune-a762ba639441-46c06acb3b53.pkl"
 EVIDENCE_OUT = REPO / "docs/evidence/P4_counterfactual_eval_2026-11-13.json"
 REPORT_OUT = REPO / "docs/reports/P4_counterfactual_calibration_2026-11-13.md"
+
+
+def _load_tune_cached_samples(
+    cfg: AppConfig, rows: list[Any]
+) -> tuple[CachedSample, ...]:
+    plan = build_sample_plan(
+        rows,
+        split="tune",
+        good_target=FULLVERIFY_GOOD_TARGET,
+        seed=DEFAULT_SEED,
+    )
+    split_hash = split_sha256(REPO / DEFAULT_SPLITS_DIR / "tune.csv")
+    meta = cache_meta(plan, cfg, split_sha256=split_hash)
+    target = cache_path(meta, REPO / CACHE_DIR)
+    if target.is_file():
+        return load_cache(target, meta)
+    samples = build_cache(plan, cfg, raw_root=REPO / DEFAULT_RAW_ROOT)
+    save_cache(samples, meta, target)
+    return samples
 
 
 def _cached_to_sample_result(cached: Any, cfg: AppConfig, config_hash: str) -> SampleResult:
@@ -355,8 +384,7 @@ def main() -> int:
     cfg = load_config(BASE_CONFIG_PATH)
     rows = load_split_rows("tune")
     dim_by_id = {row.sample_id: (int(row.width), int(row.height)) for row in rows}
-    with TUNE_CACHE_PATH.open("rb") as handle:
-        cached_samples = pickle.load(handle)["samples"]
+    cached_samples = _load_tune_cached_samples(cfg, rows)
 
     all_results = [_cached_to_sample_result(c, cfg, cfg.config_hash) for c in cached_samples]
     review_results = [r for r in all_results if r.status is Status.REVIEW]

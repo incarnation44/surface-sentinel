@@ -16,7 +16,6 @@ from __future__ import annotations
 import json
 import math
 import os
-import pickle
 import sys
 import tempfile
 import time
@@ -47,8 +46,19 @@ from surface_sentinel.agent.stability import (
 from surface_sentinel.agent.trace import TraceWriter, audit_trace, replay_trace
 from surface_sentinel.config import AppConfig, load_config
 from surface_sentinel.contracts import Status
+from surface_sentinel.evaluation.cache import (
+    CACHE_DIR,
+    CachedSample,
+    build_cache,
+    cache_meta,
+    cache_path,
+    load_cache,
+    save_cache,
+)
+from surface_sentinel.evaluation.fullverify import FULLVERIFY_GOOD_TARGET
 from surface_sentinel.evaluation.metrics import ratio
-from surface_sentinel.evaluation.runner import load_split_rows
+from surface_sentinel.evaluation.runner import DEFAULT_SPLITS_DIR, load_split_rows, split_sha256
+from surface_sentinel.evaluation.sampling import DEFAULT_SEED, build_sample_plan
 from surface_sentinel.yolo.evaluate import (
     DEFAULT_CONFIG_PATH,
     DEFAULT_RAW_ROOT,
@@ -58,7 +68,6 @@ from surface_sentinel.yolo.inspect import inspect_with_yolo
 from surface_sentinel.yolo.runtime import YoloEngineRegistry
 
 REPO = Path(__file__).resolve().parents[1]
-TUNE_CACHE_PATH = REPO / "data/derived/t05_cache/t05-cache-v1-tune-a762ba639441-46c06acb3b53.pkl"
 SEG_ONNX_PATH = REPO / "data/derived/yolo/models/seg/weights/best.onnx"
 EVIDENCE_OUT = REPO / "docs/evidence/P2_triage_eval_2026-11-13.json"
 REPORT_OUT = REPO / "docs/reports/P2_agent_triage_2026-11-13.md"
@@ -89,11 +98,29 @@ def _priority_breakdown(
     return out
 
 
+def _load_tune_cached_samples(
+    config: AppConfig, rows: list[Any]
+) -> tuple[CachedSample, ...]:
+    plan = build_sample_plan(
+        rows,
+        split="tune",
+        good_target=FULLVERIFY_GOOD_TARGET,
+        seed=DEFAULT_SEED,
+    )
+    split_hash = split_sha256(REPO / DEFAULT_SPLITS_DIR / "tune.csv")
+    meta = cache_meta(plan, config, split_sha256=split_hash)
+    target = cache_path(meta, REPO / CACHE_DIR)
+    if target.is_file():
+        return load_cache(target, meta)
+    samples = build_cache(plan, config, raw_root=REPO / DEFAULT_RAW_ROOT)
+    save_cache(samples, meta, target)
+    return samples
+
+
 def run_tune_review_eval(config: AppConfig) -> dict[str, Any]:
     rows = load_split_rows("tune")
     row_by_id = {row.sample_id: row for row in rows}
-    with TUNE_CACHE_PATH.open("rb") as handle:
-        cached_samples = pickle.load(handle)["samples"]  # noqa: S301 - 로컬 검증용 캐시
+    cached_samples = _load_tune_cached_samples(config, rows)
 
     review_samples = [s for s in cached_samples if s.status == Status.REVIEW]
     labels = {s.sample_id: s.label for s in review_samples}

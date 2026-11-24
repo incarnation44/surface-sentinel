@@ -190,3 +190,91 @@ def test_inspection_overlay_handles_corrupted_db_without_500(
     )
     response = client.get("/inspections/1/overlay.png")
     assert response.status_code == 404
+
+
+def test_inspection_detail_and_readonly_connections_handle_corrupt_db_and_busy_timeout(
+    env: tuple[Path, Path, Path],
+) -> None:
+    import json
+
+    from surface_sentinel.agent.audit import AuditVerdict, audit_records_db
+    from surface_sentinel.ui.data import (
+        UiInputError,
+        read_only_connection,
+        row_overlay_path,
+        safe_child,
+    )
+
+    runs_dir, raw_root, run_dir = env
+    seed_stats(runs_dir)
+    db_path = runs_dir / "records.db"
+
+    # 1) read_only_connection이 connect_readonly(busy_timeout=5000, query_only=1)를 사용한다.
+    ro = read_only_connection(db_path)
+    try:
+        assert int(ro.execute("PRAGMA busy_timeout").fetchone()[0]) == 5000
+        assert int(ro.execute("PRAGMA query_only").fetchone()[0]) == 1
+    finally:
+        ro.close()
+
+    # 2) safe_child NUL 바이트 거부 및 row_overlay_path 비-PNG/NUL 거부
+    with pytest.raises(UiInputError):
+        safe_child(runs_dir, "bad\x00path.png")
+    assert row_overlay_path({"overlay_path": str(db_path)}, runs_dir) is None
+    assert row_overlay_path({"overlay_path": "bad\x00.png"}, runs_dir) is None
+
+    # 3) DB JSON 컬럼 손상 시 /inspections/{id}가 500 대신 404(UiInputError)를 반환한다.
+    conn = connect(db_path)
+    try:
+        with conn:
+            cur = conn.execute(
+                "INSERT INTO inspections ("
+                "run_id, sample_id, image_sha256, inspection_fingerprint, label, split,"
+                " status, score, reasons, engine, task, config_hash, model_sha256,"
+                " model_version, provenance_complete, overlay_path, timing_ms, created_at"
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    "bad-json-run",
+                    "s_bad",
+                    "f" * 64,
+                    "1" * 64,
+                    "good",
+                    "tune",
+                    "OK",
+                    0.1,
+                    "{corrupt-json",
+                    "opencv",
+                    "",
+                    "0" * 64,
+                    "",
+                    "opencv",
+                    1,
+                    "",
+                    "{}",
+                    "2026-01-01T00:00:00Z",
+                ),
+            )
+            bad_id = int(cur.lastrowid or 0)
+    finally:
+        conn.close()
+
+    client = TestClient(
+        create_app(runs_dir=runs_dir, raw_root=raw_root),
+        raise_server_exceptions=False,
+    )
+    assert client.get(f"/inspections/{bad_id}").status_code == 404
+
+    # 4) 손상된 DB 파일에서도 /inspections/1 -> 404, audit_records_db -> REJECT
+    db_path.write_bytes(b"corrupted-sqlite-bytes")
+    assert client.get("/inspections/1").status_code == 404
+    assert audit_records_db(db_path).verdict is AuditVerdict.REJECT
+
+    # 5) 손상된 run.json(비-dict counts) 및 results.jsonl(키 누락)에서도 500 금지
+    run_json = run_dir / "run.json"
+    rj = json.loads(run_json.read_text(encoding="utf-8"))
+    rj["counts"] = ["not-a-dict"]
+    run_json.write_text(json.dumps(rj), encoding="utf-8")
+    assert client.get("/").status_code == 200
+    assert client.get(f"/runs/{ui_run.RUN_ID}").status_code == 404
+    assert client.get("/watchdog").status_code == 404
+

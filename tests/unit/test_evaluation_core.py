@@ -661,3 +661,139 @@ def test_load_cache_rejects_abnormal_mask_shape_and_non_list_fields(tmp_path: Pa
     str_reasons["reasons"] = "DEFECT_EVIDENCE_STRONG"
     with pytest.raises(ValueError):
         load_cache(_write([str_reasons], "str_reasons.sscache"), meta)
+
+
+def test_load_cache_bounded_read_and_strict_int_scalars(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json
+    import zlib
+    from types import SimpleNamespace
+
+    from surface_sentinel.evaluation import cache as cache_mod
+    from surface_sentinel.evaluation.cache import CACHE_VERSION, CacheMeta, load_cache
+
+    meta = CacheMeta(
+        version=CACHE_VERSION,
+        config_hash="a" * 64,
+        split="tune",
+        split_sha256="b" * 64,
+        sample_ids_sha256="c" * 64,
+        samples=1,
+    )
+
+    def _write_json(text: str, name: str) -> Path:
+        p = tmp_path / name
+        p.write_bytes(b"SSCACHE2\n" + zlib.compress(text.encode("utf-8")))
+        return p
+
+    base_sample: dict[str, object] = {
+        "sample_id": "s1",
+        "original_id": "s1",
+        "label": "defect",
+        "split": "tune",
+        "source_split": "train",
+        "image_path": "a.png",
+        "mask_path": "",
+        "defect_pixels": 0,
+        "status": "OK",
+        "score": 0.1,
+        "reasons": [],
+        "quality_flags": [],
+        "blur_variance": 1.0,
+        "mean_gray": 100.0,
+        "saturated_ratio": 0.0,
+        "roi_uncertain": False,
+        "truncated": False,
+        "components": [
+            {
+                "area_px": 1,
+                "bbox": [0, 0, 1, 1],
+                "mean_contrast_gray": 10.0,
+                "max_contrast_gray": 12.0,
+                "integrated_contrast": 10.0,
+                "border_distance_px": 5.0,
+                "touches_roi_border": False,
+                "mask_shape": [1, 1],
+                "mask_b64": "/w==",
+            }
+        ],
+        "gt_components": [],
+        "overlay": "",
+        "error_code": None,
+        "error_stage": None,
+    }
+
+    # 1) stat()/read_bytes() 없이 단일 바운드 읽기로 동작하고 상한 초과를 차단해야 한다.
+    valid_path = _write_json(
+        json.dumps({"meta": meta.as_dict(), "samples": [base_sample]}),
+        "ok.sscache",
+    )
+    oversized_path = tmp_path / "oversized.sscache"
+    oversized_path.write_bytes(b"SSCACHE2\n" + b"X" * 64)
+
+    def _forbid_read_bytes(self: Path) -> bytes:
+        raise AssertionError("load_cache는 read_bytes() 대신 바운드 read()를 써야 합니다")
+
+    def _lying_stat(self: Path, *args: object, **kwargs: object) -> object:
+        return SimpleNamespace(st_size=0)
+
+    monkeypatch.setattr(Path, "read_bytes", _forbid_read_bytes)
+    monkeypatch.setattr(Path, "stat", _lying_stat)
+    loaded = load_cache(valid_path, meta)
+    assert len(loaded) == 1
+
+    monkeypatch.setattr(cache_mod, "MAX_CACHE_COMPRESSED_BYTES", 32)
+    with pytest.raises(ValueError, match="크기"):
+        load_cache(oversized_path, meta)
+    monkeypatch.undo()
+
+    # 2) area_px / defect_pixels strict int (>= 0, bool/음수/float 거부)
+    for bad_val in (True, -1, 1.5, "1"):
+        s_bad_dp = dict(base_sample)
+        s_bad_dp["defect_pixels"] = bad_val
+        p = _write_json(
+            json.dumps({"meta": meta.as_dict(), "samples": [s_bad_dp]}),
+            f"dp_{bad_val}.sscache",
+        )
+        with pytest.raises(ValueError):
+            load_cache(p, meta)
+
+        s_bad_area = dict(base_sample)
+        comp_bad = dict(base_sample["components"][0])  # type: ignore[index]
+        comp_bad["area_px"] = bad_val
+        s_bad_area["components"] = [comp_bad]
+        p2 = _write_json(
+            json.dumps({"meta": meta.as_dict(), "samples": [s_bad_area]}),
+            f"area_{bad_val}.sscache",
+        )
+        with pytest.raises(ValueError):
+            load_cache(p2, meta)
+
+    # 3) 비유한(NaN/Infinity) float 필드 거부
+    for field in ("score", "blur_variance", "mean_gray", "saturated_ratio"):
+        s_nan = dict(base_sample)
+        s_nan[field] = float("nan")
+        p = _write_json(
+            json.dumps({"meta": meta.as_dict(), "samples": [s_nan]}, allow_nan=True),
+            f"nan_{field}.sscache",
+        )
+        with pytest.raises(ValueError):
+            load_cache(p, meta)
+
+    for c_field in (
+        "mean_contrast_gray",
+        "max_contrast_gray",
+        "integrated_contrast",
+        "border_distance_px",
+    ):
+        s_inf = dict(base_sample)
+        comp_inf = dict(base_sample["components"][0])  # type: ignore[index]
+        comp_inf[c_field] = float("inf")
+        s_inf["components"] = [comp_inf]
+        p = _write_json(
+            json.dumps({"meta": meta.as_dict(), "samples": [s_inf]}, allow_nan=True),
+            f"inf_{c_field}.sscache",
+        )
+        with pytest.raises(ValueError):
+            load_cache(p, meta)

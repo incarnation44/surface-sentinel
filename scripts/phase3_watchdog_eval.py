@@ -14,7 +14,6 @@
 from __future__ import annotations
 
 import json
-import pickle
 import random
 import tempfile
 from dataclasses import replace
@@ -37,14 +36,25 @@ from surface_sentinel.agent.drift import (
 from surface_sentinel.agent.run import load_profiles, run_agent_episode
 from surface_sentinel.agent.trace import audit_trace, load_trace, replay_trace
 from surface_sentinel.cli import main as cli_main
-from surface_sentinel.config import load_config
+from surface_sentinel.config import AppConfig, load_config
 from surface_sentinel.contracts import Status
+from surface_sentinel.evaluation.cache import (
+    CACHE_DIR,
+    DEFAULT_RAW_ROOT,
+    build_cache,
+    cache_meta,
+    cache_path,
+    load_cache,
+    save_cache,
+)
+from surface_sentinel.evaluation.fullverify import FULLVERIFY_GOOD_TARGET
+from surface_sentinel.evaluation.runner import DEFAULT_SPLITS_DIR, load_split_rows, split_sha256
+from surface_sentinel.evaluation.sampling import DEFAULT_SEED, build_sample_plan
 from surface_sentinel.records.db import connect, init_db
 from surface_sentinel.records.store import insert_inspection
 
 REPO = Path(__file__).resolve().parents[1]
 ADOPTED_JSONL = REPO / "docs/evidence/t05_adopted.jsonl"
-TUNE_CACHE_PATH = REPO / "data/derived/t05_cache/t05-cache-v1-tune-a762ba639441-46c06acb3b53.pkl"
 BASE_CONFIG_PATH = REPO / "configs/base.toml"
 AGENT_CONFIG_PATH = REPO / "configs/agent.toml"
 PROFILES_DIR = REPO / "configs/profiles"
@@ -54,11 +64,27 @@ EVIDENCE_OUT = REPO / "docs/evidence/P3_watchdog_eval_2026-11-13.json"
 REPORT_OUT = REPO / "docs/reports/P3_agent_watchdog_2026-11-13.md"
 
 
-def _load_tune_baseline() -> tuple[dict[str, Any], tuple[DriftObservation, ...]]:
+def _load_tune_baseline(
+    config: AppConfig,
+) -> tuple[dict[str, Any], tuple[DriftObservation, ...]]:
     adopted_line = ADOPTED_JSONL.read_text(encoding="utf-8").splitlines()[0]
     adopted_meta = json.loads(adopted_line)
-    with TUNE_CACHE_PATH.open("rb") as handle:
-        cached_samples = pickle.load(handle)["samples"]  # noqa: S301 - 로컬 검증용 캐시
+    splits_dir = REPO / DEFAULT_SPLITS_DIR
+    rows = load_split_rows("tune", splits_dir=splits_dir)
+    plan = build_sample_plan(
+        rows,
+        split="tune",
+        good_target=FULLVERIFY_GOOD_TARGET,
+        seed=DEFAULT_SEED,
+    )
+    split_hash = split_sha256(splits_dir / "tune.csv")
+    meta = cache_meta(plan, config, split_sha256=split_hash)
+    target = cache_path(meta, REPO / CACHE_DIR)
+    if target.is_file():
+        cached_samples = load_cache(target, meta)
+    else:
+        cached_samples = build_cache(plan, config, raw_root=REPO / DEFAULT_RAW_ROOT)
+        save_cache(cached_samples, meta, target)
     if len(cached_samples) != int(adopted_meta["samples"]):
         raise RuntimeError(
             f"tune 캐시 표본 수({len(cached_samples)})가 "
@@ -332,7 +358,7 @@ def _render_markdown(payload: dict[str, Any]) -> str:
 def main() -> int:
     config = load_config(BASE_CONFIG_PATH)
     gate_report = audit_repository_gates(REPO)
-    adopted_meta, baseline_obs = _load_tune_baseline()
+    adopted_meta, baseline_obs = _load_tune_baseline(config)
     drift_eval = _run_drift_scenarios(baseline_obs)
     smoke_eval = _run_repro_and_smoke_audit(config.config_hash)
 

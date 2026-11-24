@@ -72,7 +72,9 @@ def accumulate(
         if row.sample_id in excluded or row.label != "defect":
             continue
         mask_file = Path(raw_root) / row.mask_path
-        mask = cv2.imread(str(mask_file), cv2.IMREAD_GRAYSCALE)
+        from ..io.imageio import imread_unicode  # noqa: PLC0415
+
+        mask = imread_unicode(mask_file, cv2.IMREAD_GRAYSCALE)
         if mask is None:
             raise DefectMapError(f"마스크를 디코드하지 못했습니다: {mask_file}")
         if mask.shape != (row.height, row.width):

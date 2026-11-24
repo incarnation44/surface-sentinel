@@ -176,7 +176,7 @@ class TraceWriter:
         self._file = None
         if self._path is not None:
             self._path.parent.mkdir(parents=True, exist_ok=True)
-            self._file = self._path.open("a", encoding="utf-8")
+            self._file = self._path.open("a", encoding="utf-8", newline="\n")
 
     @property
     def events(self) -> tuple[dict[str, Any], ...]:
@@ -194,6 +194,12 @@ class TraceWriter:
         if self._file is not None:
             self._file.close()
             self._file = None
+
+    def __enter__(self) -> TraceWriter:
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        self.close()
 
 
 def load_trace(path: str | Path) -> list[dict[str, Any]]:
@@ -236,24 +242,30 @@ def audit_trace(events: Sequence[Mapping[str, Any]]) -> list[str]:
         if not isinstance(budget, dict):
             errors.append(f"budget missing at index {index}")
         else:
-            actions = int(budget.get("actions_used", 0))
-            profiles = int(budget.get("profiles_used", 0))
-            if actions < prev_actions or profiles < prev_profiles:
-                errors.append(f"budget decreased at index {index}")
-            prev_actions, prev_profiles = actions, profiles
+            try:
+                actions = int(budget.get("actions_used", 0))
+                profiles = int(budget.get("profiles_used", 0))
+            except (TypeError, ValueError):
+                errors.append(f"budget malformed at index {index}")
+            else:
+                if actions < prev_actions or profiles < prev_profiles:
+                    errors.append(f"budget decreased at index {index}")
+                prev_actions, prev_profiles = actions, profiles
         kind = event.get("event")
-        if (
-            kind in {"act", "plan", "rejection"}
-            and "args" in event
-            and event.get("args_hash") != hash_args(event["args"])
-        ):
-            errors.append(f"args_hash mismatch at index {index}")
+        if kind in {"act", "plan", "rejection"} and "args" in event:
+            if not isinstance(event["args"], Mapping):
+                errors.append(f"args not an object at index {index}")
+            elif event.get("args_hash") != hash_args(event["args"]):
+                errors.append(f"args_hash mismatch at index {index}")
         if kind == "act":
             expected_action = hash_action(str(event.get("tool")), str(event.get("args_hash")))
             if event.get("action_hash") != expected_action:
                 errors.append(f"action_hash mismatch at index {index}")
-            if "result" in event and event.get("result_hash") != hash_result(event["result"]):
-                errors.append(f"result_hash mismatch at index {index}")
+            if "result" in event:
+                if not isinstance(event["result"], Mapping):
+                    errors.append(f"result not an object at index {index}")
+                elif event.get("result_hash") != hash_result(event["result"]):
+                    errors.append(f"result_hash mismatch at index {index}")
 
     end = events[-1]
     terminal = end.get("terminal_state")
@@ -348,30 +360,52 @@ def replay_trace(events: Sequence[Mapping[str, Any]]) -> ReplayReport:
             mismatches=(f"invalid episode_start agent_config: {exc}",),
             audit_errors=tuple(audit_errors),
         )
-    image = start.get("image", {})
-    profile_hashes = dict(start.get("profiles", {}))
-    observations = tuple(
-        rebuild_observation(item) for item in start.get("engine_observations", [])
-    )
-    arbitration_available = bool(start.get("arbitration_available", False))
-    recorded: dict[str, dict[str, Any]] = {}
-    recorded_arbitration: dict[str, Any] | None = None
-    arbitration_tampered = False
-    elapsed: list[float] = []
-    for event in events:
-        if event.get("event") != "act":
-            continue
-        elapsed.append(float(event.get("elapsed_ms", 0.0)))
-        if event.get("tool") == "run_profile":
-            recorded[str(event["args"]["profile_id"])] = dict(event["result"])
-        elif event.get("tool") == "arbitrate_patches":
-            arb_payload = dict(event["result"])
-            expected_arb = sha256_text(
-                canonical_json({k: v for k, v in arb_payload.items() if k != "arbitration_hash"})
-            )
-            if arb_payload.get("arbitration_hash") != expected_arb:
-                arbitration_tampered = True
-            recorded_arbitration = arb_payload
+    try:
+        image = start.get("image", {})
+        if not isinstance(image, Mapping):
+            raise ValueError("episode_start image must be an object")
+        profile_hashes = dict(start.get("profiles", {}))
+        observations = tuple(
+            rebuild_observation(item) for item in start.get("engine_observations", [])
+        )
+        arbitration_available = bool(start.get("arbitration_available", False))
+        recorded: dict[str, dict[str, Any]] = {}
+        recorded_arbitration: dict[str, Any] | None = None
+        arbitration_tampered = False
+        elapsed: list[float] = []
+        for event in events:
+            if event.get("event") != "act":
+                continue
+            elapsed.append(float(event.get("elapsed_ms", 0.0)))
+            if event.get("tool") == "run_profile":
+                args = event.get("args")
+                result = event.get("result")
+                if not isinstance(args, Mapping) or not isinstance(result, Mapping):
+                    raise ValueError("run_profile act requires object args/result")
+                recorded[str(args["profile_id"])] = dict(result)
+            elif event.get("tool") == "arbitrate_patches":
+                result = event.get("result")
+                if not isinstance(result, Mapping):
+                    raise ValueError("arbitrate_patches act requires object result")
+                arb_payload = dict(result)
+                expected_arb = sha256_text(
+                    canonical_json(
+                        {k: v for k, v in arb_payload.items() if k != "arbitration_hash"}
+                    )
+                )
+                if arb_payload.get("arbitration_hash") != expected_arb:
+                    arbitration_tampered = True
+                recorded_arbitration = arb_payload
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
+        return ReplayReport(
+            deterministic=False,
+            audit_valid=not audit_errors,
+            events_compared=0,
+            terminal_state="",
+            final_status="",
+            mismatches=(f"malformed trace event: {exc}",),
+            audit_errors=tuple(audit_errors),
+        )
 
     def inspector(profile_id: str, _config: Any) -> SampleResult:
         if profile_id not in recorded:

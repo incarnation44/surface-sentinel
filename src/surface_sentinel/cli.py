@@ -1478,14 +1478,14 @@ def _cmd_records_init(args: argparse.Namespace) -> int:
 
 
 def _cmd_records_list(args: argparse.Namespace) -> int:
-    from .records.db import DatabaseError, connect
+    from .records.db import DatabaseError, connect_readonly
     from .records.store import RecordsError, list_inspections
 
     if not _require_db_file(args.db):
         return EXIT_INPUT
     connection = None
     try:
-        connection = connect(args.db)
+        connection = connect_readonly(args.db)
         rows = list_inspections(
             connection,
             status=args.status,
@@ -1516,14 +1516,14 @@ def _cmd_records_list(args: argparse.Namespace) -> int:
 
 
 def _cmd_records_stats(args: argparse.Namespace) -> int:
-    from .records.db import DatabaseError, connect
+    from .records.db import DatabaseError, connect_readonly
     from .records.store import stats_payload
 
     if not _require_db_file(args.db):
         return EXIT_INPUT
     connection = None
     try:
-        connection = connect(args.db)
+        connection = connect_readonly(args.db)
         payload = stats_payload(connection)
     except DatabaseError as exc:
         _print_error(f"기록 DB 오류: {exc}")

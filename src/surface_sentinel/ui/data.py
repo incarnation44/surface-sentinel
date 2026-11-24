@@ -26,6 +26,7 @@ from ..contracts import (
     Status,
 )
 from ..io.artifacts import MANIFEST_SNAPSHOT, RESULTS_JSONL, RUN_JSON
+from ..records.db import DatabaseError, connect_readonly
 from ..records.store import (
     STATUS_ORDER,
     get_inspection,
@@ -48,11 +49,9 @@ class RunEntry:
 
 
 def read_only_connection(path: Path) -> sqlite3.Connection:
-    """검사 DB를 읽기 전용(``?mode=ro``)으로 연다(파일을 새로 만들지 않는다)."""
+    """검사 DB를 읽기 전용(``?mode=ro``, busy_timeout·query_only)으로 연다."""
 
-    connection = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
-    connection.row_factory = sqlite3.Row
-    return connection
+    return connect_readonly(path)
 
 
 def discover_runs(runs_dir: Path) -> list[RunEntry]:
@@ -69,6 +68,8 @@ def discover_runs(runs_dir: Path) -> list[RunEntry]:
         except (OSError, json.JSONDecodeError):
             continue
         if isinstance(payload, dict):
+            if not isinstance(payload.get("counts"), dict):
+                payload["counts"] = {}
             entries.append(RunEntry(run_id=child.name, run_dir=child, payload=payload))
     return entries
 
@@ -87,6 +88,8 @@ def load_run(runs_dir: Path, run_id: str) -> RunEntry:
         raise UiInputError(f"run.json을 읽을 수 없습니다: {run_id}") from exc
     if not isinstance(payload, dict):
         raise UiInputError(f"run.json이 객체가 아닙니다: {run_id}")
+    if "counts" in payload and not isinstance(payload["counts"], dict):
+        raise UiInputError(f"run.json counts 필드가 객체가 아닙니다: {run_id}")
     return RunEntry(run_id=run_id, run_dir=run_dir, payload=payload)
 
 
@@ -134,11 +137,17 @@ def load_manifest_map(run_dir: Path) -> dict[str, dict[str, str]]:
 def safe_child(base: Path, relative: str) -> Path:
     """base 밖으로 나가는 경로는 거부한다 (경로 이탈 방지)."""
 
-    if not relative or Path(relative).is_absolute():
+    if not relative or "\x00" in relative:
+        raise UiInputError("유효하지 않은 경로입니다.")
+    rel = Path(relative)
+    if rel.is_absolute() or rel.anchor or rel.drive:
         raise UiInputError("상대 경로만 허용합니다.")
-    candidate = (base / relative).resolve()
-    if not candidate.is_relative_to(base.resolve()):
-        raise UiInputError("허용된 디렉터리 밖 경로입니다.")
+    try:
+        candidate = (base / rel).resolve()
+        if not candidate.is_relative_to(base.resolve()):
+            raise UiInputError("허용된 디렉터리 밖 경로입니다.")
+    except (OSError, ValueError) as exc:
+        raise UiInputError("유효하지 않은 경로입니다.") from exc
     return candidate
 
 
@@ -269,20 +278,23 @@ def sample_result_from_record(rec: dict[str, Any]) -> SampleResult:
 
 
 def row_overlay_path(row: dict[str, Any], runs_dir: Path) -> Path | None:
-    """DB 행의 오버레이 경로가 ``runs_dir`` 안의 실제 파일일 때만 돌려준다."""
+    """DB 행의 오버레이 경로가 ``runs_dir`` 안의 실제 PNG 파일일 때만 돌려준다."""
 
-    raw = str(row.get("overlay_path") or "")
-    if not raw:
+    raw = str(row.get("overlay_path") or "").strip()
+    if not raw or "\x00" in raw:
         return None
-    candidate = Path(raw)
+    normalized = raw.replace("\\", "/")
     try:
-        if not candidate.is_file():
+        resolved = Path(normalized).resolve()
+        if not resolved.is_file():
             return None
-        if not candidate.resolve().is_relative_to(runs_dir.resolve()):
+        if resolved.suffix.lower() != ".png":
             return None
-    except OSError:
+        if not resolved.is_relative_to(runs_dir.resolve()):
+            return None
+    except (OSError, ValueError):
         return None
-    return candidate
+    return resolved
 
 
 def load_inspections_view(
@@ -421,7 +433,14 @@ def load_inspections_view(
                 )
         finally:
             connection.close()
-    except sqlite3.Error as exc:
+    except (
+        sqlite3.Error,
+        DatabaseError,
+        json.JSONDecodeError,
+        KeyError,
+        TypeError,
+        ValueError,
+    ) as exc:
         return {**base, "message": f"검사 기록 DB를 읽지 못했습니다: {exc}"}
 
     return {
@@ -446,94 +465,119 @@ def load_inspection_detail_view(
         raise UiInputError("검사 기록 DB가 없습니다.")
     try:
         connection = read_only_connection(db_path)
-    except sqlite3.Error as exc:
-        raise UiInputError(f"검사 기록 DB를 열지 못했습니다: {exc}") from exc
+        try:
+            row = get_inspection(connection, inspection_id)
+            if row is None:
+                raise UiInputError(f"검사 기록을 찾을 수 없습니다: id={inspection_id}")
 
-    try:
-        row = get_inspection(connection, inspection_id)
-        if row is None:
-            raise UiInputError(f"검사 기록을 찾을 수 없습니다: id={inspection_id}")
-
-        tables = {
-            str(r[0])
-            for r in connection.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            ).fetchall()
-        }
-        observations_raw = (
-            list_engine_observations(connection, inspection_id)
-            if "engine_observations" in tables
-            else []
-        )
-        assessments_raw = (
-            list_agent_assessments(connection, inspection_id)
-            if "agent_assessments" in tables
-            else []
-        )
-        reviews_raw = (
-            [
-                dict(r)
+            tables = {
+                str(r[0])
                 for r in connection.execute(
-                    "SELECT id, decision, reviewer, reason, created_at FROM review_decisions "
-                    "WHERE inspection_id = ? ORDER BY id ASC",
-                    (int(inspection_id),),
+                    "SELECT name FROM sqlite_master WHERE type='table'"
                 ).fetchall()
-            ]
-            if "review_decisions" in tables
-            else []
-        )
-    finally:
-        connection.close()
-
-    observations: list[dict[str, Any]] = []
-    for obs in observations_raw:
-        observations.append(
-            {
-                "id": int(obs["id"]),
-                "engine": str(obs["engine"]),
-                "task": str(obs.get("task") or ""),
-                "status": str(obs["status"]),
-                "score": float(obs["score"]),
-                "reasons": [str(x) for x in json.loads(str(obs.get("reasons") or "[]"))],
-                "components": json.loads(str(obs.get("components") or "[]")),
-                "model_sha256": str(obs.get("model_sha256") or ""),
-                "error_code": str(obs.get("error_code") or ""),
-                "timing_ms": json.loads(str(obs.get("timing_ms") or "{}")),
-                "created_at": str(obs["created_at"]),
             }
-        )
+            observations_raw = (
+                list_engine_observations(connection, inspection_id)
+                if "engine_observations" in tables
+                else []
+            )
+            assessments_raw = (
+                list_agent_assessments(connection, inspection_id)
+                if "agent_assessments" in tables
+                else []
+            )
+            reviews_raw = (
+                [
+                    dict(r)
+                    for r in connection.execute(
+                        "SELECT id, decision, reviewer, reason, created_at FROM review_decisions "
+                        "WHERE inspection_id = ? ORDER BY id ASC",
+                        (int(inspection_id),),
+                    ).fetchall()
+                ]
+                if "review_decisions" in tables
+                else []
+            )
+        finally:
+            connection.close()
 
-    assessments: list[dict[str, Any]] = []
-    for item in assessments_raw:
-        diag = json.loads(str(item.get("diagnostics_json") or "{}"))
-        if not isinstance(diag, dict):
-            diag = {}
-        assessments.append(
-            {
-                "id": int(item["id"]),
-                "assessment_hash": str(item["assessment_hash"]),
-                "policy_hash": str(item["policy_hash"]),
-                "flags": [str(f) for f in json.loads(str(item.get("flags_json") or "[]"))],
-                "review_priority": item.get("review_priority"),
-                "stability": item.get("stability"),
-                "recommended_action": str(item["recommended_action"]),
-                "diagnostics": diag,
-                "trace_path": str(item.get("trace_path") or ""),
-                "created_at": str(item["created_at"]),
-            }
-        )
+        observations: list[dict[str, Any]] = []
+        for obs in observations_raw:
+            obs_reasons = json.loads(str(obs.get("reasons") or "[]"))
+            obs_comps = json.loads(str(obs.get("components") or "[]"))
+            obs_timing = json.loads(str(obs.get("timing_ms") or "{}"))
+            if (
+                not isinstance(obs_reasons, list)
+                or not isinstance(obs_comps, list)
+                or not isinstance(obs_timing, dict)
+            ):
+                raise UiInputError("관찰 JSON 컬럼 형식이 손상됐습니다.")
+            observations.append(
+                {
+                    "id": int(obs["id"]),
+                    "engine": str(obs["engine"]),
+                    "task": str(obs.get("task") or ""),
+                    "status": str(obs["status"]),
+                    "score": float(obs["score"]),
+                    "reasons": [str(x) for x in obs_reasons],
+                    "components": obs_comps,
+                    "model_sha256": str(obs.get("model_sha256") or ""),
+                    "error_code": str(obs.get("error_code") or ""),
+                    "timing_ms": obs_timing,
+                    "created_at": str(obs["created_at"]),
+                }
+            )
 
-    return {
-        "inspection": {
-            **row,
-            "reasons_list": [str(x) for x in json.loads(str(row.get("reasons") or "[]"))],
-            "timing_dict": json.loads(str(row.get("timing_ms") or "{}")),
-            "has_overlay": row_overlay_path(row, runs_dir) is not None,
-        },
-        "observations": observations,
-        "assessments": assessments,
-        "reviews": reviews_raw,
-    }
+        assessments: list[dict[str, Any]] = []
+        for item in assessments_raw:
+            diag = json.loads(str(item.get("diagnostics_json") or "{}"))
+            if not isinstance(diag, dict):
+                diag = {}
+            flags_raw = json.loads(str(item.get("flags_json") or "[]"))
+            if not isinstance(flags_raw, list):
+                raise UiInputError("평가 flags_json 컬럼 형식이 손상됐습니다.")
+            assessments.append(
+                {
+                    "id": int(item["id"]),
+                    "assessment_hash": str(item["assessment_hash"]),
+                    "policy_hash": str(item["policy_hash"]),
+                    "flags": [str(f) for f in flags_raw],
+                    "review_priority": item.get("review_priority"),
+                    "stability": item.get("stability"),
+                    "recommended_action": str(item["recommended_action"]),
+                    "diagnostics": diag,
+                    "trace_path": str(item.get("trace_path") or ""),
+                    "created_at": str(item["created_at"]),
+                }
+            )
+
+        reasons_list_raw = json.loads(str(row.get("reasons") or "[]"))
+        timing_dict_raw = json.loads(str(row.get("timing_ms") or "{}"))
+        if not isinstance(reasons_list_raw, list) or not isinstance(timing_dict_raw, dict):
+            raise UiInputError("검사 기록 JSON 컬럼 형식이 손상됐습니다.")
+
+        return {
+            "inspection": {
+                **row,
+                "reasons_list": [str(x) for x in reasons_list_raw],
+                "timing_dict": timing_dict_raw,
+                "has_overlay": row_overlay_path(row, runs_dir) is not None,
+            },
+            "observations": observations,
+            "assessments": assessments,
+            "reviews": reviews_raw,
+        }
+    except UiInputError:
+        raise
+    except (
+        sqlite3.Error,
+        DatabaseError,
+        json.JSONDecodeError,
+        KeyError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        raise UiInputError(f"검사 기록 DB를 읽지 못했습니다: {exc}") from exc
 
 
 __all__ = [

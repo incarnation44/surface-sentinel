@@ -33,6 +33,7 @@ from typing import Any
 
 from ..config import AppConfig
 from ..contracts import SampleResult, Status
+from ..io.limits import configure_opencv_threads
 from ..pipeline import InspectionOutcome, inspect_image
 from ..pipeline.evidence import sanitize_sample_id
 from ..records.db import connect, init_db
@@ -450,6 +451,7 @@ def run_worker(
     (핫패스 subprocess 금지). 판정은 파이프라인이 소유한다.
     """
 
+    configure_opencv_threads()
     incoming_path = Path(incoming)
     db_file = Path(db_path)
     _validate_options(
@@ -746,6 +748,7 @@ def recheck_errors(
     (``OK``/``NG``/``REVIEW``) 행이 있는 이미지는 건너뛴다.
     """
 
+    configure_opencv_threads()
     incoming_path = Path(incoming)
     db_file = Path(db_path)
     _validate_options(

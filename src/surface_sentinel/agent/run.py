@@ -12,19 +12,20 @@ overlay·결과 JSON·트레이스를 남긴다. 판정은 항상 결합 결과 
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import time
+import uuid
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import cv2
-
 from ..config import AppConfig, load_config
 from ..contracts import EngineObservation, SampleResult
+from ..io.imageio import imread_unicode
 from ..pipeline import inspect_image
 from ..pipeline.stages import SEALED_SPLITS
 from .config import AgentConfig
@@ -91,6 +92,22 @@ def new_run_id(config_hash8: str, split: str, *, now: datetime | None = None) ->
 
     stamp = (now or datetime.now(UTC)).strftime("%Y%m%dT%H%M%SZ")
     return f"{stamp}-{config_hash8}-{split}"
+
+
+def _write_result_json(result_path: Path, payload: dict[str, Any]) -> None:
+    """결과 JSON 을 pid/uuid 임시 파일 + fsync + os.replace 로 원자 기록한다."""
+
+    tmp_path = result_path.parent / f".tmp-{result_path.name}-{os.getpid()}-{uuid.uuid4().hex}"
+    try:
+        with open(tmp_path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_path, result_path)
+    finally:
+        if tmp_path.exists():
+            with contextlib.suppress(OSError):
+                tmp_path.unlink()
 
 
 def run_agent_episode(
@@ -168,11 +185,7 @@ def run_agent_episode(
         "trace_path": str(trace_path),
     }
     result_path = run_dir / RESULT_FILENAME
-    tmp_path = result_path.with_suffix(".tmp")
-    tmp_path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
-    os.replace(tmp_path, result_path)
+    _write_result_json(result_path, payload)
     return AgentRunOutcome(
         episode=episode,
         run_id=candidate,
@@ -211,6 +224,18 @@ def run_evidence_episode(
     image = Path(image_path)
     if not image.is_file():
         raise AgentRunError("E_INPUT_MISSING", f"이미지 파일을 찾을 수 없습니다: {image}")
+    from ..io.image_guard import (  # noqa: PLC0415
+        ImageHeaderError,
+        ImagePixelLimitError,
+        check_image_pixel_budget,
+    )
+
+    try:
+        check_image_pixel_budget(image)
+    except ImagePixelLimitError as exc:
+        raise AgentRunError("E_INPUT_SIZE", f"이미지 픽셀 상한 초과: {image}") from exc
+    except (ImageHeaderError, OSError) as exc:
+        raise AgentRunError("E_INPUT_DECODE", f"이미지 헤더를 읽을 수 없습니다: {image}") from exc
     if len(observations) < 2:
         raise AgentRunError(
             "E_EVIDENCE_INPUT", "교차 증거는 두 개의 엔진 관찰(EngineObservation)이 필요합니다"
@@ -238,7 +263,7 @@ def run_evidence_episode(
 
     bgr: Any = None
     if enable_arbitration:
-        bgr = cv2.imread(str(image), cv2.IMREAD_COLOR)
+        bgr = imread_unicode(image)
         if bgr is None:
             trace.close()
             raise AgentRunError("E_INPUT_MISSING", f"이미지 파일을 디코드할 수 없습니다: {image}")
@@ -261,7 +286,7 @@ def run_evidence_episode(
     arbitration = engine.arbitration
 
     if bgr is None:
-        bgr = cv2.imread(str(image), cv2.IMREAD_COLOR)
+        bgr = imread_unicode(image)
         if bgr is None:
             raise AgentRunError("E_INPUT_MISSING", f"이미지 파일을 디코드할 수 없습니다: {image}")
     overlay_path = save_dual_overlay(
@@ -285,11 +310,7 @@ def run_evidence_episode(
     if arbitration is not None:
         payload["arbitration"] = arbitration.to_dict()
     result_path = run_dir / EVIDENCE_RESULT_FILENAME
-    tmp_path = result_path.with_suffix(".tmp")
-    tmp_path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
-    os.replace(tmp_path, result_path)
+    _write_result_json(result_path, payload)
     return EvidenceRunOutcome(
         episode=episode,
         assessment=assessment,

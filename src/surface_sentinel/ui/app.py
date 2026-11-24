@@ -39,7 +39,7 @@ from ..api.app import create_inspection_app, engine_status_counts
 from ..config import REVIEW_BAND_MAX, ConfigError, default_config, load_config
 from ..evaluation.metrics import Confusion, image_metrics, ratio
 from ..io.artifacts import CONFIG_SNAPSHOT
-from ..io.image_guard import ImagePixelLimitError, check_image_pixel_budget
+from ..io.image_guard import ImageHeaderError, ImagePixelLimitError, check_image_pixel_budget
 from ..io.limits import (
     CsrfOriginError,
     UploadTooLargeError,
@@ -50,6 +50,7 @@ from ..io.limits import (
     validate_same_origin,
 )
 from ..pipeline.evidence import sanitize_sample_id
+from ..records.db import DatabaseError
 from ..records.store import STATUS_ORDER, get_inspection, stats
 from ..review import ReviewError, ReviewStorageError, ReviewStore
 from ..version import __version__
@@ -180,7 +181,7 @@ def load_stats_view(db_path: Path) -> dict[str, Any]:
             by_engine = engine_status_counts(connection)
         finally:
             connection.close()
-    except sqlite3.Error as exc:
+    except (sqlite3.Error, DatabaseError) as exc:
         return {**base, "message": f"검사 기록 DB를 읽지 못했습니다: {exc}"}
 
     engines = []
@@ -299,6 +300,8 @@ def _build_strip_hotspot_heatmap(
         comps = rec.get("components") or []
         if not comps:
             continue
+        if not isinstance(comps, list):
+            raise UiInputError("results.jsonl components 필드가 배열이 아닙니다.")
         sid = str(rec.get("sample_id", ""))
         mrow = manifest_map.get(sid) or {}
         try:
@@ -310,26 +313,49 @@ def _build_strip_hotspot_heatmap(
             roi = rec.get("roi") or {}
             rb = roi.get("bbox") if isinstance(roi, dict) else None
             if isinstance(rb, (list, tuple)) and len(rb) == 4:
-                img_w = max(int(rb[0]) + int(rb[2]), 1)
-                img_h = max(int(rb[1]) + int(rb[3]), 1)
+                try:
+                    img_w = max(int(rb[0]) + int(rb[2]), 1)
+                    img_h = max(int(rb[1]) + int(rb[3]), 1)
+                except (TypeError, ValueError) as exc:
+                    raise UiInputError("results.jsonl roi.bbox 좌표가 손상됐습니다.") from exc
         if img_w <= 0 or img_h <= 0:
-            max_cx = max(
-                (int(c["bbox"][0]) + int(c["bbox"][2]) for c in comps if "bbox" in c),
-                default=230,
-            )
-            max_cy = max(
-                (int(c["bbox"][1]) + int(c["bbox"][3]) for c in comps if "bbox" in c),
-                default=630,
-            )
+            try:
+                max_cx = max(
+                    (
+                        int(c["bbox"][0]) + int(c["bbox"][2])
+                        for c in comps
+                        if isinstance(c, dict)
+                        and isinstance(c.get("bbox"), (list, tuple))
+                        and len(c["bbox"]) == 4
+                    ),
+                    default=230,
+                )
+                max_cy = max(
+                    (
+                        int(c["bbox"][1]) + int(c["bbox"][3])
+                        for c in comps
+                        if isinstance(c, dict)
+                        and isinstance(c.get("bbox"), (list, tuple))
+                        and len(c["bbox"]) == 4
+                    ),
+                    default=630,
+                )
+            except (TypeError, ValueError) as exc:
+                raise UiInputError("results.jsonl component.bbox 좌표가 손상됐습니다.") from exc
             img_w = max(max_cx, 1)
             img_h = max(max_cy, 1)
 
         for c in comps:
+            if not isinstance(c, dict):
+                raise UiInputError("results.jsonl component 항목이 객체가 아닙니다.")
             bbox = c.get("bbox")
             if not isinstance(bbox, (list, tuple)) or len(bbox) != 4:
-                continue
-            cx = float(bbox[0]) + float(bbox[2]) / 2.0
-            cy = float(bbox[1]) + float(bbox[3]) / 2.0
+                raise UiInputError(f"results.jsonl component.bbox 형식이 손상됐습니다: {bbox!r}")
+            try:
+                cx = float(bbox[0]) + float(bbox[2]) / 2.0
+                cy = float(bbox[1]) + float(bbox[3]) / 2.0
+            except (TypeError, ValueError) as exc:
+                raise UiInputError("results.jsonl component.bbox 좌표가 손상됐습니다.") from exc
             nx = min(max(cx / float(img_w), 0.0), 0.999999)
             ny = min(max(cy / float(img_h), 0.0), 0.999999)
             gx = int(nx * cols)
@@ -471,6 +497,8 @@ def create_app(
         review_band_max: float = REVIEW_BAND_MAX,
         sort_mode: str = "",
     ) -> dict[str, Any]:
+        if "sample_id" not in record or "status" not in record:
+            raise UiInputError("results.jsonl 레코드에 필수 키(sample_id/status)가 없습니다.")
         sample_id = str(record["sample_id"])
         decision = latest.get(sample_id)
         parsed = sample_result_from_record(record)
@@ -523,7 +551,7 @@ def create_app(
             confusion = Confusion.from_pairs(
                 (str(record["label"]), str(record["status"])) for record in records
             )
-        except ValueError as exc:
+        except (KeyError, TypeError, ValueError) as exc:
             raise UiInputError(str(exc)) from exc
         return {
             "run": entry,
@@ -533,6 +561,8 @@ def create_app(
         }
 
     def mask_layers(entry: RunEntry, record: dict[str, Any]) -> list[dict[str, Any]]:
+        if "sample_id" not in record:
+            raise UiInputError("results.jsonl 레코드에 sample_id가 없습니다.")
         sample_id = str(record["sample_id"])
         stages = stage_paths(entry, sample_id)
         base = f"/runs/{entry.run_id}/samples/{quote(sample_id)}"
@@ -578,12 +608,34 @@ def create_app(
             exc.status_code,
         )
 
+    @app.exception_handler(sqlite3.Error)
+    @app.exception_handler(DatabaseError)
+    def handle_db_error(
+        request: Request, exc: sqlite3.Error | DatabaseError
+    ) -> HTMLResponse | JSONResponse:
+        if request.url.path.startswith("/api/"):
+            return JSONResponse(
+                {"detail": "검사 기록 데이터베이스를 처리할 수 없습니다."},
+                status_code=503,
+            )
+        return render(
+            request,
+            "error.html",
+            {"code": 404, "message": "검사 기록 데이터베이스를 읽을 수 없습니다."},
+            404,
+        )
+
     @app.get("/", response_class=HTMLResponse)
     def runs_index(request: Request) -> HTMLResponse:
         entries = discover_runs(app.state.runs_dir)
-        total_samples = sum(
-            int((e.payload.get("counts") or {}).get("samples") or 0) for e in entries
-        )
+        total_samples = 0
+        for e in entries:
+            counts_val = e.payload.get("counts")
+            if isinstance(counts_val, dict):
+                try:
+                    total_samples += int(counts_val.get("samples") or 0)
+                except (TypeError, ValueError):
+                    continue
         preview_samples: list[dict[str, Any]] = []
         if entries:
             latest_entry = entries[0]
@@ -673,20 +725,25 @@ def create_app(
         ng_min, review_band_max = float(run_cfg.scoring.ng_min), REVIEW_BAND_MAX
         counterfactual = explain_counterfactual(sample_result_from_record(record), run_cfg)
         timing_raw = record.get("timing_ms") or {}
-        stage_items = [(str(k), float(v)) for k, v in timing_raw.items() if str(k) != "total"]
-        max_stage = max((v for _, v in stage_items), default=0.0)
-        if max_stage <= 0.0:
-            max_stage = max((float(v) for v in timing_raw.values()), default=1.0) or 1.0
-        timing_bars = [
-            {
-                "name": str(k),
-                "ms": float(v),
-                "pct": 100.0
-                if str(k) == "total"
-                else min(100.0, round((float(v) / max_stage) * 100.0, 1)),
-            }
-            for k, v in timing_raw.items()
-        ]
+        if not isinstance(timing_raw, dict):
+            raise UiInputError("results.jsonl timing_ms 필드가 객체가 아닙니다.")
+        try:
+            stage_items = [(str(k), float(v)) for k, v in timing_raw.items() if str(k) != "total"]
+            max_stage = max((v for _, v in stage_items), default=0.0)
+            if max_stage <= 0.0:
+                max_stage = max((float(v) for v in timing_raw.values()), default=1.0) or 1.0
+            timing_bars = [
+                {
+                    "name": str(k),
+                    "ms": float(v),
+                    "pct": 100.0
+                    if str(k) == "total"
+                    else min(100.0, round((float(v) / max_stage) * 100.0, 1)),
+                }
+                for k, v in timing_raw.items()
+            ]
+        except (TypeError, ValueError) as exc:
+            raise UiInputError("results.jsonl timing_ms 값이 손상됐습니다.") from exc
         return render(
             request,
             "sample.html",
@@ -794,7 +851,7 @@ def create_app(
         latest = store.latest()
         ng_min, review_band_max = _run_scoring_bounds(entry)
         sort_mode = "priority" if sort == "priority" else ""
-        queue = [r for r in records if str(r["status"]) == "REVIEW"]
+        queue = [r for r in records if str(r.get("status", "")) == "REVIEW"]
         views = [
             sample_view(
                 entry,
@@ -893,13 +950,13 @@ def create_app(
             confusion = Confusion.from_pairs(
                 (str(r["label"]), str(r["status"])) for r in records
             )
-        except ValueError as exc:
+        except (KeyError, TypeError, ValueError) as exc:
             raise UiInputError(str(exc)) from exc
         ratios = image_metrics(confusion)
         latest = ReviewStore(entry.run_dir).latest()
         ng_min, review_band_max = _run_scoring_bounds(entry)
-        review_records = [r for r in records if str(r["status"]) == "REVIEW"]
-        review_done = sum(1 for r in review_records if str(r["sample_id"]) in latest)
+        review_records = [r for r in records if str(r.get("status", "")) == "REVIEW"]
+        review_done = sum(1 for r in review_records if str(r.get("sample_id", "")) in latest)
         priority_counts = {"P0": 0, "P1": 0, "P2": 0, "P3": 0}
         for r in review_records:
             parsed = sample_result_from_record(r)
@@ -907,8 +964,8 @@ def create_app(
                 parsed, ng_min=ng_min, review_band_max=review_band_max
             )
             priority_counts[triage.priority.value] += 1
-        escapes = [r for r in records if r["label"] == "defect" and r["status"] == "OK"]
-        false_ng = [r for r in records if r["label"] == "good" and r["status"] == "NG"]
+        escapes = [r for r in records if r.get("label") == "defect" and r.get("status") == "OK"]
+        false_ng = [r for r in records if r.get("label") == "good" and r.get("status") == "NG"]
         hotspot = _build_strip_hotspot_heatmap(records, load_manifest_map(entry.run_dir))
         return render(
             request,
@@ -934,8 +991,11 @@ def create_app(
         records = load_results(entry.run_dir)
         latest = ReviewStore(entry.run_dir).latest()
         ng_min, review_band_max = _run_scoring_bounds(entry)
-        review_records = [r for r in records if str(r["status"]) == "REVIEW"]
-        by_id = {str(r["sample_id"]): r for r in review_records}
+        review_records = [r for r in records if str(r.get("status", "")) == "REVIEW"]
+        try:
+            by_id = {str(r["sample_id"]): r for r in review_records}
+        except KeyError as exc:
+            raise UiInputError("results.jsonl 레코드에 sample_id가 없습니다.") from exc
         assessments = []
         geoms_by_id = {}
         for r in review_records:
@@ -1105,12 +1165,15 @@ def create_app(
             wd_records = load_results(entry.run_dir)
             wd_decisions = ReviewStore(entry.run_dir).read_all()
             wd_ng_min, wd_review_max = _run_scoring_bounds(entry)
-            calibration = analyze_human_feedback(
-                wd_records,
-                wd_decisions,
-                ng_min=wd_ng_min,
-                review_band_max=wd_review_max,
-            )
+            try:
+                calibration = analyze_human_feedback(
+                    wd_records,
+                    wd_decisions,
+                    ng_min=wd_ng_min,
+                    review_band_max=wd_review_max,
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                raise UiInputError(f"손상된 run 결과를 분석할 수 없습니다: {exc}") from exc
 
         db_exists = app.state.db_path.is_file()
         db_audit = audit_records_db(app.state.db_path)
@@ -1123,11 +1186,16 @@ def create_app(
         if base_id and target_id:
             base_entry = load_run(app.state.runs_dir, base_id)
             target_entry = load_run(app.state.runs_dir, target_id)
-            drift_report = assess_drift(
-                load_results(base_entry.run_dir),
-                load_results(target_entry.run_dir),
-                policy=DEFAULT_DRIFT_POLICY,
-            )
+            try:
+                drift_report = assess_drift(
+                    load_results(base_entry.run_dir),
+                    load_results(target_entry.run_dir),
+                    policy=DEFAULT_DRIFT_POLICY,
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                raise UiInputError(
+                    f"손상된 run 결과로 드리프트를 계산할 수 없습니다: {exc}"
+                ) from exc
             scale_max = 0.35
             for feat in drift_report.features:
                 drift_gauges.append(
@@ -1198,7 +1266,7 @@ def create_app(
                 row = get_inspection(connection, inspection_id)
             finally:
                 connection.close()
-        except sqlite3.Error as exc:
+        except (sqlite3.Error, DatabaseError) as exc:
             raise UiInputError(f"검사 기록 DB를 읽지 못했습니다: {exc}") from exc
         if row is None:
             raise UiInputError(f"검사 기록을 찾을 수 없습니다: id={inspection_id}")
@@ -1269,32 +1337,34 @@ def create_app(
         DB 및 runs 디렉터리에는 아무 파일도 남기지 않으며 항상 ``split="tune"`` 으로만 실행한다.
         """
 
-        _check_origin(request)
-        filename = Path(file.filename or "upload.png").name
-        suffix = Path(filename).suffix.lower()
-        if suffix not in ALLOWED_CINEMA_EXTENSIONS:
-            await file.close()
-            return JSONResponse(
-                {"detail": f"지원하지 않는 이미지 확장자입니다: {suffix or '(없음)'}"},
-                status_code=400,
-            )
-
         try:
-            payload_bytes = await read_upload_bounded(
-                file,
-                max_bytes=MAX_CINEMA_UPLOAD_BYTES,
-                chunk_bytes=CINEMA_UPLOAD_CHUNK_BYTES,
-            )
-        except UploadTooLargeError:
-            return JSONResponse(
-                {
-                    "detail": (
-                        f"업로드 용량이 제한({MAX_CINEMA_UPLOAD_BYTES // (1024 * 1024)}MiB)을 "
-                        "초과했습니다."
-                    )
-                },
-                status_code=413,
-            )
+            _check_origin(request)
+            filename = Path(file.filename or "upload.png").name
+            suffix = Path(filename).suffix.lower()
+            if suffix not in ALLOWED_CINEMA_EXTENSIONS:
+                return JSONResponse(
+                    {"detail": f"지원하지 않는 이미지 확장자입니다: {suffix or '(없음)'}"},
+                    status_code=400,
+                )
+
+            try:
+                payload_bytes = await read_upload_bounded(
+                    file,
+                    max_bytes=MAX_CINEMA_UPLOAD_BYTES,
+                    chunk_bytes=CINEMA_UPLOAD_CHUNK_BYTES,
+                )
+            except UploadTooLargeError:
+                return JSONResponse(
+                    {
+                        "detail": (
+                            f"업로드 용량이 제한({MAX_CINEMA_UPLOAD_BYTES // (1024 * 1024)}MiB)을 "
+                            "초과했습니다."
+                        )
+                    },
+                    status_code=413,
+                )
+        finally:
+            await file.close()
 
         if not payload_bytes:
             return JSONResponse({"detail": "빈 파일은 검사할 수 없습니다."}, status_code=400)
@@ -1303,9 +1373,9 @@ def create_app(
             check_image_pixel_budget(
                 payload_bytes,
                 max_pixels=_cinema_mod.MAX_CINEMA_IMAGE_PIXELS,
-                require_dimensions=False,
+                require_dimensions=True,
             )
-        except ImagePixelLimitError as exc:
+        except (ImagePixelLimitError, ImageHeaderError) as exc:
             return JSONResponse({"detail": f"이미지 검사 실패: {exc}"}, status_code=400)
 
         cfg = load_cinema_config(app.state.repo_root)

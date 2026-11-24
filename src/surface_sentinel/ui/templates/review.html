@@ -140,10 +140,10 @@ document.addEventListener("keydown", function (event) {
   if (event.target.closest("input, textarea, select")) { return; }
   var key = event.key.toLowerCase();
   {% if next_url %}
-  if (key === "j") { window.location.href = "{{ next_url }}"; }
+  if (key === "j") { window.location.href = {{ next_url | tojson }}; }
   {% endif %}
   {% if prev_url %}
-  if (key === "k") { window.location.href = "{{ prev_url }}"; }
+  if (key === "k") { window.location.href = {{ prev_url | tojson }}; }
   {% endif %}
 });
 </script>

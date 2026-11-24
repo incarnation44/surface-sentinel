@@ -171,6 +171,11 @@ def decode_det(
         raise ValueError(f"출력은 2차원이어야 합니다: shape={pred.shape}")
 
     rows, columns = pred.shape
+    if rows > 32 and columns < 16 and columns < rows:
+        raise ValueError(
+            "소형 N 전치 export([1, N, 4+nc])는 거부합니다: "
+            f"rows={rows} columns={columns}"
+        )
     if num_classes is None:
         inferred = rows - 4
         if inferred > MAX_INFERRED_CLASSES or (
@@ -328,6 +333,13 @@ def decode_seg(
         pred = pred[0]
     if pred.ndim != 2:
         raise ValueError(f"output0 은 2차원이어야 합니다: shape={pred.shape}")
+
+    rows, columns = pred.shape
+    if rows > 32 and columns < 16 and columns < rows:
+        raise ValueError(
+            "소형 N 전치 export([1, N, 4+nc+C])는 거부합니다: "
+            f"rows={rows} columns={columns}"
+        )
 
     proto_array = np.asarray(proto, dtype=np.float32)
     proto_channels = int(proto_array.shape[1] if proto_array.ndim == 4 else proto_array.shape[0])

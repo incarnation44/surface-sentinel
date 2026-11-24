@@ -35,7 +35,6 @@ from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 from typing import Annotated, Any
 
-import cv2
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.concurrency import run_in_threadpool
@@ -131,21 +130,60 @@ def engine_status_counts(connection: sqlite3.Connection) -> dict[str, dict[str, 
     return dict(sorted(counts.items()))
 
 
-def _row_overlay_path(row: dict[str, Any], runs_dir: Path) -> Path | None:
-    """DB 행의 오버레이 경로가 ``runs_dir`` 안의 실제 파일일 때만 돌려준다."""
+def _safe_json_loads(raw: Any, default: Any) -> Any:
+    """DB JSON 컬럼을 안전하게 파싱한다. 손상·타입 불일치면 기본값을 돌려준다."""
 
-    raw = str(row.get("overlay_path") or "")
-    if not raw:
-        return None
-    candidate = Path(raw)
+    if raw is None:
+        return default
+    text = str(raw).strip()
+    if not text:
+        return default
     try:
-        if not candidate.is_file():
-            return None
-        if not candidate.resolve().is_relative_to(runs_dir.resolve()):
-            return None
-    except OSError:
+        loaded = json.loads(text)
+    except (TypeError, ValueError):
+        return default
+    if not isinstance(loaded, type(default)):
+        return default
+    return loaded
+
+
+def _safe_timing_dict(raw: Any) -> dict[str, float]:
+    parsed = _safe_json_loads(raw, {})
+    result: dict[str, float] = {}
+    for key, value in parsed.items():
+        with contextlib.suppress(TypeError, ValueError):
+            result[str(key)] = float(value)
+    return result
+
+
+def _safe_components_list(raw: Any) -> list[ComponentOut]:
+    parsed = _safe_json_loads(raw, [])
+    components: list[ComponentOut] = []
+    for item in parsed:
+        if isinstance(item, dict):
+            with contextlib.suppress(TypeError, ValueError):
+                components.append(ComponentOut(**item))
+    return components
+
+
+def _row_overlay_path(row: dict[str, Any], runs_dir: Path) -> Path | None:
+    """DB 행의 오버레이 경로가 ``runs_dir`` 안의 실제 PNG 파일일 때만 돌려준다."""
+
+    raw = str(row.get("overlay_path") or "").strip()
+    if not raw or "\x00" in raw:
         return None
-    return candidate
+    normalized = raw.replace("\\", "/")
+    try:
+        resolved = Path(normalized).resolve()
+        if not resolved.is_file():
+            return None
+        if resolved.suffix.lower() != ".png":
+            return None
+        if not resolved.is_relative_to(runs_dir.resolve()):
+            return None
+    except (OSError, ValueError):
+        return None
+    return resolved
 
 
 def _inspection_item(row: dict[str, Any], runs_dir: Path) -> InspectionItem:
@@ -163,7 +201,7 @@ def _inspection_item(row: dict[str, Any], runs_dir: Path) -> InspectionItem:
         score=float(row["score"]),
         engine=EngineName(str(row["engine"])),
         model_version=str(row["model_version"]),
-        reasons=[str(reason) for reason in json.loads(str(row["reasons"]) or "[]")],
+        reasons=[str(reason) for reason in _safe_json_loads(row.get("reasons"), [])],
         overlay_url=(
             f"/api/inspections/{inspection_id}/overlay.png" if has_overlay else None
         ),
@@ -200,8 +238,6 @@ def _observations(
     rows = list_engine_observations(connection, inspection_id)
     items: list[EngineObservationOut] = []
     for row in rows:
-        components_raw = json.loads(str(row.get("components") or "[]"))
-        timing_raw = json.loads(str(row.get("timing_ms") or "{}"))
         items.append(
             EngineObservationOut(
                 observation_id=int(row["id"]),
@@ -209,12 +245,12 @@ def _observations(
                 task=str(row.get("task") or ""),
                 status=Status(str(row["status"])),
                 score=float(row["score"]),
-                reasons=[str(r) for r in json.loads(str(row.get("reasons") or "[]"))],
-                components=[ComponentOut(**c) for c in components_raw],
+                reasons=[str(r) for r in _safe_json_loads(row.get("reasons"), [])],
+                components=_safe_components_list(row.get("components")),
                 model_sha256=str(row.get("model_sha256") or ""),
                 overlay_path=str(row.get("overlay_path") or ""),
                 error_code=str(row.get("error_code") or ""),
-                timing_ms={str(k): float(v) for k, v in timing_raw.items()},
+                timing_ms=_safe_timing_dict(row.get("timing_ms")),
                 created_at=str(row["created_at"]),
             )
         )
@@ -229,13 +265,13 @@ def _assessments(
     rows = list_agent_assessments(connection, inspection_id)
     items: list[AgentAssessmentOut] = []
     for row in rows:
-        diag_raw = json.loads(str(row.get("diagnostics_json") or "{}"))
+        diag_raw = _safe_json_loads(row.get("diagnostics_json"), {})
         items.append(
             AgentAssessmentOut(
                 assessment_id=int(row["id"]),
                 assessment_hash=str(row["assessment_hash"]),
                 policy_hash=str(row["policy_hash"]),
-                flags=[str(f) for f in json.loads(str(row.get("flags_json") or "[]"))],
+                flags=[str(f) for f in _safe_json_loads(row.get("flags_json"), [])],
                 review_priority=(
                     str(row["review_priority"])
                     if row.get("review_priority") is not None
@@ -245,7 +281,7 @@ def _assessments(
                     str(row["stability"]) if row.get("stability") is not None else None
                 ),
                 recommended_action=str(row["recommended_action"]),
-                diagnostics=diag_raw if isinstance(diag_raw, dict) else {},
+                diagnostics=diag_raw,
                 trace_path=str(row.get("trace_path") or ""),
                 created_at=str(row["created_at"]),
             )
@@ -363,7 +399,7 @@ def _inspect(
     except FileNotFoundError as exc:
         raise HTTPException(
             status_code=503,
-            detail=f"{engine.value} 엔진 모델 파일이 없습니다: {exc}",
+            detail=f"{engine.value} 엔진 모델 파일이 없습니다.",
         ) from exc
     except ValueError as exc:
         # combined task 미설정 등 설정 오류(P0-3): 조용히 폴백하지 않고 명시 오류.
@@ -425,7 +461,14 @@ def _store_upload(upload_dir: Path, payload: bytes, sha256: str, suffix: str) ->
                 handle.write(payload)
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(temporary, path)
+            try:
+                os.replace(temporary, path)
+            except PermissionError:
+                if path.is_file() and path.stat().st_size == len(payload):
+                    with contextlib.suppress(OSError):
+                        temporary.unlink()
+                    return path
+                raise
         except OSError:
             with contextlib.suppress(OSError):
                 temporary.unlink()
@@ -483,6 +526,17 @@ def create_inspection_app(
     except ImportError:
         app.state.yolo_registry = None
 
+    @app.exception_handler(sqlite3.Error)
+    @app.exception_handler(DatabaseError)
+    def handle_db_error(
+        request: Request, exc: sqlite3.Error | DatabaseError
+    ) -> JSONResponse:
+        _logger.warning("검사 API 데이터베이스 오류: path=%s", request.url.path, exc_info=exc)
+        return JSONResponse(
+            {"detail": "검사 기록 데이터베이스를 처리할 수 없습니다."},
+            status_code=503,
+        )
+
     def _check_origin(request: Request) -> None:
         host = request.headers.get("host") or request.url.netloc
         try:
@@ -504,13 +558,17 @@ def create_inspection_app(
         """
 
         loop = asyncio.get_running_loop()
-        loop_locks = async_key_locks.setdefault(loop, {})
-        entry = loop_locks.get(key)
-        if entry is None:
-            entry = [asyncio.Lock(), 0]
-            loop_locks[key] = entry
-        entry[1] += 1
-        lock: asyncio.Lock = entry[0]
+        with key_locks_guard:
+            loop_locks = async_key_locks.get(loop)
+            if loop_locks is None:
+                loop_locks = {}
+                async_key_locks[loop] = loop_locks
+            entry = loop_locks.get(key)
+            if entry is None:
+                entry = [asyncio.Lock(), 0]
+                loop_locks[key] = entry
+            entry[1] += 1
+            lock: asyncio.Lock = entry[0]
         acquired = False
         try:
             await lock.acquire()
@@ -519,9 +577,10 @@ def create_inspection_app(
         finally:
             if acquired:
                 lock.release()
-            entry[1] -= 1
-            if entry[1] == 0 and loop_locks.get(key) is entry:
-                loop_locks.pop(key, None)
+            with key_locks_guard:
+                entry[1] -= 1
+                if entry[1] == 0 and loop_locks.get(key) is entry:
+                    loop_locks.pop(key, None)
 
     @contextmanager
     def _serialize_output_key(key: str) -> Iterator[None]:
@@ -599,22 +658,25 @@ def create_inspection_app(
         = 원래 실행과 같은 진단 값). 내부 경로·stack trace 는 응답에 넣지 않는다.
         """
 
-        _check_origin(request)
-        _validate_label_split(label, split)
-
-        payload = await _read_upload_bounded(file)
-        if not payload:
-            raise HTTPException(status_code=400, detail="빈 파일은 검사할 수 없습니다.")
-        suffix = Path(file.filename or "").suffix.lower()
-        if suffix not in IMAGE_SUFFIXES:
-            raise HTTPException(
-                status_code=400,
-                detail=f"이미지 확장자만 업로드할 수 있습니다: {suffix or '(없음)'}",
-            )
         try:
-            check_image_pixel_budget(payload, require_dimensions=False)
-        except ImagePixelLimitError as exc:
-            raise HTTPException(status_code=413, detail=str(exc)) from exc
+            _check_origin(request)
+            _validate_label_split(label, split)
+
+            payload = await _read_upload_bounded(file)
+            if not payload:
+                raise HTTPException(status_code=400, detail="빈 파일은 검사할 수 없습니다.")
+            suffix = Path(file.filename or "").suffix.lower()
+            if suffix not in IMAGE_SUFFIXES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"이미지 확장자만 업로드할 수 있습니다: {suffix or '(없음)'}",
+                )
+            try:
+                check_image_pixel_budget(payload, require_dimensions=False)
+            except ImagePixelLimitError as exc:
+                raise HTTPException(status_code=413, detail=str(exc)) from exc
+        finally:
+            await file.close()
 
         sha256 = hashlib.sha256(payload).hexdigest()
         output_key = f"{sha256[:16]}-{engine.value}"
@@ -683,7 +745,9 @@ def create_inspection_app(
                             assessment = assess_cross_evidence(obs_a, obs_b)
                             arbitration = None
                             try:
-                                bgr = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
+                                from ..io.imageio import imread_unicode  # noqa: PLC0415
+
+                                bgr = imread_unicode(image_path)
                                 if bgr is not None:
                                     arbitration = arbitrate_patches(bgr, obs_a, obs_b)
                             except Exception:  # noqa: BLE001 - 패치 중재 실패 시 교차 증거는 유지
@@ -761,14 +825,13 @@ def create_inspection_app(
             sample_id = str(row["sample_id"])
             status = Status(str(row["status"]))
             score = float(row["score"])
-            reasons = [str(reason) for reason in json.loads(str(row["reasons"]) or "[]")]
+            reasons = [str(reason) for reason in _safe_json_loads(row.get("reasons"), [])]
             stored = next(
                 (obs for obs in observation_rows if str(obs["engine"]) == engine.value),
                 None,
             )
             if stored is not None:
-                stored_components = json.loads(str(stored.get("components") or "[]"))
-                components_out = [ComponentOut(**component) for component in stored_components]
+                components_out = _safe_components_list(stored.get("components"))
                 error_code = str(stored.get("error_code") or "")
                 # error_stage 는 관찰 표에 저장하지 않는다 → 미저장이므로 빈 문자열.
                 error_stage = ""
@@ -812,12 +875,16 @@ def create_inspection_app(
         """검사 기록 목록(``id`` 오름차순, 페이지네이션·상태 필터)."""
 
         with open_db() as connection:
-            payload = stats_payload(connection)
-            total = (
-                int(payload["total"])
-                if status is None
-                else int(payload["by_status"].get(status.value, 0))
-            )
+            if status is None:
+                count_row = connection.execute(
+                    "SELECT COUNT(*) AS n FROM inspections"
+                ).fetchone()
+            else:
+                count_row = connection.execute(
+                    "SELECT COUNT(*) AS n FROM inspections WHERE status = ?",
+                    (status.value,),
+                ).fetchone()
+            total = int(count_row["n"]) if count_row is not None else 0
             rows = list_inspections(
                 connection,
                 status=None if status is None else status.value,
@@ -844,10 +911,7 @@ def create_inspection_app(
                 image_sha256=str(row["image_sha256"]),
                 config_hash=str(row["config_hash"]),
                 overlay_path=str(row["overlay_path"]),
-                timing_ms={
-                    str(key): float(value)
-                    for key, value in json.loads(str(row["timing_ms"]) or "{}").items()
-                },
+                timing_ms=_safe_timing_dict(row.get("timing_ms")),
                 reviews=_reviews(connection, inspection_id),
                 task=str(row["task"]),
                 model_sha256=str(row["model_sha256"]),

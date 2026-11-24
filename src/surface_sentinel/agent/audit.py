@@ -26,6 +26,7 @@ from typing import Any
 from ..config import ConfigError, default_config, load_config
 from ..contracts import Status
 from ..io.artifacts import CONFIG_SNAPSHOT, RESULTS_JSONL, RUN_JSON
+from ..records.db import DatabaseError, connect_readonly
 from ..records.fingerprint import canonical_json_sha256
 from ..records.store import RECOMMENDED_ACTIONS, REVIEW_PRIORITIES, STABILITY_LEVELS
 from ..review.store import REVIEW_DECISIONS_JSONL, ReviewDecision, ReviewError
@@ -459,12 +460,10 @@ def audit_records_db(db_path: str | Path) -> AuditReport:
             summary="검사 기록 DB 파일이 없습니다",
         )
 
-    uri = f"{path.resolve().as_uri()}?mode=ro"
     connection: sqlite3.Connection | None = None
     checks: list[AuditCheck] = []
     try:
-        connection = sqlite3.connect(uri, uri=True)
-        connection.row_factory = sqlite3.Row
+        connection = connect_readonly(path)
         tables = {
             str(row[0])
             for row in connection.execute(
@@ -596,7 +595,7 @@ def audit_records_db(db_path: str | Path) -> AuditReport:
                     detail="provenance_complete 컬럼이 없는 구형 스키마입니다",
                 )
             )
-    except sqlite3.Error as exc:
+    except (sqlite3.Error, DatabaseError) as exc:
         checks.append(
             AuditCheck(
                 name="db_readable",

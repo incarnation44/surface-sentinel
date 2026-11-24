@@ -556,3 +556,66 @@ def test_duplicate_key_waiters_do_not_starve_other_images(
     ids = asyncio.run(_run())
     assert ids[0] == ids[1] == ids[2]
     assert ids[3] != ids[0]
+
+
+def test_api_inspections_total_matches_items_after_recheck(
+    runs_dir: Path, client: TestClient
+) -> None:
+    from surface_sentinel.config import default_config
+    from surface_sentinel.records.db import connect
+    from surface_sentinel.records.identity import opencv_spec
+    from surface_sentinel.records.store import insert_inspection
+
+    cfg_hash = default_config().config_hash
+    sha = "a" * 64
+    spec_base = opencv_spec(cfg_hash)
+    spec_recheck = spec_base.with_recheck_tag("recheck-1")
+
+    conn = connect(runs_dir / "records.db")
+    try:
+        err_res = SampleResult(
+            run_id="r-err",
+            sample_id="s1",
+            original_id="s1",
+            split="tune",
+            label="unknown",
+            status=Status.ERROR,
+            score=0.0,
+            config_hash=cfg_hash,
+        )
+        ok_res = SampleResult(
+            run_id="r-ok",
+            sample_id="s1",
+            original_id="s1",
+            split="tune",
+            label="unknown",
+            status=Status.OK,
+            score=0.05,
+            config_hash=cfg_hash,
+        )
+        insert_inspection(
+            conn, err_res, engine="opencv", image_sha256=sha, fingerprint=spec_base.fingerprint
+        )
+        insert_inspection(
+            conn, ok_res, engine="opencv", image_sha256=sha, fingerprint=spec_recheck.fingerprint
+        )
+    finally:
+        conn.close()
+
+    resp_all = client.get("/api/inspections")
+    assert resp_all.status_code == 200
+    body_all = resp_all.json()
+    assert body_all["total"] == 2
+    assert len(body_all["items"]) == 2
+
+    resp_err = client.get("/api/inspections", params={"status": "ERROR"})
+    assert resp_err.status_code == 200
+    body_err = resp_err.json()
+    assert body_err["total"] == 1
+    assert len(body_err["items"]) == 1
+
+    # /api/stats는 대체된 ERROR를 제외하는 기존 계약을 유지한다.
+    resp_stats = client.get("/api/stats")
+    assert resp_stats.status_code == 200
+    assert resp_stats.json()["total"] == 1
+

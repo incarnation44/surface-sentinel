@@ -567,7 +567,9 @@ def save_dual_overlay(
         bgr, observation_a, observation_b, assessment,
         color_a=color_a, color_b=color_b, thickness=thickness,
     )
-    if not cv2.imwrite(str(target), overlay):
+    from ..io.imageio import imwrite_png_atomic  # noqa: PLC0415
+
+    if not imwrite_png_atomic(target, overlay):
         raise OSError(f"dual overlay 저장 실패: {target}")
     return target
 

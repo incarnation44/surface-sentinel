@@ -306,3 +306,103 @@ def test_cinema_preset_route_is_async_handler(env: tuple[Path, Path, Path]) -> N
         r for r in app.router.routes if getattr(r, "path", "") == "/cinema/preset/{preset_id}"
     )
     assert inspect.iscoroutinefunction(route.endpoint)
+
+
+def test_cinema_rejects_unrecognized_header_before_temp_write(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import tempfile
+    from contextlib import asynccontextmanager
+
+    from starlette.datastructures import UploadFile
+
+    from surface_sentinel.ui import app as ui_app_mod
+
+    temp_created = False
+    slot_entered = False
+    orig_tempdir = tempfile.TemporaryDirectory
+
+    def tracked_tempdir(*args: object, **kwargs: object):  # noqa: ANN202
+        nonlocal temp_created
+        temp_created = True
+        return orig_tempdir(*args, **kwargs)
+
+    @asynccontextmanager
+    async def tracked_slot():  # noqa: ANN202
+        nonlocal slot_entered
+        slot_entered = True
+        yield
+
+    close_calls = 0
+    orig_close = UploadFile.close
+
+    async def tracked_close(self: UploadFile) -> None:
+        nonlocal close_calls
+        close_calls += 1
+        await orig_close(self)
+
+    monkeypatch.setattr(tempfile, "TemporaryDirectory", tracked_tempdir)
+    monkeypatch.setattr(ui_app_mod, "async_pipeline_slot", tracked_slot)
+    monkeypatch.setattr(UploadFile, "close", tracked_close)
+
+    # 1) 알 수 없는 이미지 헤더는 슬롯 획득·임시파일 쓰기 전에 400으로 차단한다.
+    resp = client.post(
+        "/cinema/inspect",
+        files={"file": ("broken.png", b"not-a-valid-image-header", "image/png")},
+    )
+    assert resp.status_code == 400
+    assert temp_created is False
+    assert slot_entered is False
+    assert close_calls >= 1
+
+    # 2) 조기 403 Origin 거부 경로에서도 UploadFile.close()가 호출된다.
+    before_403 = close_calls
+    resp_403 = client.post(
+        "/cinema/inspect",
+        files={"file": ("broken.png", b"not-a-valid-image-header", "image/png")},
+        headers={"Origin": "https://evil.example"},
+    )
+    assert resp_403.status_code == 403
+    assert close_calls > before_403
+
+
+def test_cinema_empty_roi_and_nonfinite_response_frame_safe(
+    tmp_path: Path,
+) -> None:
+    import json
+    import warnings
+
+    from surface_sentinel.ui.cinema import (
+        _render_response_frame,
+        _render_roi_frame,
+        discover_cinema_presets,
+    )
+
+    bgr = np.full((32, 32, 3), 120, dtype=np.uint8)
+    empty_roi = np.zeros((32, 32), dtype=np.uint8)
+    roi_frame = _render_roi_frame(bgr, empty_roi)
+    assert roi_frame.shape == (32, 32, 3)
+    assert roi_frame.dtype == np.uint8
+
+    bad_resp = np.full((32, 32), 10.0, dtype=np.float32)
+    bad_resp[0, 0] = np.nan
+    bad_resp[0, 1] = np.inf
+    bad_resp[0, 2] = -np.inf
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        resp_frame = _render_response_frame(bad_resp, np.full((32, 32), 255, dtype=np.uint8))
+    assert resp_frame.shape == (32, 32, 3)
+    assert resp_frame.dtype == np.uint8
+
+    # results.jsonl 레코드에 score=None 이 있어도 discover_cinema_presets 가 실패하지 않는다.
+    runs_dir = tmp_path / "runs"
+    raw_root = tmp_path / "raw"
+    runs_dir.mkdir()
+    run_dir = ui_run.make_run(runs_dir, raw_root)
+    res_path = run_dir / "results.jsonl"
+    rows = [json.loads(line) for line in res_path.read_text(encoding="utf-8").splitlines()]
+    rows[0]["score"] = None
+    res_path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+    presets = discover_cinema_presets(runs_dir, raw_root, tmp_path)
+    assert len(presets) >= 1
+

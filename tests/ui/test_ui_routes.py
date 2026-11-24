@@ -296,3 +296,23 @@ def test_manifest_path_traversal_rejected(
         manifest.write_text(original.replace("tune/70001.png", bad), encoding="utf-8")
         response = client.get(f"/runs/{ui_run.RUN_ID}/samples/70001/original.png")
         assert response.status_code == 404
+
+
+def test_review_page_script_uses_tojson_without_html_entity_mangling(
+    client: TestClient,
+) -> None:
+    import re
+
+    response = client.get(f"/runs/{ui_run.RUN_ID}/review?sort=priority")
+    assert response.status_code == 200
+    scripts = re.findall(r"<script>(.*?)</script>", response.text, flags=re.DOTALL)
+    nav_scripts = [s for s in scripts if "window.location.href" in s]
+    assert nav_scripts
+    script_body = nav_scripts[0]
+    assert "&amp;" not in script_body
+    href_match = re.search(r"window\.location\.href\s*=\s*(\".*?\");", script_body)
+    assert href_match is not None
+    parsed_url = json.loads(href_match.group(1))
+    assert parsed_url.startswith(f"/runs/{ui_run.RUN_ID}/review?")
+    assert "&sort=priority" in parsed_url
+    assert "&amp;" not in parsed_url

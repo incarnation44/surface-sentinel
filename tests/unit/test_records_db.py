@@ -360,3 +360,42 @@ def test_insert_inspection_with_dedup_reports_atomic_status(conn: sqlite3.Connec
     assert first_dedup is False
     assert second_dedup is True
     assert second_id == first_id
+
+
+def test_store_rejects_nonfinite_score_and_cli_records_reads_readonly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from surface_sentinel.cli import main as cli_main
+    from surface_sentinel.records import db as db_mod
+    from surface_sentinel.records.store import insert_engine_observation
+
+    db_path = tmp_path / "records.db"
+    connection = connect(db_path)
+    try:
+        init_db(connection)
+        for bad_score in (float("nan"), float("inf"), float("-inf")):
+            bad_res = _result(score=bad_score)
+            with pytest.raises(ValueError):
+                insert_inspection(connection, bad_res, engine="opencv", image_sha256=SHA_A)
+            with pytest.raises(ValueError):
+                insert_inspection_with_dedup(
+                    connection, bad_res, engine="opencv", image_sha256=SHA_A
+                )
+
+        insp_id = insert_inspection(connection, _result(), engine="opencv", image_sha256=SHA_A)
+        for bad_score in (float("nan"), float("inf"), float("-inf")):
+            with pytest.raises(ValueError):
+                insert_engine_observation(
+                    connection, insp_id, _result(score=bad_score), engine="opencv"
+                )
+    finally:
+        connection.close()
+
+    # CLI records list/stats는 읽기 전용(connect_readonly)으로만 DB를 연다.
+    def _forbid_rw_connect(*args: object, **kwargs: object) -> object:
+        raise AssertionError("읽기 전용 CLI 명령은 connect() 대신 connect_readonly()를 써야 합니다")
+
+    monkeypatch.setattr(db_mod, "connect", _forbid_rw_connect)
+    assert cli_main(["records", "list", "--db", str(db_path)]) == 0
+    assert cli_main(["records", "stats", "--db", str(db_path)]) == 0
+

@@ -88,9 +88,12 @@ class YoloEngineRegistry:
         세션 캐시는 건드리지 않는다 — 재해시 결과가 같은 SHA 면 세션은 그대로 재사용된다.
         """
 
-        path = Path(model_path)
+        path = Path(model_path).resolve()
         with self._guard:
             self._sha_cache.pop(path, None)
+        from .inspect import invalidate_model_sha_cache  # noqa: PLC0415 - 순환 import 회피
+
+        invalidate_model_sha_cache(path)
 
     def _model_sha256(self, path: Path) -> str:
         """경로의 모델 바이트 SHA. **호출자가 ``self._guard`` 를 잡고 있어야 한다.**
@@ -120,7 +123,7 @@ class YoloEngineRegistry:
         ``cold_ms`` 는 이번 호출에서 세션을 새로 만든 시간(ms)이며 재사용이면 0.0.
         """
 
-        path = Path(model_path)
+        path = Path(model_path).resolve()
         with self._guard:
             key = (
                 self._model_sha256(path),
