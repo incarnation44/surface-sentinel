@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import os
 import struct
 import threading
 import time
@@ -894,12 +895,12 @@ def test_batch_and_cache_reject_manifest_path_traversal(
             defect_pixels=10 if mask_path else 0,
         )
 
-    bad_paths = [
-        "../outside.png",
-        str(outside),
-        "/etc/passwd",
-        "\\windows\\system32\\cmd.exe",
-    ]
+    # 절대 경로 표기는 플랫폼별로 다르다: POSIX에서 백슬래시 경로는 상대 파일명이라 탈출이 아니다.
+    bad_paths = ["../outside.png", str(outside)]
+    if os.name == "nt":
+        bad_paths += ["/etc/passwd", "\\windows\\system32\\cmd.exe"]
+    else:
+        bad_paths += ["/etc/passwd"]
     for bad in bad_paths:
         with pytest.raises(BatchInputError):
             _resolve_sample_paths(raw_root, _make_row(bad))

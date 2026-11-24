@@ -244,6 +244,8 @@ def test_invalidate_resolves_paths_and_syncs_inspect_sha_cache(
     resolved = str(model.resolve())
     assert any(key[0] == resolved for key in yolo_inspect._MODEL_SHA_CACHE)
 
+    # CI처럼 저장소와 tmp_path가 다른 드라이브에 있어도 relpath가 성립하도록 cwd를 옮긴다.
+    monkeypatch.chdir(tmp_path)
     relative = Path(os.path.relpath(model, Path.cwd()))
     registry.invalidate(relative)
 
