@@ -393,3 +393,66 @@ def test_inspection_detail_renders_korean_review_reason_summary(
     assert "MULTIPLE_WEAK_CANDIDATES" in text
 
 
+
+
+def test_inspection_demo_samples_random_with_labels_from_tune_csv(tmp_path: Path) -> None:
+    """tune.csv 가 있으면 20장씩 중복 없이 무작위로 소진하고, 다 쓰면 빈 목록 + 안내를 준다."""
+
+    runs_dir = tmp_path / "runs"
+    runs_dir.mkdir()
+    raw_root = tmp_path / "kolektorsdd2"
+    train_dir = raw_root / "train"
+    train_dir.mkdir(parents=True)
+    png_stub = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
+    rows = ["sample_id,image_path,label,source_split"]
+    for i in range(60):
+        name = f"{10000 + i}.png"
+        (train_dir / name).write_bytes(png_stub)
+        rows.append(f"{10000 + i},train/{name},{'defect' if i < 20 else 'good'},train")
+    splits = tmp_path / "data" / "splits"
+    splits.mkdir(parents=True)
+    (splits / "tune.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+
+    client = TestClient(create_app(runs_dir=runs_dir, raw_root=raw_root, repo_root=tmp_path))
+    seen: list[str] = []
+    first = client.get("/inspections/demo-samples", params={"limit": 20}).json()
+    assert len(first["samples"]) == 20 and first["total"] == 60 and first["remaining"] == 40
+    assert set(first["labels"]) == set(first["samples"])
+    assert sum(1 for v in first["labels"].values() if v == "defect") == 5
+    seen += first["samples"]
+    for _ in range(2):
+        body = client.get("/inspections/demo-samples", params={"limit": 20}).json()
+        seen += body["samples"]
+    assert len(seen) == 60 and len(set(seen)) == 60
+
+    done = client.get("/inspections/demo-samples", params={"limit": 20}).json()
+    assert done["samples"] == [] and done["remaining"] == 0
+    assert "모두 검사했습니다" in done["detail"]
+
+    assert client.post("/inspections/demo-samples/reset").json() == {"reset": True}
+    again = client.get("/inspections/demo-samples", params={"limit": 20}).json()
+    assert len(again["samples"]) == 20
+
+
+def test_explain_verdict_reports_values_against_thresholds() -> None:
+    """설명 표는 저장된 후보 수치를 기준값과 나란히 놓고, 판정을 다시 내리지 않는다."""
+
+    from surface_sentinel.config import default_config
+    from surface_sentinel.ui.verdict_explain import explain_verdict
+
+    cfg = default_config()
+    comp = {"area_px": 767, "mean_contrast_gray": 122.0, "evidence": 1.1992,
+            "touches_roi_border": False}
+    ng = explain_verdict({"status": "NG", "score": 1.1992, "reasons": ["DEFECT_EVIDENCE_STRONG"],
+                          "components": [comp]}, cfg)
+    assert "1.199" in ng["headline"] and "0.50" in ng["headline"]
+    assert ng["rules"][0]["hit"] is True
+    top = ng["candidates"][0]
+    assert top["contrast_capped"] is True and abs(top["contrast_norm"] - 1.5) < 1e-9
+
+    weak = [{"area_px": a, "mean_contrast_gray": 27.0, "evidence": e, "touches_roi_border": False}
+            for a, e in ((96, 0.386), (73, 0.326))]
+    rv = explain_verdict({"status": "REVIEW", "score": 0.386,
+                          "reasons": ["MULTIPLE_WEAK_CANDIDATES"], "components": weak}, cfg)
+    assert "2개" in rv["headline"] and "0.114" in rv["headline"]
+    assert any(r["hit"] and r["effect"] == "REVIEW" for r in rv["rules"])

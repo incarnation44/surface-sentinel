@@ -1,49 +1,46 @@
-{# SQLite 검사 기록 탐색기 (`GET /inspections`) — 단건 API·워커 검사 이력과 교차증거 유무를 목록 조회 -#}
+{# 사진 검사 (`GET /inspections`) — 무작위 샘플 20장·내 사진 검사, 정답 대비 결과 카드, 간단한 기록 표 -#}
 {% extends "base.html" %}
-{% block title %}실시간 검사 &amp; 기록 — Surface Sentinel{% endblock %}
+{% block title %}사진 검사 — Surface Sentinel{% endblock %}
 {% block content %}
-<div class="page-hero">
+<style>
+.ix-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.ix-hero h1{margin:0 0 4px}
+.ix-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.ix-big{font-size:16px;font-weight:800;padding:12px 22px;border-radius:10px;border:none;color:#fff;background:linear-gradient(135deg,#0f766e,#0d9488);cursor:pointer}
+.ix-big:disabled{opacity:.55;cursor:wait}
+.ix-upload{display:flex;gap:8px;align-items:center;padding:8px 12px;border:1px dashed var(--line);border-radius:10px}
+.ix-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}
+.ix-sum .kpi{padding:12px}
+.ix-sum .kpi-val{font-size:20px;white-space:nowrap}
+.ix-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:12px}
+.ix-card{border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--surface);display:flex;flex-direction:column;gap:6px}
+.ix-card.miss{border:2px solid var(--ng)}
+.ix-card img{width:100%;height:170px;object-fit:contain;background:#0b0f14;border-radius:6px;display:block}
+.ix-row{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:12.5px}
+.ix-why{font-size:12px;color:var(--muted);line-height:1.4;min-height:2.8em}
+.ix-ans{font-size:12px;font-weight:700}
+.ix-ans.ok{color:var(--ok)}.ix-ans.bad{color:var(--ng)}
+</style>
+
+<div class="ix-hero">
   <div>
-    <span class="page-eyebrow">OpenCV r20 &middot; Real-time Inspection &amp; DB</span>
-    <h1>실시간 사진 검사 &amp; 기록</h1>
-    <p class="page-sub">사진 1장 또는 <strong>샘플 20장을 한 번에 자동 검사</strong>하고, 결과와 불량(NG) 이력을 엑셀(CSV)로 바로 저장합니다.</p>
-    <p class="meta" style="margin:6px 0 0">저장소: <span class="hash">{{ db.path }}</span> (수정&middot;삭제 차단 8/8)</p>
+    <h1>사진 검사</h1>
+    <p class="page-sub" style="margin:0">동결된 <strong>OpenCV r20</strong>이 사진 한 장을 10단계로 처리해 <strong>OK · NG · REVIEW</strong>를 판정합니다. 카드를 누르면 <strong>어떤 수치가 기준을 넘었는지</strong> 바로 보입니다.</p>
   </div>
-  <div class="page-hero-aside navlinks" style="margin:0">
-    <a href="/">검사 허브</a>
-    <a href="/cinema">시네마 시연</a>
-    <a href="/stats">검사 통계</a>
-  </div>
+  <a href="/cinema" class="btn btn-ghost">10단계 검사 과정 보기 →</a>
 </div>
 
 {% if api_enabled %}
-<div class="card live-workbench-card" style="margin:12px 0 18px">
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-    <strong style="font-size:15px">실시간 이미지 검사 워크벤치 (1장 업로드 또는 샘플 20장 자동 검사)</strong>
-    <span class="mode-pill api-on">로컬 API 연결됨</span>
-  </div>
-  <p class="meta" style="margin:0 0 10px"><strong>사용 방법:</strong> 오른쪽 초록색 <strong>[샘플 20장 자동 검사]</strong> 버튼을 누르면 바로 연속 검사가 시작됩니다. 직접 사진을 골라 여러 장 검사할 수도 있습니다. (항상 <code>split=tune</code>으로 기록되어 봉인 시험 데이터에는 영향 없음)</p>
-  <form id="live-inspect-form" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
-    <div style="flex:1;min-width:240px">
-      <label for="live-file" style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">이미지 파일 (여러 장 선택 가능 · .png/.jpg/.bmp/.tif)</label>
+<div class="card live-workbench-card" style="margin-bottom:16px">
+  <div class="meta" style="margin:0 0 10px;font-weight:700">실시간 이미지 검사 워크벤치 · 누를 때마다 tune 사진(불량 약 25%)에서 <strong>겹치지 않게</strong> 20장씩 뽑고, 다 쓰면 알려 줍니다 · 봉인 시험 데이터 미사용</div>
+  <form id="live-inspect-form" class="ix-actions">
+    <button type="button" id="live-demo-20" class="ix-big">▶ 무작위 샘플 20장 검사</button>
+    <div class="ix-upload">
       <input type="file" id="live-file" name="file" accept=".png,.jpg,.jpeg,.bmp,.tif,.tiff" multiple required style="font-size:12px">
+      <button type="submit" id="live-submit">내 사진 검사</button>
     </div>
-    <div>
-      <label for="live-engine" style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">검사 엔진 (채택 정본)</label>
-      <select id="live-engine" name="engine" style="padding:5px 8px;border:1px solid var(--line);border-radius:4px;font-size:12px">
-        <option value="opencv">OpenCV r20 (채택)</option>
-      </select>
-    </div>
-    <div>
-      <label for="live-label" style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">정답 메모 (선택)</label>
-      <select id="live-label" name="label" style="padding:5px 8px;border:1px solid var(--line);border-radius:4px;font-size:12px">
-        <option value="unknown">unknown (모름 · 기본)</option>
-        <option value="defect">defect (불량 메모)</option>
-        <option value="good">good (정상 메모)</option>
-      </select>
-    </div>
-    <button type="submit" id="live-submit">선택 파일 검사</button>
-    <button type="button" id="live-demo-20" style="background:linear-gradient(135deg,#0f766e,#0d9488);color:#fff;border:none">샘플 20장 자동 검사</button>
+    <input type="hidden" id="live-engine" value="opencv">
+    <input type="hidden" id="live-label" value="unknown">
   </form>
   <div id="live-result" style="margin-top:12px"></div>
 </div>
@@ -52,74 +49,45 @@
 {% if not db.available %}
 <div class="notice">{{ db.message }}</div>
 {% else %}
-<div class="kpi-strip">
-  <div class="kpi kpi-accent"><div class="kpi-label">전체 기록</div><div class="kpi-val">{{ db.all_total }}</div></div>
-  <div class="kpi kpi-ok"><div class="kpi-label">OK (정상)</div><div class="kpi-val">{{ db.status_counts["OK"] }}</div></div>
-  <div class="kpi kpi-ng"><div class="kpi-label">NG (불량)</div><div class="kpi-val">{{ db.status_counts["NG"] }}</div></div>
-  <div class="kpi kpi-review"><div class="kpi-label">REVIEW (보류)</div><div class="kpi-val">{{ db.status_counts["REVIEW"] }}</div></div>
-</div>
-
-<form method="get" action="/inspections" class="toolbar card">
-  <label style="font-size:12px;font-weight:700">상태:
-    <select name="status" style="width:auto">
-      <option value="">전체</option>
-      {% for st in ["OK", "NG", "REVIEW", "ERROR"] %}
-      <option value="{{ st }}" {% if db.status == st %}selected{% endif %}>{{ st }}</option>
+<details class="card" {% if not api_enabled %}open{% endif %} style="padding:12px 16px">
+  <summary style="cursor:pointer;font-weight:800">검사 기록 {{ db.all_total }}건 · OK {{ db.status_counts["OK"] }} · NG {{ db.status_counts["NG"] }} · REVIEW {{ db.status_counts["REVIEW"] }} <span class="meta">(수정·삭제 차단 기록)</span></summary>
+  <form method="get" action="/inspections" class="toolbar" style="margin:10px 0">
+    <label style="font-size:12px;font-weight:700">판정:
+      <select name="status" style="width:auto">
+        <option value="">전체</option>
+        {% for st in ["OK", "NG", "REVIEW", "ERROR"] %}
+        <option value="{{ st }}" {% if db.status == st %}selected{% endif %}>{{ st }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">보기</button>
+    <span class="meta num" style="margin-left:auto">{{ db["items"]|length }} / {{ db.total }}건</span>
+    <a href="/inspections/export.csv" class="btn btn-ghost">CSV 저장</a>
+    <a href="/inspections/export.csv?status=NG" class="btn btn-ghost">NG 이력 CSV</a>
+  </form>
+  {% if db["items"] %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>번호</th><th>사진</th><th>판정</th><th>점수</th><th>사유</th><th>정답</th><th>시각(UTC)</th></tr></thead>
+    <tbody>
+      {% for it in db["items"] %}
+      <tr>
+        <td class="num"><a href="/inspections/{{ it.id }}">#{{ it.id }}</a></td>
+        <td class="num"><a href="/inspections/{{ it.id }}">{{ it.sample_id }}</a></td>
+        <td><span class="badge b-{{ it.status }}">{{ it.status }}</span></td>
+        <td class="num">{{ "%.3f"|format(it.score) }}</td>
+        <td style="font-size:12px">{% for r in it.reasons %}{{ verdict_reason_labels.get(r, r).split(" — ")[0] }}{% if not loop.last %}, {% endif %}{% endfor %}{% for f in it.flags %} <span class="flag-pill">{{ f }}</span>{% endfor %}</td>
+        <td>{% if it.label == "defect" %}불량{% elif it.label == "good" %}정상{% else %}<span class="meta">-</span>{% endif %}</td>
+        <td class="meta num">{{ it.created_at }}</td>
+      </tr>
       {% endfor %}
-    </select>
-  </label>
-  <label style="font-size:12px;font-weight:700">엔진:
-    <select name="engine" style="width:auto">
-      <option value="">전체</option>
-      {% for eng in db.engines %}
-      <option value="{{ eng }}" {% if db.engine == eng %}selected{% endif %}>{{ eng }}</option>
-      {% endfor %}
-    </select>
-  </label>
-  <button type="submit">필터 적용</button>
-  <a href="/inspections" class="btn btn-ghost">초기화</a>
-  <span class="meta num" style="margin-left:auto">조회 {{ db["items"]|length }} / {{ db.total }}건</span>
-  <a href="/inspections/export.csv" class="btn btn-ghost">CSV 저장</a>
-  <a href="/inspections/export.csv?status=NG" class="btn btn-ghost">NG 이력 CSV</a>
-</form>
-
-{% if db["items"] %}
-<div class="table-wrap">
-<table>
-  <thead>
-    <tr>
-      <th>번호</th><th>부품 ID</th><th>엔진</th><th>판정</th><th>점수</th>
-      <th>우선순위</th><th>참고 표시</th><th>기록 지문</th><th>기록 상태</th><th>검사 시각(UTC)</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% set prio_ko = {"P0": "긴급", "P1": "높음", "P2": "보통", "P3": "낮음"} %}
-    {% for it in db["items"] %}
-    <tr>
-      <td class="num"><a href="/inspections/{{ it.id }}">#{{ it.id }}</a></td>
-      <td class="num"><a href="/inspections/{{ it.id }}">{{ it.sample_id }}</a></td>
-      <td><code>{{ it.engine }}</code>{% if it.obs_count > 0 %}<span class="badge-note">({{ it.obs_count }}엔진)</span>{% endif %}</td>
-      <td><span class="badge b-{{ it.status }}">{{ it.status }}</span></td>
-      <td class="num">{{ "%.4f"|format(it.score) }}</td>
-      <td>
-        {% if it.review_priority %}<span class="prio p-{{ it.review_priority }}">{{ it.review_priority }} {{ prio_ko.get(it.review_priority, "") }}</span>{% else %}<span class="meta">-</span>{% endif %}
-      </td>
-      <td>
-        {% if it.flags %}
-          {% for f in it.flags %}<span class="flag-pill">{{ f }}</span>{% endfor %}
-        {% else %}<span class="meta">-</span>{% endif %}
-      </td>
-      <td class="hash" title="{{ it.fingerprint }}">{{ it.fingerprint[:12] ~ "..." if it.fingerprint else "-" }}</td>
-      <td>{% if it.provenance_complete %}<span class="badge b-PASS">완전</span>{% else %}<span class="badge b-REVISE">부분</span>{% endif %}</td>
-      <td class="meta num">{{ it.created_at }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-</div>
-{% else %}
-<div class="notice">조건에 맞는 검사 기록이 없습니다.</div>
-{% endif %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="notice">조건에 맞는 검사 기록이 없습니다.</div>
+  {% endif %}
+</details>
 {% endif %}
 
 {% if api_enabled %}
@@ -130,252 +98,152 @@
   var btn = document.getElementById("live-submit");
   var demoBtn = document.getElementById("live-demo-20");
   if (!form || !out) { return; }
+  var WHY = {
+    DEFECT_EVIDENCE_STRONG: "점수가 NG 기준 0.50 이상",
+    NO_DEFECT_EVIDENCE: "기준(면적≥40px·대비≥16) 넘는 후보 없음",
+    EVIDENCE_IN_REVIEW_BAND: "후보는 있으나 점수 0.50 미만",
+    MULTIPLE_WEAK_CANDIDATES: "0.25~0.50 약한 후보 2개 이상",
+    BORDER_TOUCHING_CANDIDATE: "후보가 검사 영역 테두리에 닿음",
+    CANDIDATE_TRUNCATED: "후보가 20개 상한 초과",
+    INPUT_QUALITY_LOW: "사진 품질 경고(흐림·밝기)",
+    ROI_UNCERTAIN: "검사 영역이 불확실"
+  };
 
-  function inspectOne(file, engine, label) {
+  function inspectOne(file, label) {
     var fd = new FormData();
     fd.append("file", file);
     fd.append("label", label);
     fd.append("split", "tune");
-    return fetch("/api/inspect?engine=" + encodeURIComponent(engine), { method: "POST", body: fd })
+    return fetch("/api/inspect?engine=opencv", { method: "POST", body: fd })
       .then(function (resp) {
-        return resp.json().then(function (data) { return { ok: resp.ok, data: data, fileName: file.name }; });
+        return resp.json().then(function (data) { return { ok: resp.ok, data: data }; });
       });
   }
 
-  async function runBatchFiles(files, engine, label) {
-    if (!files || !files.length) { return; }
-    btn.disabled = true;
-    if (demoBtn) { demoBtn.disabled = true; }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) { e.className = cls; }
+    if (text !== undefined) { e.textContent = text; }
+    return e;
+  }
+
+  async function runBatch(files, labels) {
+    if (!files.length) { return; }
+    btn.disabled = true; demoBtn && (demoBtn.disabled = true);
     out.textContent = "";
-
-    var statusBar = document.createElement("div");
-    statusBar.className = "okbox";
-    statusBar.style.display = "flex";
-    statusBar.style.flexWrap = "wrap";
-    statusBar.style.alignItems = "center";
-    statusBar.style.justifyContent = "space-between";
-    statusBar.style.gap = "8px";
-
-    var statusText = document.createElement("strong");
-    statusText.textContent = "연속 검사 시작 (0 / " + files.length + "장)...";
-    statusBar.appendChild(statusText);
-
-    var progTrack = document.createElement("div");
-    progTrack.style.width = "100%";
-    progTrack.style.height = "6px";
-    progTrack.style.background = "var(--track-bg)";
-    progTrack.style.borderRadius = "999px";
-    progTrack.style.overflow = "hidden";
-    var progFill = document.createElement("div");
-    progFill.style.height = "100%";
-    progFill.style.width = "0%";
-    progFill.style.background = "var(--accent)";
-    progFill.style.transition = "width 0.15s ease";
-    progTrack.appendChild(progFill);
-    statusBar.appendChild(progTrack);
-    out.appendChild(statusBar);
-
-    var grid = document.createElement("div");
-    grid.style.display = "grid";
-    grid.style.gridTemplateColumns = files.length === 1 ? "minmax(220px, 320px)" : "repeat(auto-fill, minmax(175px, 1fr))";
-    grid.style.gap = "10px";
-    grid.style.marginTop = "10px";
+    var bar = el("div", "okbox");
+    bar.style.display = "flex"; bar.style.flexWrap = "wrap"; bar.style.gap = "8px"; bar.style.alignItems = "center";
+    var barText = el("strong", "", "검사 중 0 / " + files.length);
+    bar.appendChild(barText);
+    out.appendChild(bar);
+    var sum = el("div", "ix-sum");
+    out.appendChild(sum);
+    var grid = el("div", "ix-grid");
     out.appendChild(grid);
 
-    var counts = { OK: 0, NG: 0, REVIEW: 0, ERROR: 0 };
-    var scores = [];
-    var totalElapsedMs = 0;
-    var flaggedItems = [];
-    var firstInspectionId = null;
-
+    var c = { OK: 0, NG: 0, REVIEW: 0, ERROR: 0 }, defects = 0, goods = 0, missed = 0, falseNg = 0, firstId = null, t0 = performance.now();
     for (var i = 0; i < files.length; i++) {
-      var file = files[i];
-      var t0 = performance.now();
+      var f = files[i], truth = labels[f.name] || "unknown";
+      var card = el("div", "ix-card");
       try {
-        var res = await inspectOne(file, engine, label);
-        totalElapsedMs += (performance.now() - t0);
-        var card = document.createElement("div");
-        card.style.border = "1px solid var(--line)";
-        card.style.borderRadius = "8px";
-        card.style.padding = "8px";
-        card.style.background = "var(--surface)";
-
-        if (!res.ok) {
-          counts.ERROR += 1;
-          card.className = "errbox";
-          card.textContent = file.name + ": " + ((res.data && res.data.detail) ? String(res.data.detail) : "실패");
-        } else {
-          var d = res.data;
-          if (firstInspectionId === null) { firstInspectionId = d.inspection_id; }
-          if (counts[d.status] !== undefined) { counts[d.status] += 1; }
-          scores.push(Number(d.score) || 0);
-          if (d.status === "NG" || d.status === "REVIEW") {
-            flaggedItems.push({ id: d.inspection_id, name: file.name, status: d.status, score: Number(d.score) || 0 });
-          }
-          var head = document.createElement("div");
-          head.style.display = "flex";
-          head.style.justifyContent = "space-between";
-          head.style.alignItems = "center";
-          head.style.gap = "4px";
-          head.style.marginBottom = "6px";
-
-          var nameEl = document.createElement("span");
-          nameEl.style.fontSize = "11.5px";
-          nameEl.style.fontWeight = "700";
-          nameEl.style.overflow = "hidden";
-          nameEl.style.textOverflow = "ellipsis";
-          nameEl.style.whiteSpace = "nowrap";
-          nameEl.title = file.name;
-          nameEl.textContent = "#" + d.inspection_id + " " + file.name;
-
-          var badge = document.createElement("span");
-          badge.className = "badge b-" + d.status;
-          badge.textContent = d.status;
-          head.appendChild(nameEl);
-          head.appendChild(badge);
-          card.appendChild(head);
-
-          if (typeof d.overlay_url === "string" && d.overlay_url.charAt(0) === "/") {
-            var imgLink = document.createElement("a");
-            imgLink.href = "/inspections/" + encodeURIComponent(d.inspection_id);
-            var img = document.createElement("img");
-            img.src = d.overlay_url;
-            img.alt = file.name;
-            img.style.width = "100%";
-            img.style.maxHeight = files.length === 1 ? "240px" : "150px";
-            img.style.objectFit = "contain";
-            img.style.display = "block";
-            img.style.borderRadius = "4px";
-            img.style.background = "#0b0f14";
-            imgLink.appendChild(img);
-            card.appendChild(imgLink);
-          }
-
-          var meta = document.createElement("div");
-          meta.style.marginTop = "6px";
-          meta.style.fontSize = "11.5px";
-          meta.style.display = "flex";
-          meta.style.justifyContent = "space-between";
-          meta.style.alignItems = "center";
-          var scoreSpan = document.createElement("span");
-          scoreSpan.className = "meta num";
-          scoreSpan.textContent = "점수 " + Number(d.score).toFixed(4);
-          var detailLink = document.createElement("a");
-          detailLink.href = "/inspections/" + encodeURIComponent(d.inspection_id);
-          detailLink.textContent = "상세 →";
-          detailLink.style.fontWeight = "700";
-          meta.appendChild(scoreSpan);
-          meta.appendChild(detailLink);
-          card.appendChild(meta);
+        var res = await inspectOne(f, truth);
+        if (!res.ok) { throw new Error((res.data && res.data.detail) ? String(res.data.detail) : "실패"); }
+        var d = res.data;
+        if (firstId === null) { firstId = d.inspection_id; }
+        c[d.status] = (c[d.status] || 0) + 1;
+        var head = el("div", "ix-row");
+        var nm = el("span", "", f.name); nm.style.fontWeight = "700"; nm.style.overflow = "hidden"; nm.style.textOverflow = "ellipsis"; nm.style.whiteSpace = "nowrap";
+        head.appendChild(nm);
+        head.appendChild(el("span", "badge b-" + d.status, d.status));
+        card.appendChild(head);
+        var link = el("a"); link.href = "/inspections/" + encodeURIComponent(d.inspection_id);
+        if (typeof d.overlay_url === "string" && d.overlay_url.charAt(0) === "/") {
+          var img = el("img"); img.src = d.overlay_url; img.alt = f.name; link.appendChild(img);
         }
-        grid.appendChild(card);
+        card.appendChild(link);
+        var reason = (d.reasons && d.reasons.length) ? (WHY[d.reasons[0]] || d.reasons[0]) : "";
+        card.appendChild(el("div", "ix-why", "점수 " + Number(d.score).toFixed(3) + " · " + reason));
+        var foot = el("div", "ix-row");
+        if (truth === "defect" || truth === "good") {
+          var miss = (truth === "defect" && d.status === "OK") || (truth === "good" && d.status === "NG");
+          if (truth === "defect") { defects++; if (d.status === "OK") { missed++; } } else { goods++; if (d.status === "NG") { falseNg++; } }
+          if (miss) { card.classList.add("miss"); }
+          foot.appendChild(el("span", "ix-ans " + (miss ? "bad" : "ok"), "정답 " + (truth === "defect" ? "불량" : "정상") + (miss ? (truth === "defect" ? " · 놓침" : " · 과검") : " · ✔")));
+        } else {
+          foot.appendChild(el("span", "meta", ""));
+        }
+        var dl = el("a", "", "근거 보기 →"); dl.href = link.href; dl.style.fontWeight = "800";
+        foot.appendChild(dl);
+        card.appendChild(foot);
       } catch (err) {
-        counts.ERROR += 1;
-        var errCard = document.createElement("div");
-        errCard.className = "errbox";
-        errCard.textContent = file.name + " 오류: " + String(err);
-        grid.appendChild(errCard);
+        c.ERROR++;
+        card.className = "errbox";
+        card.textContent = f.name + ": " + String(err.message || err);
       }
-      var done = i + 1;
-      progFill.style.width = Math.round((done / files.length) * 100) + "%";
-      statusText.textContent =
-        (done < files.length ? "연속 검사 중: " : "검사 완료: ") +
-        done + " / " + files.length + "장 · OK " + counts.OK + " · NG " + counts.NG + " · REVIEW " + counts.REVIEW +
-        (counts.ERROR ? " · ERROR " + counts.ERROR : "");
+      grid.appendChild(card);
+      barText.textContent = (i + 1 < files.length ? "검사 중 " : "검사 완료 ") + (i + 1) + " / " + files.length + "장";
     }
-
-    // 완료 후 핵심 결과 분석 요약 카드 표시
-    var totalDone = files.length;
-    var okPct = ((counts.OK / totalDone) * 100).toFixed(1);
-    var ngPct = ((counts.NG / totalDone) * 100).toFixed(1);
-    var rvPct = ((counts.REVIEW / totalDone) * 100).toFixed(1);
-    var autoPct = (((counts.OK + counts.NG) / totalDone) * 100).toFixed(1);
-    var avgScore = scores.length ? (scores.reduce(function (a, b) { return a + b; }, 0) / scores.length) : 0;
-    var maxScore = scores.length ? Math.max.apply(null, scores) : 0;
-    var avgMs = totalDone ? (totalElapsedMs / totalDone) : 0;
-
-    var report = document.createElement("div");
-    report.className = "card";
-    report.style.marginTop = "12px";
-    report.style.background = "var(--surface-2)";
-    report.innerHTML =
-      '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">' +
-      '  <strong style="font-size:14.5px">방금 검사한 ' + totalDone + '장 핵심 결과 분석 (OpenCV r20)</strong>' +
-      '  <span class="meta num">총 ' + (totalElapsedMs / 1000).toFixed(2) + '초 · 평균 ' + avgMs.toFixed(0) + 'ms/장</span>' +
-      '</div>' +
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:10px">' +
-      '  <div class="kpi kpi-ok" style="padding:10px"><div class="kpi-label">OK (정상 통과)</div><div class="kpi-val" style="font-size:18px">' + counts.OK + '장 <span class="meta">(' + okPct + '%)</span></div></div>' +
-      '  <div class="kpi kpi-ng" style="padding:10px"><div class="kpi-label">NG (불량 확정)</div><div class="kpi-val" style="font-size:18px">' + counts.NG + '장 <span class="meta">(' + ngPct + '%)</span></div></div>' +
-      '  <div class="kpi kpi-review" style="padding:10px"><div class="kpi-label">REVIEW (사람 확인)</div><div class="kpi-val" style="font-size:18px">' + counts.REVIEW + '장 <span class="meta">(' + rvPct + '%)</span></div></div>' +
-      '  <div class="kpi" style="padding:10px"><div class="kpi-label">자동 판정률 / 최고 점수</div><div class="kpi-val" style="font-size:18px">' + autoPct + '% <span class="meta">/ ' + maxScore.toFixed(2) + '</span></div></div>' +
-      '</div>' +
-      '<div class="stack-bar" style="height:10px;margin-bottom:8px">' +
-      '  <div class="stack-seg" style="width:' + okPct + '%;background:var(--ok)"></div>' +
-      '  <div class="stack-seg" style="width:' + ngPct + '%;background:var(--ng)"></div>' +
-      '  <div class="stack-seg" style="width:' + rvPct + '%;background:var(--review)"></div>' +
-      '</div>' +
-      '<div class="meta" style="font-size:12.5px">평균 점수: <strong>' + avgScore.toFixed(4) + '</strong> · 불량/보류 검출: <strong>' + flaggedItems.length + '건</strong> (아래 카드 클릭 시 상세 근거 확인)</div>';
-    out.insertBefore(report, grid);
-
-    if (files.length === 1 && firstInspectionId !== null) {
-      var singleDetailLink = document.createElement("a");
-      singleDetailLink.href = "/inspections/" + encodeURIComponent(firstInspectionId);
-      singleDetailLink.textContent = "상세 및 교차증거 보기 →";
-      singleDetailLink.style.fontWeight = "700";
-      statusBar.insertBefore(singleDetailLink, progTrack);
+    var n = files.length, ms = (performance.now() - t0) / n;
+    function kpi(cls, label, val) { var k = el("div", "kpi " + cls); k.appendChild(el("div", "kpi-label", label)); k.appendChild(el("div", "kpi-val", val)); sum.appendChild(k); }
+    kpi("kpi-ok", "OK 정상 통과", c.OK + "장");
+    kpi("kpi-ng", "NG 불량 격리", c.NG + "장");
+    kpi("kpi-review", "REVIEW 사람 확인", c.REVIEW + "장");
+    if (defects + goods > 0) {
+      kpi("", "정답 대비 (놓침 · 과검)", missed + "/" + defects + " · " + falseNg + "/" + goods);
     }
-
-    var reloadBtn = document.createElement("button");
-    reloadBtn.type = "button";
-    reloadBtn.textContent = "아래 DB 표 새로고침";
-    reloadBtn.style.padding = "4px 10px";
-    reloadBtn.style.fontSize = "12px";
-    reloadBtn.addEventListener("click", function () { window.location.reload(); });
-    statusBar.insertBefore(reloadBtn, progTrack);
-
-    btn.disabled = false;
-    if (demoBtn) { demoBtn.disabled = false; }
+    kpi("", "속도 (저장 포함)", Math.round(ms) + " ms/장");
+    if (firstId !== null) {
+      var a = el("a", "", n === 1 ? "근거 보기 →" : "첫 결과 근거 보기 →"); a.href = "/inspections/" + encodeURIComponent(firstId); a.style.fontWeight = "800";
+      bar.appendChild(a);
+    }
+    var re = el("button", "", "기록 표 새로고침"); re.type = "button"; re.style.padding = "4px 10px"; re.style.fontSize = "12px";
+    re.addEventListener("click", function () { window.location.reload(); });
+    bar.appendChild(re);
+    btn.disabled = false; demoBtn && (demoBtn.disabled = false);
   }
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
-    var fileInput = document.getElementById("live-file");
-    if (!fileInput || !fileInput.files || !fileInput.files.length) { return; }
-    var files = Array.prototype.slice.call(fileInput.files);
-    var engine = document.getElementById("live-engine").value;
-    var label = document.getElementById("live-label").value;
-    await runBatchFiles(files, engine, label);
+    var input = document.getElementById("live-file");
+    if (!input || !input.files || !input.files.length) { return; }
+    await runBatch(Array.prototype.slice.call(input.files), {});
   });
 
   if (demoBtn) {
     demoBtn.addEventListener("click", async function () {
-      var engine = document.getElementById("live-engine").value;
-      var label = document.getElementById("live-label").value;
-      btn.disabled = true;
-      demoBtn.disabled = true;
-      out.textContent = "실제 공장 샘플 20장 불러오는 중...";
+      btn.disabled = true; demoBtn.disabled = true;
+      out.textContent = "샘플 20장 불러오는 중...";
       try {
-        var listResp = await fetch("/inspections/demo-samples?limit=20");
-        var listData = await listResp.json();
-        var names = (listData && listData.samples) ? listData.samples : [];
+        var listData = await (await fetch("/inspections/demo-samples?limit=20")).json();
+        var names = (listData && listData.samples) || [];
+        var labels = (listData && listData.labels) || {};
         if (!names.length) {
-          out.textContent = "불러올 샘플 사진이 없습니다.";
-          btn.disabled = false;
-          demoBtn.disabled = false;
-          return;
+          out.textContent = "";
+          var done = el("div", "notice", (listData && listData.detail) || "불러올 샘플 사진이 없습니다.");
+          if (listData && listData.total) {
+            var again = el("button", "", "처음부터 다시 뽑기"); again.type = "button"; again.style.marginLeft = "10px";
+            again.addEventListener("click", async function () {
+              await fetch("/inspections/demo-samples/reset", { method: "POST" });
+              out.textContent = "대기열을 초기화했습니다. 다시 [무작위 샘플 20장 검사]를 누르세요.";
+            });
+            done.appendChild(again);
+          }
+          out.appendChild(done);
+          btn.disabled = false; demoBtn.disabled = false; return;
         }
         var files = [];
         for (var k = 0; k < names.length; k++) {
-          var imgResp = await fetch("/inspections/demo-samples/" + encodeURIComponent(names[k]));
-          if (!imgResp.ok) { continue; }
-          var blob = await imgResp.blob();
-          files.push(new File([blob], names[k], { type: "image/png" }));
+          var r = await fetch("/inspections/demo-samples/" + encodeURIComponent(names[k]));
+          if (r.ok) { files.push(new File([await r.blob()], names[k], { type: "image/png" })); }
         }
-        await runBatchFiles(files, engine, label);
+        await runBatch(files, labels);
+        if (listData && typeof listData.remaining === "number") {
+          var bar0 = out.querySelector(".okbox");
+          if (bar0) { bar0.appendChild(el("span", "meta", "남은 사진 " + listData.remaining + " / " + listData.total + "장")); }
+        }
       } catch (err) {
-        out.textContent = "샘플 자동 검사 오류: " + String(err);
-        btn.disabled = false;
-        demoBtn.disabled = false;
+        out.textContent = "샘플 검사 오류: " + String(err);
+        btn.disabled = false; demoBtn.disabled = false;
       }
     });
   }

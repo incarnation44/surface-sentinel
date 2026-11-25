@@ -297,6 +297,22 @@ def row_overlay_path(row: dict[str, Any], runs_dir: Path) -> Path | None:
     return resolved
 
 
+def row_result_json(row: dict[str, Any], runs_dir: Path) -> dict[str, Any] | None:
+    """오버레이 옆에 저장된 ``*_result.json``(후보 수치 포함)을 읽는다. 없거나 깨지면 None."""
+
+    overlay = row_overlay_path(row, runs_dir)
+    if overlay is None or not overlay.name.endswith("_overlay.png"):
+        return None
+    candidate = overlay.with_name(overlay.name[: -len("_overlay.png")] + "_result.json")
+    try:
+        if not candidate.is_file() or candidate.stat().st_size > 2_000_000:
+            return None
+        data = json.loads(candidate.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
 def load_inspections_view(
     db_path: Path,
     runs_dir: Path,
@@ -566,6 +582,7 @@ def load_inspection_detail_view(
             "observations": observations,
             "assessments": assessments,
             "reviews": reviews_raw,
+            "result_json": row_result_json(row, runs_dir),
         }
     except UiInputError:
         raise
@@ -587,6 +604,7 @@ __all__ = [
     "find_sample",
     "load_inspection_detail_view",
     "load_inspections_view",
+    "row_result_json",
     "load_manifest_map",
     "load_results",
     "load_run",

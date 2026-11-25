@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import csv
 import io
+import random
 import sqlite3
 import tempfile
+import threading
 from pathlib import Path
 from typing import Annotated, Any
 from urllib.parse import quote
@@ -83,6 +85,7 @@ from .data import (
     sample_result_from_record,
     sha256_file,
 )
+from .verdict_explain import explain_verdict
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 
@@ -1321,6 +1324,17 @@ def create_app(
             return [], [], set()
         return defects_sorted, goods_sorted, allowed
 
+    demo_lock = threading.Lock()
+    demo_queue: dict[str, Any] = {}
+
+    @app.post("/inspections/demo-samples/reset")
+    def inspection_demo_samples_reset() -> JSONResponse:
+        """무작위 샘플 대기열을 비워 처음부터 다시 뽑게 한다(검사 기록은 그대로)."""
+
+        with demo_lock:
+            demo_queue.clear()
+        return JSONResponse({"reset": True})
+
     @app.get("/inspections/demo-samples")
     def inspection_demo_samples(limit: int = 20) -> JSONResponse:
         """시연용 실제 공장 사진(train/tune) 목록을 반환한다 (봉인 test 미접근)."""
@@ -1331,14 +1345,37 @@ def create_app(
             return JSONResponse({"samples": [], "detail": "샘플 폴더를 찾을 수 없습니다."})
         defects, goods, allowed = _load_tune_train_pool(train_dir, app.state.repo_root)
         if allowed:
-            n_def = min(len(defects), max(1, round(capped * 0.25))) if defects else 0
-            n_good = min(len(goods), capped - n_def)
-            if n_def + n_good < capped:
-                if len(defects) > n_def:
-                    n_def = min(len(defects), capped - n_good)
-                elif len(goods) > n_good:
-                    n_good = min(len(goods), capped - n_def)
-            picked = sorted(_even_pick(defects, n_def) + _even_pick(goods, n_good))
+            # 서버가 켜져 있는 동안 중복 없이 소진: 섞어 둔 불량·정상 대기열에서
+            # 매번 불량 약 25% + 정상 나머지를 꺼낸다. 다 쓰면 빈 목록 + 안내.
+            rng = random.SystemRandom()
+            with demo_lock:
+                if demo_queue.get("pool") != (len(defects), len(goods)):
+                    q_def, q_good = list(defects), list(goods)
+                    rng.shuffle(q_def)
+                    rng.shuffle(q_good)
+                    demo_queue.update(
+                        pool=(len(defects), len(goods)), defects=q_def, goods=q_good
+                    )
+                q_def, q_good = demo_queue["defects"], demo_queue["goods"]
+                n_def = min(len(q_def), max(1, round(capped * 0.25)))
+                n_good = min(len(q_good), capped - n_def)
+                n_def = min(len(q_def), capped - n_good)
+                chosen_def = [q_def.pop() for _ in range(n_def)]
+                chosen_good = [q_good.pop() for _ in range(n_good)]
+                remaining = len(q_def) + len(q_good)
+            total = len(defects) + len(goods)
+            if not chosen_def and not chosen_good:
+                return JSONResponse({
+                    "samples": [], "labels": {}, "remaining": 0, "total": total,
+                    "detail": f"샘플 {total}장을 모두 검사했습니다. 더 남은 사진이 없습니다.",
+                })
+            picked = chosen_def + chosen_good
+            rng.shuffle(picked)
+            labels = {name: "defect" for name in chosen_def}
+            labels.update({name: "good" for name in chosen_good})
+            return JSONResponse(
+                {"samples": picked, "labels": labels, "remaining": remaining, "total": total}
+            )
         else:
             names = sorted(
                 p.name
@@ -1431,7 +1468,18 @@ def create_app(
         detail = load_inspection_detail_view(
             app.state.db_path, app.state.runs_dir, inspection_id
         )
-        return render(request, "inspection_detail.html", detail)
+        result_json = detail.pop("result_json", None)
+        explain = None
+        if result_json is not None:
+            insp = detail["inspection"]
+            merged = {
+                **result_json,
+                "status": insp.get("status"),
+                "score": insp.get("score"),
+                "reasons": insp.get("reasons_list"),
+            }
+            explain = explain_verdict(merged, load_cinema_config(app.state.repo_root))
+        return render(request, "inspection_detail.html", {**detail, "explain": explain})
 
     @app.get("/inspections/{inspection_id}/overlay.png")
     def inspection_overlay_image(inspection_id: int) -> FileResponse:
