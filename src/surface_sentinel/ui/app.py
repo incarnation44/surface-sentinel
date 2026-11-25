@@ -134,12 +134,25 @@ REASON_LABELS = {
 
 #: 기계 판정 사유 코드 → 쉬운 한국어 설명(상세 화면 판정 근거 카드용).
 VERDICT_REASON_LABELS = {
-    "DEFECT_EVIDENCE_STRONG": "강한 결함 증거 확인 — 유효 후보(면적 ≥ 40px, 대비 ≥ 16) 최고 점수가 NG 기준(0.50) 이상",
+    "DEFECT_EVIDENCE_STRONG": (
+        "강한 결함 증거 확인 — 유효 후보(면적 ≥ 40px, 대비 ≥ 16) 최고 점수가 "
+        "NG 기준(0.50) 이상"
+    ),
     "NO_DEFECT_EVIDENCE": "결함 증거 없음 — 유효 결함 후보 0개 및 품질·경계 이상 없음",
-    "EVIDENCE_IN_REVIEW_BAND": "보류 구간 결함 후보 검출 — 유효 후보가 있으나 최고 점수가 NG 기준(0.50) 미만",
-    "MULTIPLE_WEAK_CANDIDATES": "다수 약한 후보 동시 검출 — 보류 대역(0.25 ≤ 점수 < 0.50) 후보가 2개 이상 잡혀 미세 결함·표면 노이즈 확인 필요",
-    "BORDER_TOUCHING_CANDIDATE": "ROI 가장자리 접촉 후보 — 경계 인접 후보(점수 ≥ 0.40)로 치구·절단면 그림자 오검 확인 필요",
-    "CANDIDATE_TRUNCATED": "후보 수 상한(20개) 초과 절단 — 전면 텍스처·조명 이상 가능성으로 사람 확인 필요",
+    "EVIDENCE_IN_REVIEW_BAND": (
+        "보류 구간 결함 후보 검출 — 유효 후보가 있으나 최고 점수가 NG 기준(0.50) 미만"
+    ),
+    "MULTIPLE_WEAK_CANDIDATES": (
+        "다수 약한 후보 동시 검출 — 보류 대역(0.25 ≤ 점수 < 0.50) 후보가 2개 이상 잡혀 "
+        "미세 결함·표면 노이즈 확인 필요"
+    ),
+    "BORDER_TOUCHING_CANDIDATE": (
+        "ROI 가장자리 접촉 후보 — 경계 인접 후보(점수 ≥ 0.40)로 "
+        "치구·절단면 그림자 오검 확인 필요"
+    ),
+    "CANDIDATE_TRUNCATED": (
+        "후보 수 상한(20개) 초과 절단 — 전면 텍스처·조명 이상 가능성으로 사람 확인 필요"
+    ),
     "INPUT_QUALITY_LOW": "입력 영상 품질 저하 — 흐림·과암부·과노출·포화 비율 임계 초과",
     "ROI_UNCERTAIN": "검사 영역(ROI) 불확실 — 유효 표면 면적 비율(20%) 미달",
     "MANUAL_OVERRIDE": "작업자 수동 판정 반영",
