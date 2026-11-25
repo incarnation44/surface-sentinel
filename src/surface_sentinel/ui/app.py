@@ -1456,10 +1456,13 @@ def create_app(
     def cinema_page(request: Request) -> HTMLResponse:
         """3D 레이어 분해 & 영상식 10단계 검사 시네마 시연 뷰어."""
 
-        presets = discover_cinema_presets(
-            app.state.runs_dir, app.state.raw_root, app.state.repo_root
-        )
         cfg = load_cinema_config(app.state.repo_root)
+        presets = discover_cinema_presets(
+            app.state.runs_dir,
+            app.state.raw_root,
+            app.state.repo_root,
+            config_hash=cfg.config_hash,
+        )
         return render(
             request,
             "cinema.html",
@@ -1476,16 +1479,20 @@ def create_app(
         """사전 등록된 tune/합성 프리셋의 실제 10단계 프레임·텔레메트리를 반환한다."""
 
         def _load_preset_and_config() -> tuple[Any, Any]:
+            cfg_loaded = load_cinema_config(app.state.repo_root)
             presets = {
                 p.preset_id: p
                 for p in discover_cinema_presets(
-                    app.state.runs_dir, app.state.raw_root, app.state.repo_root
+                    app.state.runs_dir,
+                    app.state.raw_root,
+                    app.state.repo_root,
+                    config_hash=cfg_loaded.config_hash,
                 )
             }
             preset_found = presets.get(preset_id)
             if preset_found is None:
                 return None, None
-            return preset_found, load_cinema_config(app.state.repo_root)
+            return preset_found, cfg_loaded
 
         preset, cfg = await run_in_threadpool(_load_preset_and_config)
         if preset is None:

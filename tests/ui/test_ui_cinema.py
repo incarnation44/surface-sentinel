@@ -409,3 +409,50 @@ def test_cinema_empty_roi_and_nonfinite_response_frame_safe(
     presets = discover_cinema_presets(runs_dir, raw_root, tmp_path)
     assert len(presets) >= 1
 
+
+
+def test_cinema_presets_skip_runs_from_other_config_hash(tmp_path: Path) -> None:
+    """동결 설정과 다른 해시의 run 은 프리셋 후보에서 빠진다 (재현되지 않는 '실제 불량' 방지)."""
+
+    from surface_sentinel.ui.cinema import discover_cinema_presets
+
+    runs_dir = tmp_path / "runs"
+    raw_root = tmp_path / "raw"
+    runs_dir.mkdir()
+    run_dir = ui_run.make_run(runs_dir, raw_root)
+    mf = run_dir / "manifest_snapshot.csv"
+    mf.write_text(mf.read_text(encoding="utf-8").replace(",8,8,", ",128,128,"), encoding="utf-8")
+
+    matched = discover_cinema_presets(runs_dir, raw_root, tmp_path, config_hash=ui_run.CONFIG_HASH)
+    assert any(p.source == "tune-run" for p in matched)
+
+    other = discover_cinema_presets(runs_dir, raw_root, tmp_path, config_hash="0" * 64)
+    assert not any(p.source == "tune-run" for p in other)
+
+
+def test_cinema_showcase_preset_comes_first_from_tune_csv(tmp_path: Path) -> None:
+    """발표 대표 샘플(#20117)은 tune.csv 에 있고 이미지가 있으면 첫 프리셋이 된다."""
+
+    from surface_sentinel.ui.cinema import discover_cinema_presets
+
+    runs_dir = tmp_path / "runs"
+    raw_root = tmp_path / "raw"
+    runs_dir.mkdir()
+    (raw_root / "test").mkdir(parents=True)
+    img = np.full((128, 64, 3), 120, dtype=np.uint8)
+    assert cv2.imwrite(str(raw_root / "test" / "20117.png"), img)
+    splits = tmp_path / "data" / "splits"
+    splits.mkdir(parents=True)
+    (splits / "tune.csv").write_text(
+        "sample_id,image_path,label\n20117,test/20117.png,defect\n", encoding="utf-8"
+    )
+
+    presets = discover_cinema_presets(runs_dir, raw_root, tmp_path)
+    assert presets[0].preset_id == "showcase-ng-20117"
+    assert presets[0].title == "대표 불량 #20117"
+    assert presets[0].label == "defect"
+
+    # tune.csv 에 없으면(봉인 분할 등) 대표 프리셋을 만들지 않는다.
+    (splits / "tune.csv").write_text("sample_id,image_path,label\n", encoding="utf-8")
+    presets = discover_cinema_presets(runs_dir, raw_root, tmp_path)
+    assert all(not p.preset_id.startswith("showcase-") for p in presets)

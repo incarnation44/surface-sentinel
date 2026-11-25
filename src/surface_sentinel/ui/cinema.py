@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import base64
+import csv
 import math
 import tempfile
 from dataclasses import dataclass
@@ -259,24 +260,75 @@ def _safe_score(value: Any) -> float:
     return out if math.isfinite(out) else 0.0
 
 
+#: 발표 슬라이드(01·04·11장)·대본과 같은 대표 불량 샘플. tune 분할 CSV 에서만 조회한다.
+SHOWCASE_SAMPLES: tuple[tuple[str, str, str], ...] = (("20117", "대표 불량", "NG"),)
+
+
+def _showcase_presets(raw_root: Path, repo_root: Path) -> list[CinemaPreset]:
+    """``data/splits/tune.csv`` 에 있는 발표 대표 샘플을 프리셋으로 만든다 (없으면 빈 목록)."""
+
+    tune_csv = repo_root / "data" / "splits" / "tune.csv"
+    if not tune_csv.is_file():
+        return []
+    wanted = {sid: (title, badge) for sid, title, badge in SHOWCASE_SAMPLES}
+    out: list[CinemaPreset] = []
+    try:
+        with tune_csv.open(encoding="utf-8", newline="") as handle:
+            rows = [row for row in csv.DictReader(handle) if row.get("sample_id") in wanted]
+    except (OSError, csv.Error):
+        return []
+    for row in rows:
+        sid = str(row["sample_id"])
+        try:
+            img_path = safe_child(raw_root, str(row.get("image_path") or ""))
+        except UiInputError:
+            continue
+        if not img_path.is_file():
+            continue
+        title, badge = wanted[sid]
+        out.append(
+            CinemaPreset(
+                preset_id=f"showcase-{badge.lower()}-{sid}",
+                title=f"{title} #{sid}",
+                subtitle="KSDD2 tune · 발표 대표 예시",
+                badge=badge,
+                source="tune-showcase",
+                image_path=img_path,
+                label=str(row.get("label") or "unknown"),
+            )
+        )
+    return out
+
+
 def discover_cinema_presets(
     runs_dir: Path,
     raw_root: Path,
     repo_root: Path,
+    *,
+    config_hash: str | None = None,
 ) -> list[CinemaPreset]:
-    """실제 tune run 샘플(존재 시) + 합성 fixture 프리셋을 안전하게 수집한다.
+    """발표 대표 샘플 + 실제 tune run 샘플(존재 시) + 합성 fixture 프리셋을 안전하게 수집한다.
 
-    봉인 분할(test/official_test)은 절대 포함하지 않는다.
+    봉인 분할(test/official_test)은 절대 포함하지 않는다. ``config_hash`` 를 주면 그
+    설정으로 만든 run 만 쓴다. 다른 설정(예: 과거 ``22ff6bcb``) run 의 상태·점수는 현재
+    동결 설정으로 다시 돌리면 재현되지 않아 "실제 불량" 버튼이 REVIEW 로 바뀌는 혼선이 생긴다.
     """
 
     presets: list[CinemaPreset] = []
     seen_ids: set[str] = set()
+
+    # 0) 발표 대표 샘플(#20117)을 맨 앞에 둔다 → /cinema 첫 화면 기본값
+    for showcase in _showcase_presets(raw_root, repo_root):
+        seen_ids.add(showcase.preset_id)
+        presets.append(showcase)
 
     # 1) 실제 tune run 들에서 NG / REVIEW / OK 대표 샘플 최대 3건 추출 (봉인 분할 제외)
     entries = discover_runs(runs_dir)
     picked: dict[str, dict[str, Any]] = {}
     for entry in entries:
         if str(entry.payload.get("split", "")) != "tune":
+            continue
+        if config_hash and str(entry.payload.get("config_hash", "")) != config_hash:
             continue
         try:
             records = load_results(entry.run_dir)
