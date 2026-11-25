@@ -15,33 +15,88 @@
   &nbsp;<span class="meta num">점수 <strong>{{ "%.6f"|format(inspection.score) }}</strong> · 라벨 {{ inspection.label }} · 분할 {{ inspection.split }}</span>
 </p>
 
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start">
-  <div class="card">
-    <h2 style="margin-top:0">오버레이</h2>
+<div class="card" style="margin-bottom:14px">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+    <h2 style="margin:0">판정 근거 요약 (왜 {{ inspection.status }} 인가?)</h2>
+    <span class="meta num">현재 점수 <strong>{{ "%.4f"|format(inspection.score) }}</strong> / NG 기준 <strong>0.50</strong></span>
+  </div>
+  <p style="margin:0 0 10px">
+    {% if inspection.status == "NG" %}
+      최고 결함 후보 점수(<strong>{{ "%.4f"|format(inspection.score) }}</strong>)가 NG 확정 기준(<strong>0.50</strong>) 이상이어서 <strong>불량(NG)</strong>으로 확정되었습니다.
+    {% elif inspection.status == "OK" %}
+      유효 결함 후보(면적 ≥ 40px, 대비 ≥ 16)가 없고 품질·경계 보류 조건에 해당하지 않아 <strong>정상(OK)</strong>으로 판정되었습니다.
+    {% elif inspection.status == "REVIEW" %}
+      최고 점수(<strong>{{ "%.4f"|format(inspection.score) }}</strong>)가 NG 확정 기준(<strong>0.50</strong>) 미만이지만, 아래 보류 사유가 감지되어 <strong>사람 검토(REVIEW)</strong>로 분류되었습니다.
+    {% else %}
+      검사 중 입력·처리 오류가 발생했습니다(판정 아님).
+    {% endif %}
+  </p>
+
+  {% set score_pct = [100.0, [0.0, (inspection.score|float) * 100.0]|max]|min %}
+  <div style="margin:8px 0 10px">
+    <div style="position:relative;height:14px;border-radius:999px;background:var(--track-bg);overflow:hidden;border:1px solid var(--line-soft)">
+      <div style="position:absolute;left:25%;top:0;bottom:0;width:2px;background:var(--review);z-index:2" title="약한 후보 하한 0.25"></div>
+      <div style="position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--ng);z-index:2" title="NG 확정 기준선 0.50"></div>
+      <div style="height:100%;width:{{ "%.1f"|format(score_pct) }}%;background:{% if inspection.status == 'NG' %}var(--ng){% elif inspection.status == 'REVIEW' %}var(--review){% else %}var(--ok){% endif %}"></div>
+    </div>
+    <div class="meta num" style="display:flex;justify-content:space-between;font-size:11.5px;margin-top:4px;gap:8px;flex-wrap:wrap">
+      <span>0.00 (정상)</span>
+      <span>0.25 (약한 후보 하한)</span>
+      <span>0.50 (NG 확정 기준선)</span>
+      <span>1.00+</span>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:4px">
+    {% if inspection.reasons_list %}
+      {% for r in inspection.reasons_list %}
+      <div style="font-size:13px">
+        <span class="flag-pill"><code>{{ r }}</code></span>
+        <span>{{ verdict_reason_labels.get(r, r) }}</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <span class="meta">기록된 세부 사유가 없습니다.</span>
+    {% endif %}
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:16px;align-items:start">
+  <div class="card" style="text-align:center">
+    <h2 style="margin-top:0;text-align:left">오버레이</h2>
     {% if inspection.has_overlay %}
-    <img src="/inspections/{{ inspection.id }}/overlay.png" alt="검사 #{{ inspection.id }} 오버레이" style="width:100%;height:auto;border:1px solid var(--line-soft);border-radius:4px">
+    <img src="/inspections/{{ inspection.id }}/overlay.png" alt="검사 #{{ inspection.id }} 오버레이" style="max-width:100%;max-height:520px;width:auto;height:auto;display:block;margin:0 auto;border:1px solid var(--line-soft);border-radius:6px">
+    <p class="meta" style="font-size:12px;margin:8px 0 0;text-align:left">초록 외곽선: 검사 영역(ROI) · 주황/빨강 박스: 검출된 결함 후보(면적 ≥ 40px, 대비 ≥ 16) · 상단 숫자: 최고 후보 점수</p>
     {% else %}
     <div class="noimg" style="height:180px;display:flex;align-items:center;justify-content:center;background:var(--surface-2);color:var(--muted);border-radius:4px">오버레이 없음</div>
     {% endif %}
   </div>
-  <div class="card">
+  <div class="card" style="min-width:0">
     <h2 style="margin-top:0">신원 · Provenance</h2>
-    <table>
+    <div class="table-wrap">
+    <table style="width:100%;table-layout:fixed">
+      <colgroup>
+        <col style="width:136px">
+        <col>
+      </colgroup>
       <tbody>
-        <tr><th>엔진 / task</th><td><code>{{ inspection.engine }}</code>{% if inspection.task %} ({{ inspection.task }}){% endif %}</td></tr>
-        <tr><th>모델 버전</th><td>{{ inspection.model_version or "-" }}</td></tr>
-        <tr><th>신원 완전성</th><td>{% if inspection.provenance_complete %}<span class="badge b-PASS">완전</span>{% else %}<span class="badge b-REVISE">부분</span>{% endif %}</td></tr>
-        <tr><th>사유</th><td>{{ inspection.reasons_list|join(", ") or "-" }}</td></tr>
-        <tr><th>지문</th><td class="hash">{{ inspection.inspection_fingerprint or "-" }}</td></tr>
-        <tr><th>image_sha256</th><td class="hash">{{ inspection.image_sha256 }}</td></tr>
-        <tr><th>config_hash</th><td class="hash">{{ inspection.config_hash }}</td></tr>
-        <tr><th>model_sha256</th><td class="hash">{{ inspection.model_sha256 or "-" }}</td></tr>
-        <tr><th>기록 시각</th><td class="meta num">{{ inspection.created_at }}</td></tr>
+        <tr><th style="white-space:nowrap">엔진 / task</th><td><code>{{ inspection.engine }}</code>{% if inspection.task %} ({{ inspection.task }}){% endif %}</td></tr>
+        <tr><th style="white-space:nowrap">모델 버전</th><td>{{ inspection.model_version or "-" }}</td></tr>
+        <tr><th style="white-space:nowrap">신원 완전성</th><td>{% if inspection.provenance_complete %}<span class="badge b-PASS">완전</span>{% else %}<span class="badge b-REVISE">부분</span>{% endif %}</td></tr>
+        <tr><th style="white-space:nowrap">사유</th><td style="word-break:break-word">{% if inspection.reasons_list %}{% for r in inspection.reasons_list %}<div><code>{{ r }}</code> — {{ verdict_reason_labels.get(r, r) }}</div>{% endfor %}{% else %}-{% endif %}</td></tr>
+        <tr><th style="white-space:nowrap">지문</th><td class="hash" style="font-size:12px;word-break:break-all">{{ inspection.inspection_fingerprint or "-" }}</td></tr>
+        <tr><th style="white-space:nowrap">image_sha256</th><td class="hash" style="font-size:12px;word-break:break-all">{{ inspection.image_sha256 }}</td></tr>
+        <tr><th style="white-space:nowrap">config_hash</th><td class="hash" style="font-size:12px;word-break:break-all">{{ inspection.config_hash }}</td></tr>
+        <tr><th style="white-space:nowrap">model_sha256</th><td class="hash" style="font-size:12px;word-break:break-all">{{ inspection.model_sha256 or "-" }}</td></tr>
+        <tr><th style="white-space:nowrap">기록 시각</th><td class="meta num">{{ inspection.created_at }}</td></tr>
       </tbody>
     </table>
+    </div>
   </div>
 </div>
 
+<details {% if observations or assessments %}open{% endif %} style="margin-top:16px">
+  <summary style="cursor:pointer;font-weight:700;padding:8px 0">다중 엔진·교차 증거 상세 ({% if not observations and not assessments %}단일 엔진 검사 시 해당 없음 · 0건{% else %}관찰 {{ observations|length }}건 · 평가 {{ assessments|length }}건{% endif %})</summary>
 <h2>엔진별 원본 관찰 비교 (Engine Observations · {{ observations|length }}건)</h2>
 {% if observations %}
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
@@ -159,6 +214,7 @@
 {% else %}
 <p class="meta">기록된 교차 증거 평가가 없습니다.</p>
 {% endif %}
+</details>
 
 <h2>사람 검토 이력 ({{ reviews|length }}건)</h2>
 {% if reviews %}

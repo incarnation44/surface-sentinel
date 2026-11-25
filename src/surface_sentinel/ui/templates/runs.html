@@ -1,95 +1,503 @@
-{# 메인 허브 페이지 (`GET /`) — runs/ 배치 실행 목록 조회 및 실시간 검사 워크벤치 진입 -#}
+{# 메인 허브 페이지 (`GET /`) — 발표·현장 시연에 최적화된 직관적 3단계 콘솔 허브 -#}
 {% extends "base.html" %}
-{% block title %}run 목록 — Surface Sentinel{% endblock %}
+{% block title %}Surface Sentinel — 검사 시연 허브{% endblock %}
 {% block content %}
-<div class="page-hero">
-  <div>
-    <span class="page-eyebrow">Optical Surface Metrology Console</span>
-    <h1>Surface Sentinel 검사 관제 허브</h1>
-    <p class="page-sub">runs 디렉터리 배치 실행 결과와 실시간 검사 콘솔을 한눈에 탐색합니다 (기계 판정 불변).</p>
-  </div>
-  <div class="page-hero-aside navlinks" style="margin:0">
-    <a href="/inspections">실시간 검사 · DB</a>
-    <a href="/watchdog">Watchdog 관제</a>
-    <a href="/stats">검사 통계</a>
-    <a href="/compare">run 비교</a>
-  </div>
-</div>
+<style>
+  .hub-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+    padding: 32px 34px;
+    background:
+      radial-gradient(620px 280px at 92% 8%, rgba(52, 211, 153, 0.22), transparent 64%),
+      radial-gradient(480px 240px at 8% 100%, rgba(56, 189, 248, 0.14), transparent 62%),
+      linear-gradient(135deg, #0b141c 0%, #0f2426 56%, #12332f 100%);
+    border: 1px solid rgba(52, 211, 153, 0.28);
+    box-shadow: 0 18px 40px -18px rgba(10, 22, 28, 0.55);
+    color: #f8fafc;
+    display: grid;
+    grid-template-columns: 1.45fr 0.95fr;
+    gap: 28px;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  .hub-live-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.16);
+    border: 1px solid rgba(52, 211, 153, 0.42);
+    color: #6ee7b7;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    margin-bottom: 12px;
+  }
+  .hub-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 10px #34d399;
+  }
+  .hub-hero h1 {
+    color: #ffffff;
+    font-size: 30px;
+    font-weight: 850;
+    letter-spacing: -0.03em;
+    margin: 0 0 10px;
+    line-height: 1.2;
+  }
+  .hub-hero-sub {
+    margin: 0 0 22px;
+    font-size: 14.5px;
+    line-height: 1.62;
+    color: #cbd5e1;
+    max-width: 56ch;
+  }
+  .hub-cta-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .hub-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 20px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 800;
+    text-decoration: none;
+    box-shadow: 0 8px 20px -6px rgba(16, 185, 129, 0.55);
+    transition: transform 0.15s ease, filter 0.15s ease;
+  }
+  .hub-btn-primary:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+    text-decoration: none;
+  }
+  .hub-btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 18px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    color: #f8fafc;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+  .hub-btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.18);
+    transform: translateY(-1px);
+    text-decoration: none;
+  }
+  .hub-summary-box {
+    background: rgba(8, 16, 22, 0.62);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 16px;
+    padding: 18px 20px;
+    backdrop-filter: blur(8px);
+  }
+  .hub-sum-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #94a3b8;
+  }
+  .hub-sum-speed {
+    font-family: var(--font-mono);
+    color: #6ee7b7;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(52, 211, 153, 0.30);
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11.5px;
+  }
+  .hub-sum-nums {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .hub-stat {
+    padding: 12px 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    text-align: center;
+  }
+  .hub-stat-k { font-size: 11.5px; font-weight: 700; color: #cbd5e1; }
+  .hub-stat-v {
+    font-family: var(--font-mono);
+    font-size: 26px;
+    font-weight: 900;
+    line-height: 1.15;
+    margin-top: 4px;
+  }
+  .hub-bar {
+    height: 9px;
+    border-radius: 999px;
+    overflow: hidden;
+    display: flex;
+    background: rgba(255, 255, 255, 0.10);
+  }
+  .hub-sum-foot {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: #94a3b8;
+  }
+
+  /* 3-Step Clean Action Cards */
+  .hub-sec-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 26px 0 12px;
+  }
+  .hub-sec-head h2 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+  }
+  .hub-sec-sub {
+    margin: 3px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .hub-steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .hub-step-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 22px 22px 18px;
+    border-radius: 16px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-sm);
+    text-decoration: none;
+    color: var(--text);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  }
+  .hub-step-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+    text-decoration: none;
+  }
+  .hub-step-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .hub-step-num {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+  .hub-step-num.s1 { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-bd); }
+  .hub-step-num.s2 { background: rgba(59, 130, 246, 0.10); color: #2563eb; border: 1px solid rgba(59, 130, 246, 0.28); }
+  .hub-step-num.s3 { background: var(--review-bg); color: var(--review); border: 1px solid var(--review-bd); }
+  html[data-theme="dark"] .hub-step-num.s2 { color: #60a5fa; }
+  .hub-step-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+    margin: 10px 0 6px;
+    letter-spacing: -0.02em;
+  }
+  .hub-step-desc {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--muted);
+    margin: 0;
+  }
+  .hub-step-go {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-soft);
+    font-size: 13px;
+    font-weight: 750;
+    color: var(--accent);
+  }
+
+  /* Visual Preview Gallery */
+  .hub-gallery {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 14px;
+  }
+  .hub-part {
+    display: flex;
+    flex-direction: column;
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-xs);
+    text-decoration: none;
+    color: var(--text);
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+  }
+  .hub-part:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+    text-decoration: none;
+  }
+  .hub-part-img {
+    height: 168px;
+    background: #0a0f14;
+    overflow: hidden;
+    position: relative;
+  }
+  .hub-part-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .hub-prio-chip {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    backdrop-filter: blur(6px);
+  }
+  .hub-prio-chip.p-P0 { background: rgba(225, 29, 72, 0.90); color: #fff; }
+  .hub-prio-chip.p-P1 { background: rgba(217, 119, 6, 0.90); color: #fff; }
+  .hub-prio-chip.p-P2 { background: rgba(15, 118, 110, 0.88); color: #fff; }
+  .hub-prio-chip.p-P3 { background: rgba(71, 85, 105, 0.88); color: #f8fafc; }
+  .hub-part-body {
+    padding: 10px 12px 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .hub-part-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+  }
+  .hub-part-id { font-family: var(--font-mono); font-size: 13px; font-weight: 800; color: var(--text); }
+  .hub-part-score { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--muted); }
+
+  /* Collapsible Advanced Drawer */
+  .hub-details {
+    margin-top: 26px;
+    border-radius: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-xs);
+    overflow: hidden;
+  }
+  .hub-details summary {
+    cursor: pointer;
+    padding: 14px 18px;
+    font-size: 13.5px;
+    font-weight: 750;
+    color: var(--muted);
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    user-select: none;
+  }
+  .hub-details summary::-webkit-details-marker { display: none; }
+  .hub-details summary:hover { color: var(--text); background: var(--surface-2); }
+  .hub-details-body {
+    padding: 0 18px 18px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .hub-adv-links {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 14px 0;
+  }
+
+  @media (max-width: 1024px) {
+    .hub-hero { grid-template-columns: 1fr; }
+    .hub-steps { grid-template-columns: 1fr; }
+    .hub-gallery { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .hub-gallery { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
 
 {% if runs %}
 {% set latest_run = runs[0] %}
 {% set latest_status = latest_run.payload.get("status", "ERROR") %}
 {% set latest_counts = latest_run.payload.get("counts", {}) %}
+{% set s_tot = latest_counts.get("samples", 0)|int %}
+{% set c_ok = latest_counts.get("ok", 0)|int %}
+{% set c_ng = latest_counts.get("ng", 0)|int %}
+{% set c_rv = latest_counts.get("review", 0)|int %}
+{% set c_er = latest_counts.get("error", 0)|int %}
+{% set p50_ms = (latest_run.payload.get("timing") or {}).get("p50_ms") %}
 
-<h2>빠른 시연 동선 (추천 순서)</h2>
-<div class="demo-grid">
-  <a class="demo-card" href="/runs/{{ latest_run.run_id }}">
-    <span class="demo-step">STEP 1 · 결과 갤러리</span>
-    <div class="demo-title">배치 요약 &amp; 샘플 오버레이</div>
-    <div class="demo-desc">최신 run({{ latest_counts.get("samples", 0) }}장)의 OK·NG·REVIEW 필터와 결함 오버레이 이미지를 한눈에 확인합니다.</div>
-  </a>
-  <a class="demo-card" href="/runs/{{ latest_run.run_id }}/review?sort=priority">
-    <span class="demo-step">STEP 2 · 작업자 검토</span>
-    <div class="demo-title">위험도순 REVIEW 검토 큐</div>
-    <div class="demo-desc">에이전트 P0→P3 우선순위 정렬과 J/K 단축키로 애매한 경계 샘플만 빠르게 검토·기록합니다.</div>
-  </a>
-  <a class="demo-card" href="/runs/{{ latest_run.run_id }}/triage">
-    <span class="demo-step">STEP 3 · Lift 분석</span>
-    <div class="demo-title">에이전트 트리아지 &amp; 회수 곡선</div>
-    <div class="demo-desc">우선순위 정렬이 무작위 대비 결함을 얼마나 일찍 잡아내는지 Gain 곡선과 Lift 배수로 확인합니다.</div>
-  </a>
-  <a class="demo-card" href="/inspections">
-    <span class="demo-step">STEP 4 · 실시간 · 감사</span>
-    <div class="demo-title">실시간 이미지 검사 &amp; 교차증거</div>
-    <div class="demo-desc">train 샘플을 직접 업로드해 즉시 추론·오버레이 결과를 확인하고 DB 이력을 조회합니다.</div>
-  </a>
-</div>
-
-<div class="kpi-strip">
-  <div class="kpi">
-    <div class="kpi-label">총 Run 수</div>
-    <div class="kpi-val">{{ runs|length }}</div>
-    <div class="kpi-sub">배치 실행 이력</div>
-  </div>
-  <div class="kpi">
-    <div class="kpi-label">총 검사 샘플</div>
-    <div class="kpi-val">{{ total_samples }}</div>
-    <div class="kpi-sub">누적 처리 건수</div>
-  </div>
-  <div class="kpi">
-    <div class="kpi-label">최근 Run 상태</div>
-    <div class="kpi-val" style="display:flex;align-items:center;gap:6px;margin-top:4px">
-      <span class="badge b-{{ latest_status }}">{{ latest_status }}</span>
-      <span class="badge-note">{{ status_labels.get(latest_status, "") }}</span>
+<!-- 1. PREMIUM HERO BANNER -->
+<section class="hub-hero">
+  <div>
+    <div class="hub-live-pill">
+      <span class="hub-live-dot"></span>
+      <span>OpenCV r20 동결 엔진 &middot; 오프라인 로컬 콘솔 실행 중</span>
     </div>
-    <div class="kpi-sub num">{{ latest_run.run_id }}</div>
+    <h1>금속 표면 결함 검사 시연 허브</h1>
+    <p class="hub-hero-sub">
+      어려운 설정 없이 <strong>아래 3가지 메뉴</strong>만 누르면 됩니다.
+      10단계 검사 원리부터 20장 자동 연속 검사, 애매한 부품 우선 검토까지 한 곳에서 시연하세요.
+    </p>
+    <div class="hub-cta-row">
+      <a class="hub-btn-primary" href="/cinema">▶ 10단계 시네마 시연</a>
+      <a class="hub-btn-ghost" href="/inspections">⚡ 실시간 20장 자동 검사</a>
+    </div>
   </div>
-  <div class="kpi">
-    <div class="kpi-label">최근 실행 시각</div>
-    <div class="kpi-val num" style="font-size:15px">{{ (latest_run.payload.get("started_at", "-")|string).replace("T", " ").replace("Z", " UTC") }}</div>
-    <div class="kpi-sub">분할: {{ latest_run.payload.get("split", "-") }} · p50 {{ (latest_run.payload.get("timing") or {}).get("p50_ms", "-") }}ms</div>
+
+  <div class="hub-summary-box">
+    <div class="hub-sum-head">
+      <span>최근 샘플 배치 결과 (총 {{ s_tot }}장)</span>
+      {% if p50_ms is not none %}
+      <span class="hub-sum-speed">1장 {{ "%.0f"|format(p50_ms|float) }}ms</span>
+      {% endif %}
+    </div>
+    <div class="hub-sum-nums">
+      <div class="hub-stat">
+        <div class="hub-stat-k">정상 (OK)</div>
+        <div class="hub-stat-v" style="color:#34d399">{{ c_ok }}</div>
+      </div>
+      <div class="hub-stat">
+        <div class="hub-stat-k">불량 (NG)</div>
+        <div class="hub-stat-v" style="color:#fb7185">{{ c_ng }}</div>
+      </div>
+      <div class="hub-stat">
+        <div class="hub-stat-k">보류 (REVIEW)</div>
+        <div class="hub-stat-v" style="color:#fbbf24">{{ c_rv }}</div>
+      </div>
+    </div>
+    {% if s_tot > 0 %}
+    <div class="hub-bar" title="OK {{ c_ok }} / NG {{ c_ng }} / REVIEW {{ c_rv }} / ERROR {{ c_er }}">
+      <div style="width:{{ '%.1f'|format((c_ok / s_tot) * 100) }}%;background:#34d399"></div>
+      <div style="width:{{ '%.1f'|format((c_ng / s_tot) * 100) }}%;background:#fb7185"></div>
+      <div style="width:{{ '%.1f'|format((c_rv / s_tot) * 100) }}%;background:#fbbf24"></div>
+      <div style="width:{{ '%.1f'|format((c_er / s_tot) * 100) }}%;background:#94a3b8"></div>
+    </div>
+    {% endif %}
+    <div class="hub-sum-foot">
+      <span>누적 샘플 {{ total_samples }}장</span>
+      <span>엔진 지문 a762ba63</span>
+    </div>
+  </div>
+</section>
+
+<!-- 2. SIMPLE 3-STEP DEMO FLOW -->
+<div class="hub-sec-head">
+  <div>
+    <h2>어디서부터 눌러볼까요? (시연 추천 3단계)</h2>
+    <p class="hub-sec-sub">발표할 때는 왼쪽부터 1 &rarr; 2 &rarr; 3 순서대로 누르시면 가장 이해하기 쉽습니다.</p>
   </div>
 </div>
 
-{% if preview_samples %}
-<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:22px">
-  <h2 style="margin:0">최근 Run 오버레이 미리보기 ({{ latest_run.run_id }})</h2>
-  <a class="pill-link" href="/runs/{{ latest_run.run_id }}">전체 {{ latest_counts.get("samples", "") }}장 갤러리 보기 →</a>
-</div>
-<div class="preview-grid">
-  {% for item in preview_samples %}
-  <a class="preview-card" href="{{ item.url }}">
-    <img src="{{ item.overlay_url }}" alt="{{ item.sample_id }} 오버레이" loading="lazy">
-    <div class="preview-meta">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:4px">
-        <strong class="num" style="font-size:13px">{{ item.sample_id }}</strong>
-        {% if item.machine_status == "REVIEW" %}
-        <span class="prio p-{{ item.priority }}">{{ item.priority }}</span>
-        {% endif %}
+<div class="hub-steps">
+  <a class="hub-step-card" href="/cinema">
+    <div>
+      <div class="hub-step-top">
+        <span class="hub-step-num s1">① 원리 보기</span>
+        <span class="meta">약 30초</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:4px">
+      <div class="hub-step-title">10단계 시네마 시연</div>
+      <p class="hub-step-desc">부품 1장이 조명 제거 &rarr; 결함 추출 &rarr; 외접박스 계측 &rarr; NG 판정까지 변하는 과정을 그림과 3D로 보여줍니다.</p>
+    </div>
+    <div class="hub-step-go"><span>시네마 화면 열기</span><span>&rarr;</span></div>
+  </a>
+
+  <a class="hub-step-card" href="/inspections">
+    <div>
+      <div class="hub-step-top">
+        <span class="hub-step-num s2">② 직접 검사</span>
+        <span class="meta">약 40초</span>
+      </div>
+      <div class="hub-step-title">실시간 자동 검사 (1~20장)</div>
+      <p class="hub-step-desc">클릭 한 번으로 샘플 20장을 연속 검사하고, 불량(NG) 이력만 한글 엑셀(CSV) 파일로 바로 내려받습니다.</p>
+    </div>
+    <div class="hub-step-go"><span>실시간 검사 열기</span><span>&rarr;</span></div>
+  </a>
+
+  <a class="hub-step-card" href="/runs/{{ latest_run.run_id }}/review?sort=priority">
+    <div>
+      <div class="hub-step-top">
+        <span class="hub-step-num s3">③ 사람 확인</span>
+        <span class="meta">에이전트 정렬</span>
+      </div>
+      <div class="hub-step-title">애매한 부품 우선 검토</div>
+      <p class="hub-step-desc">기계가 애매하다고 넘긴 REVIEW 사진만 에이전트가 위험한 순서(긴급&rarr;낮음)로 줄 세워 빠르게 확정합니다.</p>
+    </div>
+    <div class="hub-step-go"><span>우선 검토 큐 열기</span><span>&rarr;</span></div>
+  </a>
+</div>
+
+<!-- 3. VISUAL PREVIEW GALLERY -->
+{% if preview_samples %}
+{% set prio_ko = {"P0": "긴급", "P1": "높음", "P2": "보통", "P3": "낮음"} %}
+<div class="hub-sec-head">
+  <div>
+    <h2>사람 확인이 필요한 부품 미리보기</h2>
+    <p class="hub-sec-sub">에이전트가 위험도 순으로 뽑아둔 부품입니다. 사진을 클릭하면 왜 보류되었는지 상세 근거를 바로 봅니다.</p>
+  </div>
+  <a class="pill-link" href="/runs/{{ latest_run.run_id }}">전체 {{ s_tot }}장 갤러리 보기 &rarr;</a>
+</div>
+
+<div class="hub-gallery">
+  {% for item in preview_samples %}
+  <a class="hub-part" href="{{ item.url }}">
+    <div class="hub-part-img">
+      <img src="{{ item.overlay_url }}" alt="부품 {{ item.sample_id }} 오버레이" loading="lazy">
+      {% if item.machine_status == "REVIEW" %}
+      <span class="hub-prio-chip p-{{ item.priority }}">{{ item.priority }} {{ prio_ko.get(item.priority, "") }}</span>
+      {% endif %}
+    </div>
+    <div class="hub-part-body">
+      <div class="hub-part-row">
+        <span class="hub-part-id">#{{ item.sample_id }}</span>
+        <span class="hub-part-score">점수 {{ "%.2f"|format(item.record.score) }}</span>
+      </div>
+      <div class="hub-part-row">
         <span><span class="badge b-{{ item.machine_status }}">{{ item.machine_status }}</span><span class="badge-note">{{ status_labels.get(item.machine_status, "") }}</span></span>
-        <span class="meta num">{{ "%.2f"|format(item.record.score) }}</span>
       </div>
     </div>
   </a>
@@ -97,56 +505,79 @@
 </div>
 {% endif %}
 
-<h2>배치 Run 목록 ({{ runs|length }}건)</h2>
-<div class="table-wrap">
-<table>
-  <thead>
-    <tr>
-      <th>run_id</th><th>상태</th><th>분할</th><th>샘플</th>
-      <th>OK</th><th>NG</th><th>REVIEW</th><th>ERROR</th><th>판정 분포</th><th>화면 바로가기</th><th>시작(UTC)</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for run in runs %}
-    {% set counts = run.payload.get("counts", {}) %}
-    {% set s_total = counts.get("samples", 0)|int %}
-    {% set r_status = run.payload.get("status", "ERROR") %}
-    <tr>
-      <td class="num"><a href="/runs/{{ run.run_id }}"><strong>{{ run.run_id }}</strong></a></td>
-      <td style="white-space:nowrap">
-        <span class="badge b-{{ r_status }}">{{ r_status }}</span>
-        {% if status_labels.get(r_status) %}<span class="badge-note">{{ status_labels.get(r_status) }}</span>{% endif %}
-      </td>
-      <td><code>{{ run.payload.get("split", "-") }}</code></td>
-      <td class="num">{{ counts.get("samples", "-") }}</td>
-      <td class="num">{{ counts.get("ok", "-") }}</td>
-      <td class="num">{{ counts.get("ng", "-") }}</td>
-      <td class="num">{{ counts.get("review", "-") }}</td>
-      <td class="num">{{ counts.get("error", "-") }}</td>
-      <td style="min-width:120px">
-        {% if s_total > 0 %}
-        <div class="stack-bar" title="OK {{ counts.get('ok', 0) }} / NG {{ counts.get('ng', 0) }} / REVIEW {{ counts.get('review', 0) }} / ERROR {{ counts.get('error', 0) }}">
-          <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('ok', 0)|int / s_total) * 100) }}%;background:var(--ok)"></div>
-          <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('ng', 0)|int / s_total) * 100) }}%;background:var(--ng)"></div>
-          <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('review', 0)|int / s_total) * 100) }}%;background:var(--review)"></div>
-          <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('error', 0)|int / s_total) * 100) }}%;background:var(--error)"></div>
-        </div>
-        {% else %}-{% endif %}
-      </td>
-      <td style="white-space:nowrap">
-        <div style="display:flex;gap:4px;flex-wrap:wrap">
-          <a class="pill-link" href="/runs/{{ run.run_id }}">요약</a>
-          <a class="pill-link" href="/runs/{{ run.run_id }}/triage">트리아지</a>
-          <a class="pill-link" href="/runs/{{ run.run_id }}/review">검토 큐</a>
-          <a class="pill-link" href="/runs/{{ run.run_id }}/metrics">지표</a>
-        </div>
-      </td>
-      <td class="meta num">{{ (run.payload.get("started_at", "-")|string).replace("T", " ").replace("Z", "") }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-</div>
+<!-- 4. COLLAPSIBLE ADVANCED / AUDIT DRAWER -->
+<details class="hub-details">
+  <summary>
+    <span>고급 &middot; 저장된 배치 기록 ({{ runs|length }}건) 및 통계 &middot; 엔진 비교 도구 펼치기</span>
+    <span style="font-size:12px">클릭하여 열기 &#9662;</span>
+  </summary>
+  <div class="hub-details-body">
+    <div class="hub-adv-links">
+      <a class="pill-link" href="/stats">검사 통계 (/stats)</a>
+      <a class="pill-link" href="/compare">엔진 비교 (/compare)</a>
+      <a class="pill-link" href="/runs/{{ latest_run.run_id }}/triage">트리아지 분석</a>
+      <a class="pill-link" href="/runs/{{ latest_run.run_id }}/metrics">상세 지표</a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="white-space:nowrap">실행 ID (run_id)</th>
+            <th style="white-space:nowrap">상태</th>
+            <th style="white-space:nowrap">분할</th>
+            <th style="white-space:nowrap">샘플</th>
+            <th style="white-space:nowrap">OK</th>
+            <th style="white-space:nowrap">NG</th>
+            <th style="white-space:nowrap">REVIEW</th>
+            <th style="white-space:nowrap">ERROR</th>
+            <th style="white-space:nowrap">판정 분포</th>
+            <th style="white-space:nowrap">화면 바로가기</th>
+            <th style="white-space:nowrap">시작(UTC)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for run in runs %}
+          {% set counts = run.payload.get("counts", {}) %}
+          {% set s_total = counts.get("samples", 0)|int %}
+          {% set r_status = run.payload.get("status", "ERROR") %}
+          <tr>
+            <td class="num" style="white-space:nowrap"><a href="/runs/{{ run.run_id }}"><strong>{{ run.run_id }}</strong></a></td>
+            <td style="white-space:nowrap">
+              <span class="badge b-{{ r_status }}">{{ r_status }}</span>
+              {% if status_labels.get(r_status) %}<span class="badge-note">{{ status_labels.get(r_status) }}</span>{% endif %}
+            </td>
+            <td style="white-space:nowrap"><code>{{ run.payload.get("split", "-") }}</code></td>
+            <td class="num" style="white-space:nowrap">{{ counts.get("samples", "-") }}</td>
+            <td class="num" style="white-space:nowrap">{{ counts.get("ok", "-") }}</td>
+            <td class="num" style="white-space:nowrap">{{ counts.get("ng", "-") }}</td>
+            <td class="num" style="white-space:nowrap">{{ counts.get("review", "-") }}</td>
+            <td class="num" style="white-space:nowrap">{{ counts.get("error", "-") }}</td>
+            <td style="min-width:110px">
+              {% if s_total > 0 %}
+              <div class="stack-bar" title="OK {{ counts.get('ok', 0) }} / NG {{ counts.get('ng', 0) }} / REVIEW {{ counts.get('review', 0) }} / ERROR {{ counts.get('error', 0) }}">
+                <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('ok', 0)|int / s_total) * 100) }}%;background:var(--ok)"></div>
+                <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('ng', 0)|int / s_total) * 100) }}%;background:var(--ng)"></div>
+                <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('review', 0)|int / s_total) * 100) }}%;background:var(--review)"></div>
+                <div class="stack-seg" style="width:{{ '%.1f'|format((counts.get('error', 0)|int / s_total) * 100) }}%;background:var(--error)"></div>
+              </div>
+              {% else %}-{% endif %}
+            </td>
+            <td style="white-space:nowrap">
+              <div style="display:flex;gap:4px;flex-wrap:wrap">
+                <a class="pill-link" href="/runs/{{ run.run_id }}">요약</a>
+                <a class="pill-link" href="/runs/{{ run.run_id }}/triage">트리아지</a>
+                <a class="pill-link" href="/runs/{{ run.run_id }}/review">검토 큐</a>
+                <a class="pill-link" href="/runs/{{ run.run_id }}/metrics">지표</a>
+              </div>
+            </td>
+            <td class="meta num">{{ (run.payload.get("started_at", "-")|string).replace("T", " ").replace("Z", "") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</details>
 {% else %}
 <div class="notice">표시할 run이 없습니다. 먼저 <code>surface-sentinel batch</code>로 run을 만드세요.</div>
 {% endif %}

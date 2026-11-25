@@ -278,3 +278,118 @@ def test_inspection_detail_and_readonly_connections_handle_corrupt_db_and_busy_t
     assert client.get(f"/runs/{ui_run.RUN_ID}").status_code == 404
     assert client.get("/watchdog").status_code == 404
 
+
+def test_inspections_export_csv_without_db_does_not_create_db(
+    client: TestClient, env: tuple[Path, Path, Path]
+) -> None:
+    runs_dir, _, _ = env
+    resp = client.get("/inspections/export.csv")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    assert resp.content.startswith(b"\xef\xbb\xbf")
+    text = resp.content.decode("utf-8-sig")
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    assert lines == [
+        "id,sample_id,engine,status,score,reasons,label,split,config_hash,created_at"
+    ]
+    assert not (runs_dir / "records.db").exists()
+
+
+def test_inspections_export_csv_with_seeded_db_and_status_filter(
+    client: TestClient, env: tuple[Path, Path, Path]
+) -> None:
+    import csv
+    import io
+
+    runs_dir, _, _ = env
+    seed_stats(runs_dir)
+
+    page = client.get("/inspections")
+    assert page.status_code == 200
+    assert 'href="/inspections/export.csv"' in page.text
+    assert 'href="/inspections/export.csv?status=NG"' in page.text
+
+    all_resp = client.get("/inspections/export.csv")
+    assert all_resp.status_code == 200
+    assert all_resp.content.startswith(b"\xef\xbb\xbf")
+    all_rows = list(csv.DictReader(io.StringIO(all_resp.content.decode("utf-8-sig"))))
+    assert len(all_rows) == 3
+    assert [row["status"] for row in all_rows] == ["REVIEW", "NG", "OK"]
+
+    ng_resp = client.get("/inspections/export.csv", params={"status": "NG"})
+    assert ng_resp.status_code == 200
+    assert "inspections_ng.csv" in ng_resp.headers.get("content-disposition", "")
+    ng_rows = list(csv.DictReader(io.StringIO(ng_resp.content.decode("utf-8-sig"))))
+    assert len(ng_rows) == 1
+    assert ng_rows[0]["status"] == "NG"
+    assert ng_rows[0]["engine"] == "opencv"
+
+
+def test_inspection_demo_samples_direct_train_dir_and_gt_exclusion(tmp_path: Path) -> None:
+    runs_dir = tmp_path / "runs"
+    runs_dir.mkdir()
+    raw_root = tmp_path / "kolektorsdd2"
+    train_dir = raw_root / "train"
+    train_dir.mkdir(parents=True)
+
+    png_stub = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
+    (train_dir / "demo_01.png").write_bytes(png_stub)
+    (train_dir / "demo_02.png").write_bytes(png_stub)
+    (train_dir / "demo_01_GT.png").write_bytes(png_stub)
+
+    client = TestClient(
+        create_app(runs_dir=runs_dir, raw_root=raw_root, repo_root=tmp_path)
+    )
+    resp = client.get("/inspections/demo-samples", params={"limit": 20})
+    assert resp.status_code == 200
+    assert resp.json() == {"samples": ["demo_01.png", "demo_02.png"]}
+
+    img_resp = client.get("/inspections/demo-samples/demo_01.png")
+    assert img_resp.status_code == 200
+    assert img_resp.headers["content-type"].startswith("image/png")
+
+    gt_resp = client.get("/inspections/demo-samples/demo_01_GT.png")
+    assert gt_resp.status_code == 404
+
+    missing_client = TestClient(
+        create_app(runs_dir=runs_dir, raw_root=tmp_path / "empty_raw", repo_root=tmp_path)
+    )
+    missing_resp = missing_client.get("/inspections/demo-samples", params={"limit": 20})
+    assert missing_resp.status_code == 200
+    assert missing_resp.json() == {"samples": [], "detail": "샘플 폴더를 찾을 수 없습니다."}
+
+
+def test_inspection_detail_renders_korean_review_reason_summary(
+    env: tuple[Path, Path, Path],
+) -> None:
+    runs_dir, raw_root, _ = env
+    db_path = runs_dir / "records.db"
+    connection = connect(db_path)
+    try:
+        init_db(connection)
+        sha = hashlib.sha256(b"review-weak-sample").hexdigest()
+        result = SampleResult(
+            run_id="live-demo",
+            sample_id="weak_01",
+            original_id="weak_01",
+            split="tune",
+            label="unknown",
+            status=Status.REVIEW,
+            score=0.383909,
+            reasons=(ReasonCode.MULTIPLE_WEAK_CANDIDATES,),
+            config_hash="0" * 64,
+        )
+        iid = insert_inspection(connection, result, engine="opencv", image_sha256=sha)
+    finally:
+        connection.close()
+
+    client = TestClient(create_app(runs_dir=runs_dir, raw_root=raw_root))
+    resp = client.get(f"/inspections/{iid}")
+    assert resp.status_code == 200
+    text = resp.text
+    assert "판정 근거 요약" in text
+    assert "다수 약한 후보 동시 검출" in text
+    assert "0.50" in text
+    assert "MULTIPLE_WEAK_CANDIDATES" in text
+
+

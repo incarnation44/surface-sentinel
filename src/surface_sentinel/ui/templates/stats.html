@@ -4,15 +4,15 @@
 {% block content %}
 <div class="page-hero">
   <div>
-    <span class="page-eyebrow">Inspection Analytics · Read-Only</span>
-    <h1>검사 통계</h1>
-    <p class="page-sub">검사 기록 DB(기계 판정 불변, 사람 판정 append-only)를 <b>읽기 전용</b>으로 집계합니다. 모든 비율에 분모를 함께 표시하고, 분모가 0이면 값을 비웁니다.</p>
-    <p class="meta" style="margin:6px 0 0">DB: <span class="hash">{{ stats.path }}</span></p>
+    <span class="page-eyebrow">Inspection Analytics &middot; Read-Only</span>
+    <h1>검사 통계 요약</h1>
+    <p class="page-sub">지금까지 검사한 전체 기록의 정상&middot;불량&middot;보류 비율을 <b>읽기 전용</b>으로 집계합니다. 모든 비율에는 전체 건수(분모)를 함께 표시합니다.</p>
+    <p class="meta" style="margin:6px 0 0">저장소: <span class="hash">{{ stats.path }}</span></p>
   </div>
   <div class="page-hero-aside navlinks" style="margin:0">
-    <a href="/">run 목록</a>
-    <a href="/compare">run 비교</a>
-    <a href="/watchdog">Watchdog 관제</a>
+    <a href="/">검사 허브</a>
+    <a href="/compare">엔진 비교</a>
+    <a href="/watchdog">이상 감시(Watchdog)</a>
   </div>
 </div>
 
@@ -68,7 +68,7 @@
 </table>
 </div>
 
-<h2>엔진별 비교 (분모 = 엔진별 검사 수)</h2>
+<h2>엔진별 비교 (검사 결과)</h2>
 {% if stats.engines %}
 <div class="table-wrap">
 <table>
@@ -95,7 +95,7 @@
 <div class="empty-card">엔진별 기록이 없습니다.</div>
 {% endif %}
 
-<h2>지표 (분모 포함)</h2>
+<h2>세부 비율 지표 (분모 포함)</h2>
 <div class="table-wrap">
 <table>
   <thead><tr><th>지표</th><th>값 [95% 구간] (분모)</th><th>정의</th></tr></thead>
@@ -107,7 +107,7 @@
 </table>
 </div>
 
-<h2>리뷰</h2>
+<h2>사람 검토 이력 요약</h2>
 <div class="table-wrap">
 <table>
   <tbody>

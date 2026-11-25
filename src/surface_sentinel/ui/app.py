@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import sqlite3
 import tempfile
 from pathlib import Path
@@ -16,7 +18,7 @@ from typing import Annotated, Any
 from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -128,6 +130,20 @@ REASON_LABELS = {
     "INSUFFICIENT_EVIDENCE": "증거 부족",
     "IMAGE_QUALITY": "이미지 품질 문제",
     "OTHER": "기타(메모 필수)",
+}
+
+#: 기계 판정 사유 코드 → 쉬운 한국어 설명(상세 화면 판정 근거 카드용).
+VERDICT_REASON_LABELS = {
+    "DEFECT_EVIDENCE_STRONG": "강한 결함 증거 확인 — 유효 후보(면적 ≥ 40px, 대비 ≥ 16) 최고 점수가 NG 기준(0.50) 이상",
+    "NO_DEFECT_EVIDENCE": "결함 증거 없음 — 유효 결함 후보 0개 및 품질·경계 이상 없음",
+    "EVIDENCE_IN_REVIEW_BAND": "보류 구간 결함 후보 검출 — 유효 후보가 있으나 최고 점수가 NG 기준(0.50) 미만",
+    "MULTIPLE_WEAK_CANDIDATES": "다수 약한 후보 동시 검출 — 보류 대역(0.25 ≤ 점수 < 0.50) 후보가 2개 이상 잡혀 미세 결함·표면 노이즈 확인 필요",
+    "BORDER_TOUCHING_CANDIDATE": "ROI 가장자리 접촉 후보 — 경계 인접 후보(점수 ≥ 0.40)로 치구·절단면 그림자 오검 확인 필요",
+    "CANDIDATE_TRUNCATED": "후보 수 상한(20개) 초과 절단 — 전면 텍스처·조명 이상 가능성으로 사람 확인 필요",
+    "INPUT_QUALITY_LOW": "입력 영상 품질 저하 — 흐림·과암부·과노출·포화 비율 임계 초과",
+    "ROI_UNCERTAIN": "검사 영역(ROI) 불확실 — 유효 표면 면적 비율(20%) 미달",
+    "MANUAL_OVERRIDE": "작업자 수동 판정 반영",
+    "MANUAL_DEFERRED": "작업자 수동 보류",
 }
 
 #: 낮을수록 좋은 지표(run 비교 Δ 표시에 사용).
@@ -472,6 +488,7 @@ def create_app(
     templates.env.globals["version"] = __version__
     templates.env.globals["status_labels"] = STATUS_LABELS
     templates.env.globals["reason_labels"] = REASON_LABELS
+    templates.env.globals["verdict_reason_labels"] = VERDICT_REASON_LABELS
     templates.env.globals["metric_labels"] = METRIC_LABELS
 
     def render(
@@ -1246,6 +1263,153 @@ def create_app(
             offset=max(0, offset),
         )
         return render(request, "inspections.html", {"db": view})
+
+    def _resolve_demo_train_dir(raw_root: Path) -> Path | None:
+        for candidate in (raw_root / "train", raw_root / "kolektorsdd2" / "train"):
+            if candidate.is_dir():
+                return candidate
+        return None
+
+    def _even_pick(items: list[str], count: int) -> list[str]:
+        if count <= 0 or not items:
+            return []
+        if len(items) <= count:
+            return list(items)
+        return [items[(i * len(items)) // count] for i in range(count)]
+
+    def _load_tune_train_pool(
+        train_dir: Path, repo_root: Path
+    ) -> tuple[list[str], list[str], set[str]]:
+        tune_csv = repo_root / "data" / "splits" / "tune.csv"
+        if not tune_csv.is_file():
+            return [], [], set()
+        defects: list[str] = []
+        goods: list[str] = []
+        with tune_csv.open(encoding="utf-8", newline="") as handle:
+            for row in csv.DictReader(handle):
+                if row.get("source_split") != "train":
+                    continue
+                name = Path(row.get("image_path", "")).name
+                if (
+                    not name
+                    or not name.lower().endswith(".png")
+                    or Path(name).stem.endswith("_GT")
+                    or not (train_dir / name).is_file()
+                ):
+                    continue
+                if row.get("label") == "defect":
+                    defects.append(name)
+                else:
+                    goods.append(name)
+        defects_sorted = sorted(set(defects))
+        goods_sorted = sorted(set(goods))
+        allowed = set(defects_sorted) | set(goods_sorted)
+        if not allowed:
+            return [], [], set()
+        return defects_sorted, goods_sorted, allowed
+
+    @app.get("/inspections/demo-samples")
+    def inspection_demo_samples(limit: int = 20) -> JSONResponse:
+        """시연용 실제 공장 사진(train/tune) 목록을 반환한다 (봉인 test 미접근)."""
+
+        capped = max(1, min(limit, 50))
+        train_dir = _resolve_demo_train_dir(app.state.raw_root)
+        if train_dir is None:
+            return JSONResponse({"samples": [], "detail": "샘플 폴더를 찾을 수 없습니다."})
+        defects, goods, allowed = _load_tune_train_pool(train_dir, app.state.repo_root)
+        if allowed:
+            n_def = min(len(defects), max(1, round(capped * 0.25))) if defects else 0
+            n_good = min(len(goods), capped - n_def)
+            if n_def + n_good < capped:
+                if len(defects) > n_def:
+                    n_def = min(len(defects), capped - n_good)
+                elif len(goods) > n_good:
+                    n_good = min(len(goods), capped - n_def)
+            picked = sorted(_even_pick(defects, n_def) + _even_pick(goods, n_good))
+        else:
+            names = sorted(
+                p.name
+                for p in train_dir.iterdir()
+                if p.is_file() and p.suffix.lower() == ".png" and not p.stem.endswith("_GT")
+            )
+            picked = _even_pick(names, capped)
+        return JSONResponse({"samples": picked})
+
+    @app.get("/inspections/demo-samples/{filename}")
+    def inspection_demo_sample_file(filename: str) -> FileResponse:
+        """시연용 train 샘플 1장을 안전하게 반환한다."""
+
+        train_dir = _resolve_demo_train_dir(app.state.raw_root)
+        if train_dir is None:
+            raise UiInputError(NO_IMAGE_TEXT)
+        _, _, allowed = _load_tune_train_pool(train_dir, app.state.repo_root)
+        target = safe_child(train_dir, filename)
+        if not target.is_file() or target.suffix.lower() != ".png" or target.stem.endswith("_GT"):
+            raise UiInputError(NO_IMAGE_TEXT)
+        if allowed and target.name not in allowed:
+            raise UiInputError(NO_IMAGE_TEXT)
+        return FileResponse(target, media_type="image/png")
+
+    @app.get("/inspections/export.csv")
+    def inspections_export_csv(
+        status: str | None = None,
+        engine: str | None = None,
+    ) -> Response:
+        """검사 기록 DB(`inspections`)를 UTF-8 BOM CSV로 내려보낸다."""
+
+        columns = (
+            "id",
+            "sample_id",
+            "engine",
+            "status",
+            "score",
+            "reasons",
+            "label",
+            "split",
+            "config_hash",
+            "created_at",
+        )
+        rows_out: list[tuple[Any, ...]] = []
+        if app.state.db_path.is_file():
+            connection = _read_only_connection(app.state.db_path)
+            try:
+                tables = {
+                    str(r[0])
+                    for r in connection.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table'"
+                    ).fetchall()
+                }
+                if "inspections" in tables:
+                    where: list[str] = []
+                    params: list[Any] = []
+                    if status:
+                        where.append("status = ?")
+                        params.append(status)
+                    if engine:
+                        where.append("engine = ?")
+                        params.append(engine)
+                    where_sql = (" WHERE " + " AND ".join(where)) if where else ""
+                    sql = (
+                        f"SELECT {', '.join(columns)} FROM inspections"
+                        f"{where_sql} ORDER BY id DESC"
+                    )
+                    for r in connection.execute(sql, params).fetchall():
+                        rows_out.append(tuple(r[col] for col in columns))
+            finally:
+                connection.close()
+
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(columns)
+        writer.writerows(rows_out)
+        payload = buf.getvalue().encode("utf-8-sig")
+        suffix = f"_{status.lower()}" if status and status in STATUS_ORDER else ""
+        filename = f"inspections{suffix}.csv"
+        return Response(
+            content=payload,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     @app.get("/inspections/{inspection_id}", response_class=HTMLResponse)
     def inspection_detail_page(request: Request, inspection_id: int) -> HTMLResponse:

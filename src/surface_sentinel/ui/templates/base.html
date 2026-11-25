@@ -849,12 +849,10 @@ html[data-theme="dark"] .hotspot-svg line[stroke="#92400e"] { stroke: #fbbf24; }
         Surface Sentinel
       </a>
       <nav class="gnav" aria-label="전역 탐색">
-        <a href="/" {% if current_path == "/" or current_path.startswith("/runs/") %}class="active"{% endif %}>Run 목록</a>
         <a href="/cinema" {% if current_path.startswith("/cinema") %}class="active"{% endif %}>시네마 시연</a>
-        <a href="/watchdog" {% if current_path.startswith("/watchdog") %}class="active"{% endif %}>Watchdog 관제</a>
-        <a href="/inspections" {% if current_path.startswith("/inspections") %}class="active"{% endif %}>교차증거 DB</a>
+        <a href="/inspections" {% if current_path.startswith("/inspections") %}class="active"{% endif %}>실시간 검사</a>
+        <a href="/" {% if current_path == "/" or current_path.startswith("/runs/") %}class="active"{% endif %}>검사 허브</a>
         <a href="/stats" {% if current_path.startswith("/stats") %}class="active"{% endif %}>검사 통계</a>
-        <a href="/compare" {% if current_path.startswith("/compare") %}class="active"{% endif %}>Run 비교</a>
       </nav>
     </div>
     <div class="mode-group">
@@ -869,7 +867,7 @@ html[data-theme="dark"] .hotspot-svg line[stroke="#92400e"] { stroke: #fbbf24; }
 <main>
 {% block content %}{% endblock %}
 </main>
-<footer>Surface Sentinel {{ version }} · 광학 표면 계측 콘솔 · 읽기 전용 + REVIEW 검토 결정(append-only) · OK/NG 기계 판정은 불변</footer>
+<footer>Surface Sentinel {{ version }} · OpenCV r20 (동결) 표면 결함 검사 시연 콘솔 · <a href="/watchdog" style="color:var(--muted)">내부 감사</a> · <a href="/compare" style="color:var(--muted)">Run 비교</a></footer>
 <script>
 (function () {
   var btn = document.getElementById("theme-toggle");

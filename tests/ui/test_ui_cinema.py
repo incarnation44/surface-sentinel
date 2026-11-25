@@ -55,7 +55,7 @@ def test_cinema_page_renders_offline_without_external_urls(client: TestClient) -
     assert "2D 시네마 와이프" in text
     assert "결함 줌인 콜아웃" in text
     assert "INSPECTION LOOP" in text
-    assert "발표 전체화면" in text
+    assert "전체화면" in text
     assert "http://" not in text
     assert "https://" not in text
 
