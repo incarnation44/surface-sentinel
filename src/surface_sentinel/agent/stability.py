@@ -1,4 +1,4 @@
-"""Phase 2 안정성·약후보 기하·능동 패치 중재 모듈 (observe-only).
+"""약후보 기하 패턴(선형 스크래치·경계 잡음)·섭동 민감도·엔진 간 패치 중재를 계산하는 보조 분석기.
 
 실데이터 KSDD2의 REVIEW 원인(``MULTIPLE_WEAK_CANDIDATES``,
 ``EVIDENCE_IN_REVIEW_BAND``)과 엔진 간 불일치(``LOCALIZATION_MISMATCH``,

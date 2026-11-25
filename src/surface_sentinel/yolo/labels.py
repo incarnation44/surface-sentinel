@@ -1,4 +1,4 @@
-"""마스크 → YOLO 라벨 변환(결정론적).
+"""GT 이진 마스크 연결 요소를 YOLO detection bbox 및 segmentation 폴리곤 라벨로 변환.
 
 GT 마스크의 연결 요소를 컴포넌트로 추출해 detection용 bbox와
 segmentation용 폴리곤을 만든다. 좌표는 이미지 크기로 정규화한다.

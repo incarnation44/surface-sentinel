@@ -1,4 +1,7 @@
-"""데이터 감사, contact sheet, 감사 보고서 테스트."""
+"""데이터셋 감사(`io/audit.py`) 단위 테스트.
+
+손상 이미지·마스크 형상 불일치·빈 결함 마스크 탐지와 contact sheet·감사 보고서 생성을 검증한다.
+"""
 
 from __future__ import annotations
 

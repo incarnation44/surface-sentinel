@@ -1,4 +1,7 @@
-"""T05 단위 테스트: Wilson 경계, 분모 0, 표본, override, grid 결정론, 봉인 차단."""
+"""평가 핵심 모듈 단위 테스트.
+
+Wilson 95% CI 경계, 분모 0 처리, 층화 표본 추출, 그리드 결정론, 봉인 분할 차단을 검증한다.
+"""
 
 from __future__ import annotations
 

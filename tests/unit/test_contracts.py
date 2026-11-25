@@ -1,4 +1,7 @@
-"""Contract enum and serialization tests."""
+"""공용 계약 Enum(`Status`, `Stage`, `ErrorCode`) 및 `SampleResult` 직렬화 단위 테스트.
+
+디스크 스키마와 연동되는 단계 순서·상태값·JSON 직렬화 규격이 깨지지 않도록 보장한다.
+"""
 
 from __future__ import annotations
 

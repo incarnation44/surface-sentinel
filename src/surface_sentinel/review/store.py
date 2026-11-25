@@ -1,4 +1,4 @@
-"""append-only 검토 결정 저장소 (설계 §5.3, T07).
+"""배치 run용 append-only 검토 결정 저장소(`review_decisions.jsonl`) 및 검증 로직.
 
 ``review_decisions.jsonl``은 한 줄에 결정 하나를 추가만 한다. 기존 줄은
 수정·삭제하지 않으며, 같은 샘플의 마지막 결정이 최종 상태다. 기계 판정이

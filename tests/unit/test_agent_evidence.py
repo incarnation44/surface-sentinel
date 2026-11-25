@@ -1,4 +1,4 @@
-"""Phase 1 교차 증거 순수 모듈 단위 테스트 (에이전트 확장 제안 §2).
+"""엔진 간 교차 증거 계산(`agent/evidence.py`) 단위 테스트 — IoU·포함률·greedy 매칭·ROI 비교 검증.
 
 엔진 간 localization(IoU·containment·중심거리·면적비)·ROI 비교, 결정론 greedy
 matching, 전용 플래그, dual overlay를 검증한다. 합성 관찰만 사용하며 기계 판정은

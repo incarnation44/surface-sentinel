@@ -1,4 +1,7 @@
-"""API 레지스트리 주입 검증 (감사 P1-1, ADR 0008)."""
+"""검사 API의 ONNX 세션 레지스트리 주입 단위 테스트.
+
+앱 생성 시 레지스트리 공유 및 YOLO 미활성 환경에서의 안전한 None 처리를 검증한다.
+"""
 from pathlib import Path
 from types import SimpleNamespace
 

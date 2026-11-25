@@ -1,4 +1,4 @@
-"""Phase 3 무결성 감사 Watchdog 에이전트 (observe-only).
+"""배치 산출물·SQLite DB·저장소 계약 게이트 무결성을 점검하는 읽기 전용 Watchdog 감사기.
 
 개별 이미지 에이전트(Tier 1) 상위에서 배치 실행 산출물(``runs/<run_id>/``),
 검사 기록 DB(``records.db``), 저장소 설계 하드 게이트(H1~H7 핵심 불변 조건)를

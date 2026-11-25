@@ -1,4 +1,4 @@
-"""API 교차 증거 배선 통합 테스트 (Phase 1, observe-only).
+"""검사 API의 결합(combined) 교차 증거 저장 배선 통합 테스트 — 판정 불변 및 장애 격리 검증.
 
 결합(combined) 검사가 엔진별 관찰 2개를 보존하면 API 도 별도 증거
 (agent_assessments)를 append 한다. YOLO 경로는 ``sys.modules`` stub 으로

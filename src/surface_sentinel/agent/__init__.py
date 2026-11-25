@@ -1,4 +1,4 @@
-"""Constrained tool-using agent.
+"""제한된 결정론적 에이전트·교차증거·트리아지·드리프트·감사·워커 패키지.
 
 T09 제한된 에이전트(설계 §6): 결정론적 정책 엔진(``engine``), 제한된 도구,
 append-only 감사와 replay(``trace``), 실행 하네스(``run``), 승격 비교

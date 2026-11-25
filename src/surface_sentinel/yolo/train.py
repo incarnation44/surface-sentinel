@@ -1,11 +1,11 @@
-"""YOLO 학습·ONNX export 스크립트(격리 환경 `.venv-train` 전용, ADR 0007 D2).
+r"""격리 학습 환경(`.venv-train`)에서 YOLO det/seg 모델을 학습하고 ONNX로 내보내는 스크립트.
 
 이 스크립트는 ultralytics만 사용하며 ``surface_sentinel`` 패키지를 import하지
 않는다. 메인 venv에 torch/ultralytics를 넣지 않기 위한 격리 학습 진입점이다.
 
 실행 예(저장소 루트에서):
-    .venv-train\\Scripts\\python.exe src\\surface_sentinel\\yolo\\train.py --task det
-    .venv-train\\Scripts\\python.exe src\\surface_sentinel\\yolo\\train.py --task seg
+    .venv-train\Scripts\python.exe src\surface_sentinel\yolo\train.py --task det
+    .venv-train\Scripts\python.exe src\surface_sentinel\yolo\train.py --task seg
 
 학습 산출물(best.pt, best.onnx, results.csv)은 ``data/derived/yolo/models/<task>/``
 아래에 저장되며 Git에 추가하지 않는다.

@@ -1,4 +1,7 @@
-"""P1 누적 결함 지도 테스트."""
+"""누적 결함 공간 히트맵(`analysis/defect_map.py`) 단위 테스트.
+
+픽셀-그리드 좌표 매핑, 정상/제외 샘플 필터링, 결정론적 통계·렌더링 및 CLI 실행을 검증한다.
+"""
 
 from __future__ import annotations
 

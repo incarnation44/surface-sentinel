@@ -1,4 +1,4 @@
-"""git_code_identity 진입점 헬퍼 단위 테스트 (P0-2 code_sha 주입 + 감사 5.4).
+"""Git 코드 리비전(`git_code_identity`) 헬퍼 단위 테스트 — clean/dirty 트리 해시 결정론 검증.
 
 code_sha/code_dirty 는 진입점(API 생성·워커 시작·평가 CLI)에서 1회 계산한다.
 subprocess 는 스텁으로 대체해 git 없이 결정론적으로 검증하고, 파싱 자체가 실제

@@ -1,4 +1,7 @@
-"""Wave 3 UI 고도화 및 신규 콘솔 라우트 테스트."""
+"""로컬 웹 UI 고급 관제 라우트 테스트.
+
+트리아지 Lift(`/triage`), 위험도순 리뷰 정렬, Watchdog(`/watchdog`), 검사 DB 탐색기 화면을 검증한다.
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""YOLO 엔진 진입점(``inspect_with_yolo``) 단위 테스트 (E5b 통합).
+"""공용 YOLO 검사 진입점(`yolo/inspect.py`) 단위 테스트 — 스텁 엔진으로 det/seg/combined 경로 검증.
 
 실제 ONNX 가중치는 아직 없다(학습 중). ``YoloOnnxEngine`` 을 stub 으로 바꿔
 합성 :class:`~surface_sentinel.yolo.inference.Detection` 만으로 검사 흐름을

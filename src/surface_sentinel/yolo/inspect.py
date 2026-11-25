@@ -1,4 +1,4 @@
-"""YOLO 검사 진입점(det / seg / combined) — 워커·API 공용 계약 (E5b 통합).
+"""워커·API 공용 YOLO 검사 진입점(`inspect_with_yolo`) — det/seg/combined 추론과 오버레이 통합.
 
 ``inspect_with_yolo`` 하나로 YOLO 추론 → 어댑터 변환 → 오버레이 저장을 끝낸다.
 판정 규칙은 이 모듈이 아니라 ``yolo.adapter``(점수 → 상태)와

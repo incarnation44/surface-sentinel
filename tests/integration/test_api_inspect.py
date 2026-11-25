@@ -1,4 +1,4 @@
-"""E4 검사 API 통합 테스트 (TestClient).
+"""로컬 FastAPI 검사 API 통합 테스트 — 이미지 업로드 검사, DB 기록, 중복제거, 검토 API 검증.
 
 합성 PNG만 업로드하고 ``tmp_path`` 밖은 건드리지 않는다. opencv 경로는 실제
 ``inspect_image``로, YOLO 경로는 ``sys.modules`` stub으로 검증한다(모델 파일

@@ -1,4 +1,7 @@
-"""실행 자원 상한(동시성·OpenCV 스레드)과 로컬 웹 Origin/CSRF 검증."""
+"""실행 자원 상한(파이프라인 동시성·OpenCV 스레드)과 로컬 웹 Origin/CSRF·업로드 크기 검증.
+
+과도한 동시 요청·대용량 업로드·교차 출처 요청으로부터 로컬 API와 UI 서버를 보호한다.
+"""
 
 from __future__ import annotations
 

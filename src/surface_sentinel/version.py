@@ -1,3 +1,6 @@
-"""Single source of truth for the package version."""
+"""패키지 버전 단일 출처(`__version__`).
+
+CLI 출력, run 메타데이터, 보고서에서 동일한 버전 문자열을 참조하기 위해 분리했다.
+"""
 
 __version__ = "1.0.1"

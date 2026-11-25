@@ -1,4 +1,4 @@
-"""전수 tune 검증 상세 분석 단위 테스트.
+"""전수 `tune` 분석(`evaluation/fullverify.py`) 단위 테스트 — escape 원인·REVIEW 사유·IoU 분포 검증.
 
 합성 이미지 fixture로 escape 원인·REVIEW 사유·IoU 경계·캐시 정체성·
 CLI 종료 코드를 검증한다. 실제 KSDD2 이미지는 쓰지 않는다.

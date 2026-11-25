@@ -1,4 +1,4 @@
-"""Phase 3 Watchdog 감사·PSI 드리프트 감시·repro check 실측 검증.
+"""Watchdog 무결성 감사·PSI 드리프트 감시·재현성 체크를 실데이터 산출물로 검증하는 스크립트.
 
 봉인 분할(``test``·``official_test`` CSV)은 절대 열지 않는다.
 오직 ``docs/evidence/t05_adopted.jsonl`` + ``tune`` 2,001장 캐시, 저장소 메타데이터,

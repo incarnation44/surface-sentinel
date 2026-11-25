@@ -1,4 +1,7 @@
-"""CLI ``gate``, ``repro check``, ``agent audit/drift/triage`` 통합·단위 테스트."""
+"""CLI `gate`, `repro check`, `agent` 분석 서브커맨드 테스트.
+
+저장소 무결성 게이트, 재현성 비교, 감사·드리프트·트리아지·반사실 해석 CLI 동작을 검증한다.
+"""
 
 from __future__ import annotations
 

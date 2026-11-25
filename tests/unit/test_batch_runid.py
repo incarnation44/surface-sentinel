@@ -1,4 +1,7 @@
-"""T06 run_id 생성·백분위수·정합성 단위 테스트."""
+"""배치 `run_id` 생성 및 지연시간 백분위수 계산 단위 테스트.
+
+충돌 시 덮어쓰지 않는 접미사 증가 규칙과 nearest-rank 백분위수 단조성을 검증한다.
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""EngineSpec 신원 단위 테스트 (P0-2/P0-3).
+"""검사 신원(`EngineSpec`) 단위 테스트 — 경로 독립 해시, provenance 완결성 판정, 불변성 검증.
 
 fingerprint 가 신원 필드별로 분리되는지, provenance_complete 판정, opencv_spec,
 그리고 onnx_path 가 fingerprint 에 영향을 주지 않는지(바이트 SHA 로 신원 고정) 검증.

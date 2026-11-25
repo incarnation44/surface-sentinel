@@ -1,4 +1,7 @@
-"""YOLO 판정 어댑터·결합 판정 단위 테스트(합성 detection, ONNX 불필요)."""
+"""YOLO 탐지→`Status` 어댑터 및 OpenCV 결합 규칙(`yolo/adapter.py`, `yolo/combine.py`) 단위 테스트.
+
+신뢰도 경계(OK/REVIEW/NG) 변환과 한쪽이라도 결함·검토 시 보수적 결합 규칙을 검증한다.
+"""
 
 from __future__ import annotations
 

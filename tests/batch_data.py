@@ -1,4 +1,4 @@
-"""T06 배치 테스트가 공유하는 결정론적 합성 dataset 빌더.
+"""배치·평가 테스트 공용 합성 데이터셋(이미지·manifest·분할 CSV) 생성 헬퍼.
 
 실제 KSDD2 이미지는 쓰지 않는다. ``tests/synthetic.py``가 만드는 합성 PNG를
 ``raw/train``에 쓰고, 그 바이트 해시로 manifest와 tune.csv를 만든다.

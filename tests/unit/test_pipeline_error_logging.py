@@ -1,4 +1,4 @@
-"""예상 못한 예외의 내부 진단 로깅 테스트(감사 5.8).
+"""파이프라인 내부 예외 진단 로깅 단위 테스트 — ERROR 변환과 별개로 내부 원인이 남는지 검증.
 
 ERROR 결과로 변환되는 실패는 그대로 ERROR + ``E_PROCESS_INTERNAL`` 을 유지하되,
 원인 추적용 컨텍스트(stage·예외 타입·traceback·run_id·image SHA·config_hash)를

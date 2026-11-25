@@ -1,4 +1,4 @@
-"""OpenCV 기준선과 YOLO 판정의 결합 규칙.
+"""OpenCV 기준선과 YOLO 판정을 보수적으로 결합(NG/REVIEW 우선)하는 합산 규칙 모듈.
 
 어느 한쪽이 NG 면 NG, REVIEW 면 REVIEW, ERROR 면 ERROR, 둘 다 OK 일 때만 OK.
 한쪽 판정이 다른 쪽을 덮어써서 OK 로 되돌리는 경로는 없다.

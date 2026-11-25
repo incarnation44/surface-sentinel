@@ -1,4 +1,4 @@
-"""Shared data contracts for inspection, evaluation, and persistence.
+"""검사·평가·저장 전 계층이 공유하는 데이터 계약(Status, ReasonCode, ErrorCode, SampleResult).
 
 The enum values in this module are part of the on-disk schema. Renaming a
 member requires a schema version bump and a migration plan.

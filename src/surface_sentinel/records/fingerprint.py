@@ -1,4 +1,4 @@
-"""검사 fingerprint (P0-2, 판정 로드맵 2단계).
+"""검사 조건 지문(`inspection_fingerprint`) SHA-256 계산 — 동일 이미지의 엔진·설정별 중복 구분.
 
 중복제거 키를 ``image_sha256`` 단독에서 ``(image_sha256, inspection_fingerprint)``
 쌍으로 바꾼다. 같은 이미지라도 엔진·task·모델·설정·정책·코드 버전이 다르면

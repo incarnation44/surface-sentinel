@@ -1,4 +1,4 @@
-"""실제 KSDD2 반입본, manifest, 분할에 대한 T03 데이터 테스트.
+"""실제 KSDD2 반입본(`data/`)의 manifest 수량·그룹 분할 누출·해시 일치 검증(`@pytest.mark.data`).
 
 원본 전체 재디코드는 ``surface-sentinel data verify``가 담당하므로 이
 테스트는 manifest/split CSV만 읽어 수량과 누출을 확인한다.

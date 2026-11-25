@@ -1,4 +1,4 @@
-"""E트랙 채택 게이트(P0-1) — val 400 짝비교 분석.
+"""OpenCV r20 vs YOLO seg vs 결합 엔진 `tune-val` 400장 짝비교 채택 게이트 분석 스크립트.
 
 결합 감사 JSONL의 ``opencv_status`` 열은 **같은 이미지**에서 돌린 OpenCV r20
 판정이다. 이 스크립트는 그 열로 r20 / YOLO seg / 결합 세 엔진을 같은 표본에서

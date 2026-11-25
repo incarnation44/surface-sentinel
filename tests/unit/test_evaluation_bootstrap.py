@@ -1,4 +1,7 @@
-"""F6 부트스트랩 단위 테스트: 결정론, den=0 제외, 짝 delta 부호."""
+"""이미지 단위 그룹·짝 부트스트랩 CI(`evaluation/bootstrap.py`) 단위 테스트.
+
+리샘플링 결정론, 분모 0 이미지 제외, 짝 delta 부호, 채택 검증 CLI의 봉인 차단을 검증한다.
+"""
 
 from __future__ import annotations
 

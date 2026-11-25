@@ -1,4 +1,4 @@
-"""유니코드 경로 안전 이미지 I/O (Windows 한글 경로 대응).
+"""Windows 비ASCII(한글 등) 경로에서도 깨지지 않는 안전한 이미지 읽기·원자적 PNG 저장 모듈.
 
 ``cv2.imread``/``cv2.imwrite`` 는 Windows 에서 비ASCII(한글 등) 경로를
 열지 못한다. 읽기는 ``np.fromfile`` + ``cv2.imdecode``, 쓰기는

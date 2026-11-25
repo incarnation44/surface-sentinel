@@ -1,4 +1,4 @@
-"""v1→v2 migration + fingerprint 중복제거 테스트 (P0-2).
+"""SQLite 스키마 v1→v2 마이그레이션 및 fingerprint 기반 중복제거 단위 테스트.
 
 v1 스키마(이미지 단독 UNIQUE) DB 를 만들어 migration 이 id·리뷰를 보존하는지,
 같은 이미지의 다른 엔진/신원이 별도 행으로 기록되는지 검증한다.

@@ -1,4 +1,4 @@
-"""Phase 2 리뷰 큐 트리아지·3단 논증 영수증·Recall@Top-K 평가기 (observe-only).
+"""REVIEW 큐를 결함 위험도순으로 정렬하고 3단 근거 카드·Recall@Top-K를 계산하는 트리아지 모듈.
 
 계약:
 * 제품 판정(``SampleResult.status``)은 절대 변경하지 않는다(``machine_status`` 불변).

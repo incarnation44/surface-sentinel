@@ -1,4 +1,4 @@
-"""SQLite 연결과 스키마 초기화 (E5, ADR 0007).
+"""SQLite 연결, `schema.sql` 초기화, append-only 트리거 강제 및 DB 무결성 검증 모듈.
 
 스키마 정본은 ``records/schema.sql`` 한 파일이다. 파이썬 코드에 DDL을 중복해
 두지 않으며, ``importlib.resources``로 읽어 wheel 설치본에서도 같은 파일을

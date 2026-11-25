@@ -1,4 +1,4 @@
-"""전수 tune 검증 상세 분석 (2026-11-11).
+"""전수 `tune`(2,001장) 후보 검증 상세 분석 — escape 원인 분류, REVIEW 사유, IoU 분포 산출.
 
 전수 측정 산출물(``docs/evidence/tune_fullverify.jsonl``)과 후보별 캐시를
 **읽기 전용**으로 재사용한다. 파이프라인 재실행은 escape 샘플의 원인을

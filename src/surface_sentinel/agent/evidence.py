@@ -1,4 +1,4 @@
-"""Phase 1 교차 증거 — 엔진 간 비교 관찰 (에이전트 확장 제안 §2, observe-only).
+"""OpenCV와 YOLO 관찰 결과를 위치(IoU)·ROI 기준으로 대조하는 읽기 전용 교차 증거 분석기.
 
 결합(combined) 검사가 보존한 엔진별 관찰(``EngineObservation``)을 비교해
 **별도 증거**(AgentAssessment)를 만든다. 기계 판정(``SampleResult.status``)은

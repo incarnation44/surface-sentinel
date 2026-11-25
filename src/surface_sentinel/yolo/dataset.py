@@ -1,4 +1,4 @@
-"""YOLO 데이터셋 export(ultralytics 형식, 결정론적).
+"""`tune` 분할 CSV와 마스크를 ultralytics 학습용 YOLO 디렉터리(det/seg)로 내보내는 모듈.
 
 분할 CSV(tune)를 읽어 group-aware train/val로 나누고, task별(det/seg)
 루트에 이미지(하드링크, 실패 시 복사)와 라벨을 쓴다. 각 루트에

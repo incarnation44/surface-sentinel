@@ -1,3 +1,5 @@
+# OS 간 줄바꿈(LF) 통일 및 이미지·아카이브 바이너리 처리 규칙.
+
 * text=auto eol=lf
 *.png binary
 *.jpg binary

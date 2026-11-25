@@ -1,4 +1,4 @@
-"""기록 DB(SQLite) 단위 테스트 (E5, ADR 0007).
+"""SQLite 검사 기록 DB 초기화·기본 CRUD 단위 테스트 — WAL·외래키 설정과 중복 검사 처리 검증.
 
 합성 :class:`SampleResult`만 사용한다. DB 파일과 스키마는 모두 ``tmp_path``
 아래에 만들고 저장소의 ``data/derived``는 건드리지 않는다.

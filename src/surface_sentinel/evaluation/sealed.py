@@ -1,4 +1,4 @@
-"""T08 봉인 test 일회성 측정 (설계 §2.5, §4.1, §4.4).
+"""봉인 테스트 분할(`test`/`official_test`) 일회성 최종 평가 실행기 및 잠금(lock) 기록 모듈.
 
 봉인 분할(``test``/``official_test``)은 설정 동결 후 ``--allow-sealed`` 플래그로만
 연다. 첫 접근은 ``data/splits/<split>.lock.json`` 에 split 해시·config 해시·코드

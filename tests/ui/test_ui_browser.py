@@ -1,4 +1,4 @@
-"""T07 브라우저 테스트 (로컬 Chrome 또는 Playwright Chromium 필요).
+"""Playwright 헤드리스 브라우저 E2E 테스트 — 콘솔 오류 0건, J/K 탐색, 폼 제출, 인터랙티브 UI 검증.
 
 CI에서는 제외된다(``-m "not data and not browser"``). 로컬 실행:
 ``uv run pytest -m browser``. 시스템 Chrome(``channel="chrome"``)을 먼저

@@ -1,4 +1,4 @@
-"""YOLO vs OpenCV 비교 평가(E2c).
+"""학습된 YOLO ONNX(det/seg)와 OpenCV r20 기준선을 `tune-val`에서 동일 지표로 비교 평가.
 
 학습된 ONNX(det/seg)를 tune-val에서 평가하고, r20 기준선과 **분모를 붙여**
 비교한다. 이 모듈이 만드는 것:

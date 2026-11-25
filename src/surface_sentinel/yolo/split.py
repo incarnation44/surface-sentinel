@@ -1,4 +1,4 @@
-"""tune 내부 group-aware train/val 분할(ADR 0007 D4).
+"""YOLO 학습용 `tune` 내부 group-aware train/val 분할기 — 같은 부품 그룹 누출을 차단.
 
 이미지가 아니라 ``group_id`` 단위로 배정해 같은 부품 그룹이 양쪽에
 섞이는 누출을 막는다. 그룹 라벨(결함 포함 여부)로 층화하고 시드로

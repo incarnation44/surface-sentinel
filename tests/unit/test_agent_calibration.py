@@ -1,4 +1,7 @@
-"""Phase 4 사람-기계 피드백 캘리브레이션(agent.calibration) 단위 테스트."""
+"""사람-기계 피드백 캘리브레이션(`agent/calibration.py`) 단위 테스트.
+
+빈 검토 기록 방어, 최신 결정 기준 불일치 집계, 하드샘플 분류 추출을 검증한다.
+"""
 
 from __future__ import annotations
 

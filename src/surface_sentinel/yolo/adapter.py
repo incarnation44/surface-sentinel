@@ -1,4 +1,4 @@
-"""YOLO 탐지 → 기존 ``Status`` 계약 어댑터.
+"""YOLO 탐지 결과를 기존 `SampleResult`·`Status` 판정 계약으로 변환하는 어댑터.
 
 새 판정 체계를 만들지 않는다. 탐지 결과를 ``ComponentFeature``/``SampleResult``
 라는 기존 계약에 채워 넣고, 임계값 정책은 :class:`YoloDecisionPolicy` 하나로

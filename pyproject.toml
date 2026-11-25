@@ -1,3 +1,5 @@
+# 패키지 메타데이터, 의존성(uv), CLI 진입점, pytest 마커, ruff 린트 규칙 정의.
+
 [build-system]
 requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"

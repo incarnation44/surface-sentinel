@@ -1,4 +1,7 @@
-"""API 교차증거·원본관찰·통합 마운트 상세 테스트 (Wave 3)."""
+"""검사 API 단건 상세(`GET /inspections/{id}`) 및 UI 통합 마운트 테스트.
+
+엔진 관찰·교차 증거 응답 포함 여부와 `--enable-api` 마운트 시 JSON 오류 반환을 검증한다.
+"""
 
 from __future__ import annotations
 

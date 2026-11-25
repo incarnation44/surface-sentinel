@@ -1,4 +1,4 @@
-"""Metrics, baselines, ablations, and release gates.
+"""정량 평가·기준선 비교·ablation·재보정·봉인 테스트 패키지.
 
 공개 진입점은 ``run_evaluation`` 하나다. 세부 모듈은 다음과 같다.
 

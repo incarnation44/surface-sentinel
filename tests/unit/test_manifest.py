@@ -1,4 +1,7 @@
-"""manifest 파일명 파싱, dHash, 빌드, 로드 계약 테스트."""
+"""데이터셋 `manifest` 빌더 단위 테스트.
+
+KSDD2 파일명 파싱, dHash 중복 그룹 계산, 이미지/마스크 페어 매칭과 디코드 실패 차단을 검증한다.
+"""
 
 from __future__ import annotations
 

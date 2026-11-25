@@ -1,4 +1,7 @@
-"""T04 N18: 설정 변경이 실제 inspect 결과에 반영되는지 검증한다."""
+"""설정 파라미터 민감도 통합 테스트.
+
+`z_threshold`, `min_area_px`, `ng_min` 변경이 실제 검사 결과와 `config_hash`에 반영되는지 검증한다.
+"""
 
 from __future__ import annotations
 

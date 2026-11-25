@@ -1,4 +1,7 @@
-"""T04 결과 스키마 검증기 단위 테스트."""
+"""`SampleResult` 스키마 검증기 단위 테스트.
+
+타이밍 딕셔너리 누락/null 차단, ERROR 상태 필수 필드 등 출력 계약 위반 탐지를 검증한다.
+"""
 
 from __future__ import annotations
 

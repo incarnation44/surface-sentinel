@@ -1,4 +1,7 @@
-"""YOLO 라벨 export·group-aware 분할 단위 테스트(합성 데이터, 실데이터 미사용)."""
+"""YOLO 데이터셋 라벨 변환 및 group-aware 분할(`yolo/labels.py`, `yolo/split.py`) 단위 테스트.
+
+마스크→bbox/폴리곤 정규화 변환, 정상 이미지 빈 라벨, 그룹 누출 차단 분할을 검증한다.
+"""
 
 from __future__ import annotations
 

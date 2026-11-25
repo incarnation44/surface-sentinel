@@ -1,4 +1,4 @@
-"""append-only 감사 로그와 결정론적 replay (T09, 설계 §6).
+"""에이전트 실행 단계를 해시 체인으로 기록하는 append-only 감사 로그 및 결정론적 리플레이 모듈.
 
 감사 이벤트는 ``args_hash`` / ``action_hash`` / ``result_hash`` 로 무결성을
 검증한다. replay 는 기록된 결과만으로 정책 엔진을 재실행해 동일한 행동 순서와

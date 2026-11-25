@@ -1,4 +1,7 @@
-"""CLI ``data`` 서브커맨드 도움말과 합성 데이터 실행 테스트."""
+"""CLI `data` 서브커맨드 단위 테스트.
+
+합성 데이터셋에서 `build-manifest`, `make-splits`, `verify` 명령의 정상 동작과 도움말을 검증한다.
+"""
 
 from __future__ import annotations
 

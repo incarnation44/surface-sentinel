@@ -1,4 +1,7 @@
-"""Phase 3 무결성 감사 Watchdog(agent.audit) 단위 테스트."""
+"""Watchdog 무결성 감사(`agent/audit.py`) 단위 테스트.
+
+run 디렉터리 변조 탐지, DB 미존재 시 비생성 보장, 저장소 게이트·가이드 변조 탐지를 검증한다.
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,7 @@
-"""반사실적 경계 해석 & Leave-One-Out 귀속도(agent.counterfactual) 단위 테스트."""
+"""반사실적 경계 해석 및 LOO 컴포넌트 귀속도(`agent/counterfactual.py`) 단위 테스트.
+
+닫힌 형태 목표치 산출, 불가능성 증명, 컴포넌트 제거 기여도와 결정론을 검증한다.
+"""
 
 from __future__ import annotations
 

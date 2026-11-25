@@ -1,4 +1,4 @@
-"""ONNX Runtime 기반 YOLO 추론(전처리 + 결정론적 후처리).
+"""ultralytics 없이 ONNX Runtime만으로 YOLO det/seg 전처리·추론·결정론적 NMS를 수행하는 엔진.
 
 ultralytics 런타임 없이 ONNX 모델을 직접 실행한다. onnxruntime은
 optional extra ``yolo`` 로 설치하며, 이 모듈 자체는 세션 생성 시점에만

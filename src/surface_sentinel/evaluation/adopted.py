@@ -1,4 +1,7 @@
-"""채택 검증(F6): 채택 캐시 그룹 CI + r18 짝 부트스트랩 delta."""
+"""최종 채택 설정(r20) 통계 검증 모듈 — 이미지 단위 그룹 CI와 대안 후보(r18) 대비 짝 부트스트랩.
+
+`docs/evidence/t05_adopted_verify.json`을 생성해 채택 근거를 정량화한다.
+"""
 
 from __future__ import annotations
 

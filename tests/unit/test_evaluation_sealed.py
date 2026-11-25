@@ -1,4 +1,4 @@
-"""T08 봉인 메커니즘 단위/통합 테스트 (설계 §2.5, §4.1, §4.4).
+"""봉인 분할 접근 제어(`evaluation/sealed.py`) 테스트 — `--allow-sealed` 잠금, 재실행, 차단 검증.
 
 실제 KSDD2 봉인 데이터는 쓰지 않는다. ``tests/batch_data.build_dataset``이 만드는
 합성 PNG와, 그 행을 복사한 합성 봉인 CSV만 ``tmp_path``에서 쓴다. 실제

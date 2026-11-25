@@ -1,4 +1,7 @@
-"""Phase 2 리뷰 트리아지·논증 카드·Recall@Top-K 단위 테스트."""
+"""리뷰 트리아지·3단 논증 카드·Recall@Top-K(`agent/review.py`) 단위 테스트.
+
+기계 판정 불변, 위험도 우선 정렬, 결정론적 tie-break 및 Lift 신뢰구간 계산을 검증한다.
+"""
 
 from __future__ import annotations
 

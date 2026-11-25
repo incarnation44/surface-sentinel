@@ -1,4 +1,7 @@
-"""T10 공식 30섹션 통합 HTML 가이드 및 H7 증거-문서 수치 일치 검증."""
+"""통합 HTML 가이드(`docs/surface-sentinel-integrated-guide.html`) 무결성 검증 테스트.
+
+30개 섹션 구조, 용량 상한, 내부 앵커, 외부 URL 0건, 증거 JSON 대비 문서 수치 일치를 검증한다.
+"""
 
 from __future__ import annotations
 

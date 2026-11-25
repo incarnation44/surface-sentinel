@@ -1,4 +1,4 @@
-"""결정론적 정책 엔진 (T09, 설계 §6).
+"""화질 저하·ROI 불확실 시 제한된 프로파일 재검사를 제어하는 결정론적 상태 머신 정책 엔진.
 
 상태 머신: ``OBSERVE → PLAN → ACT → VERIFY → PLAN | DONE | REVIEW | ERROR``.
 제품 판정은 항상 파이프라인(``decide_status``)이 소유한다. 이 엔진은 제한된

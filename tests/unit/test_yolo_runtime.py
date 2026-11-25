@@ -1,4 +1,4 @@
-"""ONNX 세션 재사용 레지스트리 테스트 (P0-3, 감사 5.7).
+"""ONNX 세션 재사용 레지스트리(`yolo/runtime.py`) 단위 테스트 — 바이트 해시 캐시 적중·무효화 검증.
 
 스텁 engine_factory 를 주입해 onnxruntime 없이 캐시 키·재사용·cold/warm 을 검증한다.
 모델 파일은 tmp_path 아래 작은 바이트 파일로 만든다(저장소 데이터 미접촉).

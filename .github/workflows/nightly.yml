@@ -1,3 +1,6 @@
+# 매일 03:00 KST(UTC 18:00) 실행되는 야간 전체 검증 워크플로우.
+# ONNX(yolo extra)와 Playwright Chromium 브라우저 테스트까지 포함한 전체 비데이터 스위트를 돌린다.
+
 name: nightly
 
 on:

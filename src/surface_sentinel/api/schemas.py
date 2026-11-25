@@ -1,4 +1,4 @@
-"""검사 API 요청·응답 스키마 (E4, ADR 0007).
+"""검사 API 요청·응답 Pydantic 스키마 정의 — `contracts.py` 규격과 API 입출력 형식을 일치.
 
 상태·사유 문자열은 :mod:`surface_sentinel.contracts`의 ``StrEnum`` 값을 그대로
 직렬화한다(예: ``"REVIEW"``, ``"DEFECT_EVIDENCE_STRONG"``). API 전용 문자열

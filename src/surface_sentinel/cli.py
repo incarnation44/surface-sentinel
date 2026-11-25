@@ -1,4 +1,4 @@
-"""Surface Sentinel CLI.
+"""Surface Sentinel 통합 명령행 인터페이스(CLI) 진입점 — 검사·배치·평가·서버·에이전트 실행을 연결.
 
 제공 서브커맨드: ``doctor``, ``data``(``build-manifest``, ``make-splits``, ``verify``),
 ``inspect``, ``batch``, ``eval``, ``recalibrate``, ``fullverify-details``,

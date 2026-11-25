@@ -1,4 +1,4 @@
-"""닫힌 형태(Closed-Form) 반사실적 경계 해석 & Leave-One-Out 컴포넌트 귀속도 (observe-only).
+"""결함 판정 경계까지의 최소 변화량과 컴포넌트별 기여도(LOO)를 닫힌 식으로 계산하는 해석 모듈.
 
 ``pipeline/stages.py`` 의 실제 점수 공식(``_component_evidence``, ``calculate_score``,
 ``decide_status``)을 그대로 역산하여, 딥러닝 블랙박스가 줄 수 없는 화이트박스

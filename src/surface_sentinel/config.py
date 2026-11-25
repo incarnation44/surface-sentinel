@@ -1,4 +1,8 @@
-"""TOML configuration loading, validation, and canonical hashing."""
+"""TOML 설정 로딩·스키마 검증·정규화 해시(`config_hash`) 계산 모듈.
+
+`configs/base.toml`과 후보 설정을 타입 안전 dataclass로 파싱하고,
+동결 파라미터 무결성과 실행 재현성을 보장하는 64자리 SHA-256 해시를 산출한다.
+"""
 
 from __future__ import annotations
 

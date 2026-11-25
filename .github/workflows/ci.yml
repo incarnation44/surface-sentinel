@@ -1,3 +1,6 @@
+# PR·push마다 Ubuntu/Windows에서 실행되는 기본 CI 워크플로우.
+# 의존성 잠금, ruff 린트, 저장소 게이트, DB 트리거 검증, 비데이터/비브라우저 pytest를 점검한다.
+
 name: ci
 
 on:

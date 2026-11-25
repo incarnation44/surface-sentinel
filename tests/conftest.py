@@ -1,4 +1,7 @@
-"""Shared pytest setup."""
+"""pytest 전역 설정 파일.
+
+테스트 실행 시 `tests/` 루트의 공용 헬퍼 모듈을 import할 수 있도록 환경을 맞춘다.
+"""
 
 from __future__ import annotations
 

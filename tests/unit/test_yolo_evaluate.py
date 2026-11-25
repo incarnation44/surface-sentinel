@@ -1,4 +1,4 @@
-"""YOLO vs OpenCV 비교 평가(E2c) 단위 테스트.
+"""YOLO vs OpenCV 평가(`yolo/evaluate.py`) 단위 테스트 — 봉인 차단, 분모·Wilson CI, val 분할 검증.
 
 합성 GT 마스크·합성 Detection·stub 엔진만 쓴다. ONNX 가중치와 실제 평가
 실행은 필요 없다(학습 완료 후 별도 단계). 검증 대상은 ① 지표와 분모,

@@ -1,4 +1,7 @@
-"""T04 inspect 통합 테스트. 합성 fixture만 사용한다."""
+"""10단계 OpenCV 파이프라인(`inspect_image`) 통합 테스트.
+
+정상·어두운/밝은 결함·경계 접촉·약후보 등 합성 fixture별 판정과 사유 코드를 검증한다.
+"""
 
 from __future__ import annotations
 

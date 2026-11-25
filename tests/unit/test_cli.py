@@ -1,4 +1,7 @@
-"""CLI skeleton tests."""
+"""CLI 기본 진입점 단위 테스트.
+
+`--version`, `doctor` JSON 출력, 인자 누락·미등록 명령어 오류 코드를 검증한다.
+"""
 
 from __future__ import annotations
 

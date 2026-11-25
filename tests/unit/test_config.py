@@ -1,4 +1,7 @@
-"""Configuration schema and hashing tests."""
+"""TOML 설정 파싱·스키마 검증·`config_hash` 안정성 단위 테스트.
+
+허용되지 않은 키 거부, `configs/base.toml` 동결 값 일치, 정규화 직렬화 왕복을 검증한다.
+"""
 
 from __future__ import annotations
 

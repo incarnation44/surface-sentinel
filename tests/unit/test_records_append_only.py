@@ -1,4 +1,4 @@
-"""append-only 스키마 강제 + 무결성 검사 테스트 (감사 5.13).
+"""SQLite append-only 트리거 강제 단위 테스트 — 8개 트리거의 UPDATE/DELETE 차단과 무결성 검사 검증.
 
 스키마(schema.sql)의 트리거 8개가 UPDATE/DELETE 를 SQLite 오류로 거부하는지,
 v1→v2 마이그레이션 뒤에도 트리거가 남는지, ``records verify`` 가 정상/위반을

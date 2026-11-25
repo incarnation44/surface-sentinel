@@ -1,4 +1,4 @@
-"""Phase 2 리뷰 트리아지·섭동 민감도·능동 패치 중재 실측 검증 (tune + val).
+"""리뷰 큐 트리아지(Recall@Top-K)·섭동 민감도·패치 중재 성능을 `tune`/`val`에서 실측하는 스크립트.
 
 봉인 분할(``test.csv``·``official_test.csv``)은 절대 열지 않는다.
 오직 ``data/splits/tune.csv``(2,001장)와 그 내부의 group-aware ``val``

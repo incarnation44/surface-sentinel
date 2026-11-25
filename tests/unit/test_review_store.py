@@ -1,4 +1,4 @@
-"""review 저장소 단위 테스트 (T07, 설계 §5.3).
+"""배치 검토 저장소(`review_decisions.jsonl`) 단위 테스트 — append-only, REVIEW 제약, 사유 검증.
 
 합성 입력만 사용한다. 모든 파일은 ``tmp_path`` 아래에 만들어지고
 저장소의 ``runs/``는 건드리지 않는다.

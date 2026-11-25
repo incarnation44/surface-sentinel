@@ -1,4 +1,4 @@
-"""T09 제한된 에이전트 설정 (설계 §6).
+"""에이전트 예산·재시도 프로파일·승격 기준 설정(`configs/agent.toml`) 로더 및 검증기.
 
 ``configs/agent.toml`` 은 동결 ``configs/base.toml`` 과 별개 파일이며 base 를
 변경하지 않는다. 알 수 없는 키와 범위 위반은 ``ConfigError`` 로 거부한다.

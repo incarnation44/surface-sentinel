@@ -1,4 +1,4 @@
-"""agent_assessments 저장소 단위 테스트 (Phase 1, 제안 §1.5).
+"""SQLite `agent_assessments` 테이블 저장소 단위 테스트 — append-only 멱등성과 v2 DB 호환 검증.
 
 append-only 계약: 같은 (inspection_id, assessment_hash) 는 기존 행 id 를
 돌려주고(중복 기록 금지), 다른 해시는 새 행으로 쌓는다. UPDATE/DELETE 는

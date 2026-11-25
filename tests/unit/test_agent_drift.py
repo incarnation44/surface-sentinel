@@ -1,4 +1,7 @@
-"""Phase 3 PSI 분포 드리프트 감시(agent.drift) 단위 테스트."""
+"""PSI 분포 드리프트 감시(`agent/drift.py`) 단위 테스트.
+
+동일 분포 PSI=0, 주의/경고 임계 판정, 소표본 오경보 방지 및 관찰값 추출을 검증한다.
+"""
 
 from __future__ import annotations
 

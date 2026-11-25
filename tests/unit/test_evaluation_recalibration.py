@@ -1,4 +1,7 @@
-"""T04 재보정 단위 테스트: 후보 로딩, 통과 기준, JSONL·보고서, 봉인 차단."""
+"""후보 생성 재보정(`evaluation/recalibration.py`) 단위 테스트.
+
+후보 TOML 로딩, 5개 하드 게이트 동시 판정, JSONL·보고서 출력 및 봉인 분할 차단을 검증한다.
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,7 @@
-"""T09 감사 로그·replay 단위 테스트 (설계 §6: append-only, 결정론)."""
+"""에이전트 감사 로그·리플레이(`agent/trace.py`) 단위 테스트.
+
+append-only 기록, 해시 체인 결정론, 변조 탐지를 검증한다.
+"""
 
 from __future__ import annotations
 

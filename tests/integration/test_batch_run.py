@@ -1,4 +1,4 @@
-"""T06 batch 통합 테스트. 합성 dataset만 사용한다.
+"""배치 검사(`surface-sentinel batch`) 통합 테스트 — run 디렉터리 원자 생성·스키마·봉인 차단 검증.
 
 봉인 test/official_test는 접근하지 않는다. 모든 run은 ``tmp_path`` 아래에서
 만들어지고 저장소의 ``runs/``나 ``data/``를 건드리지 않는다.

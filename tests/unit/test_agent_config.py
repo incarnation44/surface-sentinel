@@ -1,4 +1,7 @@
-"""T09 에이전트 설정 단위 테스트. 설계 §6 계약 값과 동결 base 를 검증한다."""
+"""에이전트 설정(`configs/agent.toml`) 및 재시도 프로파일 단위 테스트.
+
+예산·승격 기본값, 동결 `base.toml` 해시 일치, `denoise_strong`/`roi_fixed` 차이 범위를 검증한다.
+"""
 
 from __future__ import annotations
 

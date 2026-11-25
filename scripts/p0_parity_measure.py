@@ -1,4 +1,4 @@
-"""P0-3 평가·서빙 짝 실측 — 같은 val 400장, 같은 ONNX, 같은 정책.
+"""평가 경로와 API·워커 서빙 경로가 같은 ONNX·정책에서 동일 판정을 내는지 400장 실측 스크립트.
 
 평가 경로(``evaluate_rows`` + ``YoloOnnxEngine``)와 서빙 경로
 (``inspect_with_yolo`` + ``YoloEngineRegistry``)를 **같은 이미지·같은 모델 바이트**로

@@ -1,4 +1,4 @@
-"""검사 기록 저장소(ADR 0007).
+"""SQLite 기반 검사·검토·에이전트 관찰 기록 영속화 패키지.
 
 SQLite 우선, PostgreSQL 호환 스키마. run 산출물 ingest와
 결정론적 워커(incoming 감시 → 검사 → 기록)를 담당한다.

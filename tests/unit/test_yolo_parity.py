@@ -1,4 +1,4 @@
-"""평가·서빙 동일성 짝 일치 테스트 (P0-3).
+"""평가 경로와 서빙 경로의 신원·판정 동일성(`yolo` + `records/identity.py`) 짝 일치 단위 테스트.
 
 같은 이미지·모델·정책에서 평가 경로(``evaluate_row``/``evaluate_rows``)와
 서빙 경로(``inspect_with_yolo``)가 같은 결합 상태·모델 SHA·정책을 쓰는지 검증한다.

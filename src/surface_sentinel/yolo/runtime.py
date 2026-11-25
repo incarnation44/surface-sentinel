@@ -1,4 +1,4 @@
-"""ONNX 세션 재사용 레지스트리 (P0-3, 서빙 동일성).
+"""ONNX Runtime 세션을 모델 바이트 해시 기준으로 캐싱·재사용하는 레지스트리(서빙 지연 방지).
 
 이미지마다 ``YoloOnnxEngine`` 을 새로 만들면 세션 cold init 비용이 매 이미지
 발생한다. 이 레지스트리는 ``(model_sha256, task, onnxruntime_version, providers)``
