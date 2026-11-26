@@ -17,7 +17,7 @@ KolektorSDD2 금속 표면 사진에서 결함 후보를 찾고 사람 검토를
   * 봉인 `test`: 1,334장(결함 142 / 정상 1,192). 기본 실행 시 코드가 읽기 전 거부(`E_SEALED_DENIED`, exit 6)하며, 잠금 원장(`test.lock.json`)에 접근 횟수(`access_count=2`)와 사후 설정 무변경(`post_seal_config_change=false`)이 남아 있다.
   * `official_test`: 1,004장(결함 110 / 정상 894). 내부 `tune`(579)과 `test`(425)가 절반 이상 겹쳐 독립 검증으로 쓰지 않는다.
 
-설계 요약은 [plan.md](plan.md), 상세 규격은 [docs/design/master-design.md](docs/design/master-design.md), 현황은 [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md), 실행 환경은 [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md), 웹 콘솔 사용법은 [docs/WEB_GUI_GUIDE.md](docs/WEB_GUI_GUIDE.md), 30섹션 통합 기술 문서는 [docs/surface-sentinel-integrated-guide.html](docs/surface-sentinel-integrated-guide.html)을 참고한다.
+설계 요약은 [plan.md](plan.md), 상세 규격은 [docs/design/master-design.md](docs/design/master-design.md), 현황은 [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md), 실행 환경은 [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md), 웹 콘솔 사용법은 [docs/WEB_GUI_GUIDE.md](docs/WEB_GUI_GUIDE.md), 30섹션 통합 기술 문서는 [docs/surface-sentinel-integrated-guide.html](docs/surface-sentinel-integrated-guide.html), 12장 발표 슬라이드는 [docs/presentation/index.html](docs/presentation/index.html)을 참고한다.
 
 ## 구현 항목
 
@@ -129,12 +129,13 @@ surface-sentinel/
 │   ├── evidence/        # 평가·감사 원시 JSON
 │   ├── reports/         # 실험·봉인·에이전트 보고서
 │   ├── research/        # 데이터셋 사실 및 감사 문서
+│   ├── presentation/    # 12장 발표 슬라이드 (index.html + assets/)
 │   ├── PROJECT_STATUS.md
 │   ├── ENVIRONMENT.md
 │   ├── WEB_GUI_GUIDE.md                       # 웹 콘솔 실행·사용 가이드
 │   └── surface-sentinel-integrated-guide.html  # 30섹션 자립형 기술 가이드
 ├── scripts/             # 짝평가, 패리티 측정, 스모크, 요구사항 검증 스크립트
-├── tests/               # 단위, 통합, 데이터, 브라우저 테스트 (1000건)
+├── tests/               # 단위, 통합, 데이터, 브라우저 테스트 (1004건)
 ├── plan.md              # 기획 및 설계 요약
 ├── pyproject.toml       # 패키지 설정 (v1.0.1)
 └── uv.lock              # 의존성 잠금 파일

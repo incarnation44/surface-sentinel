@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surface Sentinel 발표 슬라이드</title>
+<style>
+:root {
+  --font-sans: "NanumSquare", "NanumBarunGothic", "Malgun Gothic", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: "NanumMyeongjo", Georgia, "Times New Roman", serif;
+  --font-mono: "NanumGothicCoding", Consolas, "Courier New", monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%;
+  height: 100%;
+  background: #04070a;
+  color: #f8fafc;
+  font-family: var(--font-sans);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Stage scales cleanly to any 16:9 viewport or 1920x1080 capture */
+.deck-viewport {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #030608;
+}
+.deck-frame {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #060b0f;
+  transform-origin: center center;
+}
+
+#factory-canvas {
+  position: absolute;
+  inset: 0;
+  width: 1920px;
+  height: 1080px;
+  z-index: 0;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 58px 86px 76px;
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.slide.active { display: flex; }
+
+/* ===== Shared Editorial Components (Reference Images 1-5) ===== */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.white-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 28px 11px 14px;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+}
+.white-pill-ico {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+}
+.white-pill em {
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: #d97706;
+  font-weight: 700;
+}
+.slide-num-pill {
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(10, 17, 24, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #94a3b8;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* Floating Neon Bezel + Top Black Tab */
+.bezel-wrap {
+  position: relative;
+  padding-top: 34px;
+}
+.bezel-tab {
+  position: absolute;
+  top: 0;
+  left: 26px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 20px;
+  border-radius: 12px 12px 0 0;
+  background: #05080b;
+  border: 1.5px solid rgba(251, 191, 36, 0.55);
+  border-bottom: 0;
+  color: #f8fafc;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.bezel-tab .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 12px #34d399;
+}
+.bezel-tab.amber .dot { background: #fbbf24; box-shadow: 0 0 12px #fbbf24; }
+.bezel-box {
+  border-radius: 26px;
+  padding: 2.5px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.85) 0%, rgba(52, 211, 153, 0.80) 55%, rgba(56, 189, 248, 0.72) 100%);
+  box-shadow: 0 0 60px rgba(16, 185, 129, 0.18), 0 30px 70px rgba(0, 0, 0, 0.62);
+}
+.bezel-box.amber-only {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 60%, #fde68a 100%);
+  box-shadow: 0 0 54px rgba(245, 158, 11, 0.25), 0 28px 64px rgba(0, 0, 0, 0.65);
+}
+.bezel-inner {
+  border-radius: 23.5px;
+  background: rgba(7, 13, 18, 0.88);
+  backdrop-filter: blur(22px);
+  padding: 36px 42px;
+}
+
+/* Stacked White Feature Pills (Reference Image 1) */
+.white-card-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.white-card {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 24px 30px;
+  border-radius: 22px;
+  background: #f8fafc;
+  color: #0f172a;
+  border-top: 5px solid var(--bar, #f59e0b);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.42);
+}
+.wc-ico {
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--bar, #f59e0b);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 21px;
+  font-weight: 900;
+}
+.wc-k {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.wc-v {
+  font-size: 27px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+.wc-sub {
+  font-size: 18px;
+  color: #475569;
+  margin-top: 4px;
+}
+
+/* Glass KPI Cards (Reference Image 2) */
+.kpi-row-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+.kpi-tile {
+  padding: 26px 24px;
+  border-radius: 20px;
+  background: rgba(14, 26, 30, 0.72);
+  border: 1.5px solid rgba(52, 211, 153, 0.22);
+}
+.kpi-tile.warn {
+  border-color: rgba(251, 191, 36, 0.45);
+  background: rgba(34, 24, 12, 0.65);
+}
+.kpi-num {
+  font-family: var(--font-mono);
+  font-size: 52px;
+  font-weight: 900;
+  color: #6ee7b7;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.kpi-tile.warn .kpi-num { color: #fbbf24; }
+.kpi-label {
+  margin-top: 10px;
+  font-size: 21px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+.kpi-desc {
+  margin-top: 8px;
+  font-size: 16px;
+  color: #94a3b8;
+  line-height: 1.45;
+}
+
+/* Bottom Caption Pill */
+.bottom-caption {
+  align-self: center;
+  padding: 13px 32px;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 800;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.bottom-caption span {
+  color: #059669;
+  margin-right: 10px;
+  font-family: var(--font-mono);
+}
+
+/* ===== Slide-Specific Layouts ===== */
+/* Slide 1 Hero */
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 56px;
+  align-items: center;
+  flex: 1;
+}
+.hero-title {
+  font-size: 92px;
+  font-weight: 900;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  color: #ffffff;
+}
+.hero-title .accent {
+  color: #6ee7b7;
+  font-style: italic;
+  font-family: var(--font-serif);
+}
+.hero-sub {
+  margin-top: 26px;
+  font-size: 32px;
+  font-weight: 700;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+.hero-chips {
+  margin-top: 38px;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.hero-chip {
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1.5px solid rgba(52, 211, 153, 0.42);
+  color: #a7f3d0;
+  font-family: var(--font-mono);
+  font-size: 19px;
+  font-weight: 800;
+}
+.hero-stack-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 20px 10px;
+}
+.hero-mini-layer {
+  width: 175px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid var(--lc, #34d399);
+  background: #04070c;
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.65);
+}
+.hero-mini-layer img {
+  width: 100%;
+  height: 360px;
+  object-fit: contain;
+  display: block;
+}
+.hero-mini-cap {
+  padding: 8px 10px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 800;
+  color: #e2e8f0;
+  background: rgba(7, 13, 18, 0.92);
+}
+
+/* Slide 2 Split */
+.s2-grid {
+  display: grid;
+  grid-template-columns: 0.92fr 1.08fr;
+  gap: 54px;
+  align-items: center;
+  flex: 1;
+}
+.code-console {
+  font-family: var(--font-mono);
+  font-size: 21px;
+  line-height: 1.75;
+  color: #e2e8f0;
+  white-space: pre-wrap;
+}
+.code-console .hl-g { color: #6ee7b7; font-weight: 700; }
+.code-console .hl-a { color: #fbbf24; font-weight: 700; }
+.code-console .hl-m { color: #64748b; }
+
+/* Slide 3 Pipeline Hero (Reference Image 3) */
+.big-banner-head {
+  text-align: center;
+  font-size: 68px;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  color: #f8fafc;
+  margin-bottom: 14px;
+}
+.big-banner-head span {
+  color: #84cc16;
+  font-style: italic;
+}
+.step3-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 18px;
+}
+.step-glass {
+  padding: 32px 28px;
+  border-radius: 20px;
+  background: rgba(15, 25, 22, 0.78);
+  border: 1.5px solid rgba(132, 204, 22, 0.30);
+}
+.step-tag {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 800;
+  color: #a3e635;
+  letter-spacing: 0.08em;
+}
+.step-h {
+  margin: 12px 0 12px;
+  font-size: 32px;
+  font-weight: 900;
+  color: #ffffff;
+}
+.step-p {
+  font-size: 20px;
+  color: #cbd5e1;
+  line-height: 1.55;
+}
+
+/* Slide 4 7-Layer Strip */
+.l7-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 16px;
+  margin-top: 12px;
+}
+.l7-card {
+  border-radius: 16px;
+  overflow: hidden;
+  background: #04070c;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.l7-card.active, .l7-card:hover {
+  border-color: var(--ac, #34d399);
+  transform: translateY(-6px);
+  box-shadow: 0 0 28px rgba(52, 211, 153, 0.32);
+}
+.l7-img-box {
+  height: 410px;
+  background: #03060a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+}
+.l7-img-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.l7-meta {
+  padding: 12px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(10, 17, 24, 0.96);
+  font-family: var(--font-mono);
+}
+.l7-lbl { font-size: 16px; font-weight: 800; color: #f8fafc; }
+.l7-ms { font-size: 14px; color: #6ee7b7; font-weight: 700; }
+
+/* Slide 5 Zoom Callout + Live Demo */
+.s5-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 48px;
+  align-items: center;
+  flex: 1;
+}
+.zoom-showcase-row {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.zoom-ov-box {
+  width: 230px;
+  height: 520px;
+  border-radius: 18px;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  background: #04070c;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.zoom-ov-box img { width: 100%; height: 100%; object-fit: contain; }
+.zoom-crop-img {
+  width: 100%;
+  height: 270px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1.5px solid rgba(251, 191, 36, 0.45);
+}
+.zoom-kv-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.zkv {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+.zkv .k { font-size: 14px; color: #94a3b8; }
+.zkv .v { font-family: var(--font-mono); font-size: 24px; font-weight: 900; color: #fde68a; margin-top: 4px; }
+
+/* Slide 6 Metrics + Loop Sidebar (Reference Image 2) */
+.s6-layout {
+  display: grid;
+  grid-template-columns: 1.55fr 0.45fr;
+  gap: 28px;
+  align-items: stretch;
+}
+.loop-box {
+  padding: 24px 22px;
+  border-radius: 20px;
+  background: rgba(8, 16, 20, 0.88);
+  border: 1.5px solid rgba(52, 211, 153, 0.22);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.loop-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 17px;
+  color: #94a3b8;
+}
+.loop-row.done { color: #cbd5e1; }
+.loop-row.now {
+  background: rgba(16, 185, 129, 0.22);
+  border: 1px solid rgba(52, 211, 153, 0.55);
+  color: #ffffff;
+  font-weight: 800;
+}
+.loop-dot { width: 9px; height: 9px; border-radius: 50%; background: #34d399; }
+.loop-row.now .loop-dot { background: #fbbf24; box-shadow: 0 0 10px #fbbf24; }
+
+/* Slide 7 Governance */
+.s7-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 44px;
+  align-items: center;
+  flex: 1;
+}
+.limit-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 18px;
+}
+.limit-list li {
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.30);
+  font-size: 21px;
+  color: #fef3c7;
+  line-height: 1.45;
+}
+.limit-list strong { color: #fbbf24; }
+
+/* Slide 8 Closing */
+.closing-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 28px;
+}
+
+/* Interactive Nav Controls (hidden during static PNG capture via ?static=1) */
+.deck-nav {
+  position: fixed;
+  right: 26px;
+  bottom: 20px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(5, 9, 14, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(12px);
+}
+.deck-nav button {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(15, 23, 34, 0.9);
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.deck-nav button:hover { border-color: #34d399; }
+.deck-nav span { font-family: var(--font-mono); font-size: 14px; color: #94a3b8; padding: 0 6px; }
+body.static-capture .deck-nav { display: none !important; }
+
+.cmp-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(6, 11, 15, 0.72);
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,0.14);
+}
+.cmp-tbl th, .cmp-tbl td {
+  padding: 13px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+  font-size: 19px;
+}
+.cmp-tbl th {
+  background: rgba(15, 23, 34, 0.9);
+  color: #cbd5e1;
+  font-size: 17px;
+  font-weight: 800;
+}
+.cmp-tbl td { color: #e2e8f0; font-weight: 600; }
+.cmp-tbl tr.win td { background: rgba(16, 185, 129, 0.14); color: #ffffff; font-weight: 800; }
+.cmp-tbl .mono { font-family: var(--font-mono); font-weight: 800; }
+.cmp-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; flex: 1; align-items: stretch; }
+.cmp-card {
+  padding: 26px 26px;
+  border-radius: 22px;
+  background: rgba(7, 13, 18, 0.88);
+  border: 2px solid rgba(255,255,255,0.16);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+}
+.cmp-card.em { border-color: rgba(52, 211, 153, 0.65); box-shadow: 0 0 36px rgba(16,185,129,0.15); }
+.cmp-card.am { border-color: rgba(251, 191, 36, 0.55); }
+.cmp-pill { display: inline-block; padding: 6px 14px; border-radius: 999px; font-size: 16px; font-weight: 900; align-self: flex-start; }
+.cmp-pill.em { background: #34d399; color: #052e16; }
+.cmp-pill.am { background: rgba(251,191,36,0.16); color: #fbbf24; border: 1px solid rgba(251,191,36,0.5); }
+.cmp-pill.mu { background: rgba(148,163,184,0.16); color: #cbd5e1; border: 1px solid rgba(148,163,184,0.35); }
+.cmp-ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.cmp-ul li { padding: 14px 16px; border-radius: 12px; background: rgba(15, 25, 34, 0.82); border: 1px solid rgba(255,255,255,0.10); font-size: 20px; line-height: 1.4; color: #e2e8f0; }
+.cmp-ul li strong { color: #ffffff; }
+/* Slide 3 dedicated styles only */
+.s3-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 10px; min-height: 0; }
+.s3-headline {
+  font-size: 27px;
+  font-weight: 900;
+  color: #f8fafc;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  white-space: nowrap;
+  padding: 11px 20px;
+  border-radius: 14px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+}
+.s3-headline em { font-style: normal; color: #34d399; }
+.s3-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.s3-step {
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: rgba(15, 25, 34, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  word-break: keep-all;
+}
+.s3-step.s3-step-win { border-color: rgba(52, 211, 153, 0.65); }
+.s3-step-tag { font-family: var(--font-mono); font-size: 13px; font-weight: 800; color: #94a3b8; letter-spacing: 0.04em; }
+.s3-step-h { font-size: 18.5px; font-weight: 900; color: #ffffff; margin-top: 3px; line-height: 1.25; }
+.s3-step-p { font-size: 14.5px; color: #cbd5e1; margin-top: 4px; line-height: 1.35; }
+.s3-bottom { font-size: 19px !important; padding: 11px 22px !important; white-space: nowrap; }
+.s3-tbl { width: 100%; border-collapse: collapse; font-size: 20px; }
+.s3-tbl th {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f1f5f9;
+  font-size: 18px;
+  font-weight: 900;
+  vertical-align: bottom;
+}
+.s3-th-sub { display: block; font-size: 13px; font-weight: 600; color: #94a3b8; margin-top: 2px; font-family: var(--font-mono); }
+.s3-tbl td {
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  vertical-align: middle;
+}
+.s3-tbl tr.s3-win td { background: rgba(16, 185, 129, 0.14); }
+.s3-name { font-size: 19px; font-weight: 900; color: #ffffff; }
+.s3-name-sub { display: block; font-size: 14px; font-weight: 600; color: #94a3b8; margin-top: 2px; }
+.s3-val { font-family: var(--font-mono); font-size: 22px; font-weight: 900; color: #f8fafc; }
+.s3-val.s3-em { color: #34d399; }
+.s3-val.s3-am { color: #fbbf24; }
+.s3-val.s3-muted { color: #64748b; }
+.s3-cnt { font-family: var(--font-mono); font-size: 14px; font-weight: 600; color: #94a3b8; margin-left: 6px; }
+.s3-trap-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #cbd5e1;
+  background: rgba(100, 116, 139, 0.28);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  vertical-align: middle;
+}
+.s3-reasons { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.s3-reason {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 16.5px;
+  line-height: 1.35;
+  color: #94a3b8;
+  background: rgba(15, 25, 34, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.s3-reason.s3-reason-win {
+  color: #ecfdf5;
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(52, 211, 153, 0.5);
+  font-weight: 700;
+}
+.s3-ico { font-size: 17px; flex-shrink: 0; }
+.s3-notes {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13.5px;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+.s3-notes strong { color: #cbd5e1; }
+
+/* ===== Slide 3 simple bars ===== */
+.s3b-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 40px; min-height: 0; }
+.s3b-head { font-size: 45px; font-weight: 900; color: #f8fafc; letter-spacing: -0.03em; line-height: 1.18; word-break: keep-all; }
+.s3b-head em { font-style: normal; color: #34d399; }
+.s3b-bars { display: flex; flex-direction: column; gap: 34px; }
+.s3b-row { display: grid; grid-template-columns: 345px 1fr 195px 275px; align-items: center; gap: 28px; }
+.s3b-name { font-family: var(--font-mono); font-size: 35px; font-weight: 900; color: #cbd5e1; line-height: 1.15; }
+.s3b-name small { display: block; font-family: var(--font-sans); font-size: 19px; font-weight: 700; color: #94a3b8; margin-top: 5px; }
+.s3b-track { height: 68px; border-radius: 14px; background: rgba(148, 163, 184, 0.14); overflow: hidden; }
+.s3b-fill { height: 100%; border-radius: 14px; background: linear-gradient(90deg, #4b5563, #94a3b8); }
+.s3b-fill-win { background: linear-gradient(90deg, #059669, #34d399); box-shadow: 0 0 34px rgba(52, 211, 153, 0.48); }
+.s3b-pct { font-family: var(--font-mono); font-size: 58px; font-weight: 900; color: #e2e8f0; text-align: right; line-height: 1; }
+.s3b-sub { font-size: 26px; font-weight: 800; color: #94a3b8; text-align: right; line-height: 1.25; }
+.s3b-sub small { display: block; font-family: var(--font-mono); font-size: 18px; font-weight: 600; color: #64748b; margin-top: 4px; }
+.s3b-row.s3b-win .s3b-name { color: #6ee7b7; }
+.s3b-row.s3b-win .s3b-name small { color: #a7f3d0; }
+.s3b-row.s3b-win .s3b-pct { color: #34d399; }
+.s3b-row.s3b-win .s3b-sub { color: #a7f3d0; }
+.s3b-row.s3b-win .s3b-sub small { color: #6ee7b7; }
+.s3b-foot { font-size: 22px; font-weight: 600; color: #94a3b8; }
+
+/* ===== Slide 4 graph + gates ===== */
+.s4b-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 22px; min-height: 0; }
+.s4b-head { font-size: 47px; font-weight: 900; color: #f8fafc; letter-spacing: -0.03em; line-height: 1.15; word-break: keep-all; }
+.s4b-head em { font-style: normal; color: #34d399; }
+.s4b-meta { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: #cbd5e1; margin-top: -10px; }
+.s4b-gates { display: flex; gap: 14px; }
+.s4b-gate { flex: 1; padding: 15px 8px 13px; border-radius: 16px; text-align: center; background: rgba(15, 25, 34, 0.88); border: 1.5px solid rgba(255, 255, 255, 0.16); font-size: 20px; font-weight: 800; color: #cbd5e1; line-height: 1.2; }
+.s4b-gate span { display: block; font-family: var(--font-mono); font-size: 15.5px; font-weight: 700; color: #94a3b8; margin-top: 3px; }
+.s4b-gate b { display: block; margin-top: 5px; font-family: var(--font-mono); font-size: 31px; font-weight: 900; color: #f8fafc; }
+.s4b-chart-box { padding: 18px 24px 12px; border-radius: 20px; background: rgba(12, 20, 28, 0.90); border: 1.5px solid rgba(255, 255, 255, 0.16); }
+.s4b-chart-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 12px; flex-wrap: wrap; }
+.s4b-chart-title { font-size: 22px; font-weight: 800; color: #e2e8f0; }
+.s4b-legend { display: flex; gap: 18px; align-items: center; font-size: 16.5px; font-weight: 700; color: #cbd5e1; }
+.s4b-lg { display: inline-flex; align-items: center; gap: 7px; }
+.s4b-dot { width: 13px; height: 13px; border-radius: 3px; display: inline-block; }
+.s4b-dash { width: 20px; height: 0; border-top: 3px dashed #fb7185; display: inline-block; }
+.s4b-why { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.s4b-why-item { display: flex; align-items: center; gap: 22px; padding: 19px 26px; border-radius: 18px; background: rgba(16, 185, 129, 0.11); border: 1.5px solid rgba(52, 211, 153, 0.46); }
+.s4b-big { font-family: var(--font-mono); font-size: 48px; font-weight: 900; color: #34d399; line-height: 1; white-space: nowrap; }
+.s4b-txt { font-size: 22px; font-weight: 800; color: #d1fae5; line-height: 1.3; word-break: keep-all; }
+.s4b-txt small { display: block; font-family: var(--font-mono); font-size: 16px; font-weight: 600; color: #a7f3d0; opacity: 0.9; margin-top: 4px; }
+
+/* ===== 공통 단순 레이아웃 (슬라이드 2·5·6·7·8·9·10 — 대형 가독성 스케일) ===== */
+.sx-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 38px; min-height: 0; }
+.sx-head { font-size: 52px; font-weight: 900; color: #f8fafc; letter-spacing: -0.03em; line-height: 1.18; word-break: keep-all; }
+.sx-head em { font-style: normal; color: #34d399; }
+.sx-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+.sx-grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.sx-grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+.sx-box { padding: 38px 26px; border-radius: 22px; background: rgba(12, 20, 28, 0.88); border: 1.5px solid rgba(255, 255, 255, 0.16); text-align: center; display: flex; flex-direction: column; justify-content: center; }
+.sx-k { font-family: var(--font-mono); font-size: 27px; font-weight: 900; letter-spacing: 0.02em; }
+.sx-v { font-size: 34px; font-weight: 900; color: #ffffff; margin-top: 10px; line-height: 1.2; word-break: keep-all; }
+.sx-s { font-size: 21px; font-weight: 700; color: #cbd5e1; margin-top: 8px; word-break: keep-all; }
+.sx-verdict { font-size: 54px; font-weight: 900; color: #ffffff; margin-top: 10px; line-height: 1.1; letter-spacing: -0.03em; }
+.sx-num { font-family: var(--font-mono); font-size: 86px; font-weight: 900; line-height: 1; margin-top: 16px; }
+.sx-lbl { font-size: 25px; font-weight: 800; color: #e2e8f0; margin-top: 16px; word-break: keep-all; }
+.sx-sub { font-size: 19px; font-weight: 600; color: #94a3b8; margin-top: 10px; line-height: 1.38; word-break: keep-all; }
+.sx-mono { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: #94a3b8; margin-top: 8px; line-height: 1.35; }
+.sx-panel { padding: 30px 32px; border-radius: 22px; background: rgba(12, 20, 28, 0.88); border: 1.5px solid rgba(255, 255, 255, 0.16); display: flex; flex-direction: column; gap: 15px; }
+.sx-panel-t { font-size: 29px; font-weight: 900; margin-bottom: 6px; }
+.sx-line { font-size: 25px; font-weight: 800; color: #f1f5f9; padding: 15px 20px; border-radius: 14px; background: rgba(255, 255, 255, 0.055); line-height: 1.32; word-break: keep-all; }
+.sx-line small { display: block; font-family: var(--font-mono); font-size: 17px; font-weight: 600; color: #94a3b8; margin-top: 5px; }
+.sx-foot { font-size: 23px; font-weight: 700; color: #cbd5e1; text-align: center; }
+
+/* Slide 2 real product example thumbnails (large & crisp) */
+.s2ex-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+.s2ex-card { padding: 14px 14px 12px; border-radius: 20px; background: rgba(12, 20, 28, 0.88); border: 1.5px solid rgba(255, 255, 255, 0.14); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+.s2ex-top { display: flex; flex-direction: column; align-items: center; }
+.s2ex-k { font-family: var(--font-mono); font-size: 24px; font-weight: 900; letter-spacing: 0.03em; line-height: 1; }
+.s2ex-v { font-size: 27px; font-weight: 900; color: #ffffff; margin-top: 5px; line-height: 1.15; }
+.s2ex-sub { font-size: 15.5px; font-weight: 700; color: #94a3b8; margin-top: 4px; line-height: 1.25; word-break: keep-all; }
+.s2ex-thumb { width: 100%; border-radius: 14px; overflow: hidden; background: #04070c; border: 2px solid var(--ac, rgba(255,255,255,0.2)); box-shadow: 0 10px 26px rgba(0,0,0,0.48); display: flex; flex-direction: column; }
+.s2ex-img-wrap { height: 470px; background: #03060a; display: flex; align-items: center; justify-content: center; padding: 6px; }
+.s2ex-img-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.s2ex-img-wrap svg { width: 100%; height: 100%; max-height: 458px; display: block; }
+.s2ex-meta { padding: 10px 13px; display: flex; justify-content: space-between; align-items: center; background: rgba(10, 17, 24, 0.96); font-family: var(--font-mono); font-size: 15px; font-weight: 800; border-top: 1px solid rgba(255,255,255,0.08); }
+.s2ex-meta span:first-child { color: #e2e8f0; }
+
+/* Slide 3 Dual Morphology explanation callout */
+.s3b-explain { padding: 26px 32px; border-radius: 20px; background: rgba(16, 185, 129, 0.10); border: 1.5px solid rgba(52, 211, 153, 0.42); display: flex; flex-direction: column; gap: 12px; }
+.s3b-explain-row { font-size: 24px; font-weight: 700; color: #e2e8f0; line-height: 1.44; word-break: keep-all; }
+.s3b-explain-row b { color: #6ee7b7; font-weight: 900; margin-right: 10px; }
+
+
+/* ===== Slide 5: Full 10-Stage Pipeline Flow (2 rows x 5 cards with arrows) ===== */
+.s5f-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px; min-height: 0; }
+.s5f-head-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.s5f-head { font-size: 46px; font-weight: 900; color: #f8fafc; letter-spacing: -0.03em; line-height: 1.15; }
+.s5f-head em { font-style: normal; color: #34d399; }
+.s5f-legend { display: flex; gap: 14px; font-size: 15.5px; font-weight: 800; color: #cbd5e1; }
+.s5f-lg { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; background: rgba(15, 25, 34, 0.85); border: 1px solid rgba(255,255,255,0.14); }
+.s5f-lg i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.s5f-rows { display: flex; flex-direction: column; gap: 14px; flex: 1; min-height: 0; justify-content: center; }
+.s5f-row { display: grid; grid-template-columns: 1fr 22px 1fr 22px 1fr 22px 1fr 22px 1fr; align-items: center; gap: 6px; }
+.s5f-arr { text-align: center; font-size: 24px; font-weight: 900; color: #34d399; opacity: 0.85; user-select: none; }
+.s5f-card { height: 345px; border-radius: 16px; overflow: hidden; background: rgba(10, 17, 25, 0.94); border: 1.8px solid var(--ac, rgba(255,255,255,0.18)); display: flex; flex-direction: column; box-shadow: 0 8px 22px rgba(0,0,0,0.38); }
+.s5f-card.calc { background: linear-gradient(160deg, rgba(16, 27, 40, 0.96), rgba(10, 18, 28, 0.96)); border-style: dashed; }
+.s5f-card.final { box-shadow: 0 0 26px rgba(244, 63, 94, 0.34); }
+.s5f-top { padding: 9px 12px 7px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.08); }
+.s5f-num { font-family: var(--font-mono); font-size: 16px; font-weight: 900; color: var(--ac, #38bdf8); }
+.s5f-tag { font-family: var(--font-mono); font-size: 14px; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,0.07); color: #cbd5e1; }
+.s5f-tag.code { background: rgba(251,191,36,0.16); color: #fde68a; }
+.s5f-body { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: #03060a; padding: 5px; gap: 4px; }
+.s5f-body img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.s5f-body.dual img { width: 49%; height: 100%; object-fit: contain; }
+.s5f-calc-body { flex: 1; min-height: 0; padding: 14px 14px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 9px; }
+.s5f-calc-ico { font-family: var(--font-mono); font-size: 15px; font-weight: 900; color: var(--ac, #38bdf8); padding: 4px 10px; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); }
+.s5f-calc-main { font-size: 21px; font-weight: 900; color: #ffffff; line-height: 1.25; word-break: keep-all; }
+.s5f-calc-big { font-family: var(--font-mono); font-size: 32px; font-weight: 900; line-height: 1.05; }
+.s5f-calc-sub { font-size: 16px; font-weight: 700; color: #94a3b8; line-height: 1.35; word-break: keep-all; }
+.s5f-foot { padding: 8px 11px 9px; background: rgba(12, 20, 29, 0.98); border-top: 1px solid rgba(255,255,255,0.08); }
+.s5f-title { font-size: 16.5px; font-weight: 900; color: #f8fafc; line-height: 1.2; }
+.s5f-fn { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: #94a3b8; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+
+/* ===== Slide 7: Single Final Test (1,334) + Trust ===== */
+.s7c-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 26px; min-height: 0; }
+.s7c-head { font-size: 50px; font-weight: 900; color: #f8fafc; letter-spacing: -0.03em; line-height: 1.18; }
+.s7c-head em { font-style: normal; color: #34d399; }
+.s7c-sub { font-size: 21px; font-weight: 700; color: #94a3b8; margin-top: -14px; }
+.s7c-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.s7c-kpi { padding: 30px 22px 26px; border-radius: 22px; background: rgba(12, 20, 28, 0.90); border: 1.8px solid rgba(52, 211, 153, 0.42); text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+.s7c-kpi-k { font-size: 22px; font-weight: 800; color: #cbd5e1; }
+.s7c-kpi-en { font-family: var(--font-mono); font-size: 14.5px; font-weight: 700; color: #94a3b8; margin-top: -4px; }
+.s7c-kpi-v { font-family: var(--font-mono); font-size: 62px; font-weight: 900; color: #34d399; line-height: 1.05; margin: 6px 0 4px; }
+.s7c-kpi-d { font-size: 17.5px; font-weight: 800; color: #e2e8f0; }
+.s7c-kpi-s { font-family: var(--font-mono); font-size: 14.5px; font-weight: 700; color: #6ee7b7; }
+.s7c-note { padding: 18px 26px; border-radius: 16px; background: rgba(251, 191, 36, 0.09); border: 1.5px solid rgba(251, 191, 36, 0.42); font-size: 21px; font-weight: 700; color: #fef3c7; line-height: 1.45; word-break: keep-all; }
+.s7c-note b { color: #fbbf24; font-weight: 900; margin-right: 8px; }
+.s7c-note small { display: block; font-size: 16px; font-weight: 600; color: #cbd5e1; margin-top: 4px; }
+.s7c-trust { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.s7c-pill { padding: 18px 20px; border-radius: 16px; background: rgba(15, 25, 34, 0.88); border: 1.5px solid rgba(52, 211, 153, 0.34); text-align: center; }
+.s7c-pill b { display: block; font-size: 22px; font-weight: 900; color: #6ee7b7; }
+.s7c-pill span { display: block; font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: #cbd5e1; margin-top: 5px; }
+
+/* ===== NEW Slide 02: Field Pain Point & 4-State Background ===== */
+.s2bg-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 26px; min-height: 0; }
+.s2bg-head { font-size: 50px; font-weight: 900; color: #f8fafc; letter-spacing: -0.03em; line-height: 1.18; }
+.s2bg-head em { font-style: normal; color: #34d399; }
+.s2bg-head em.r { color: #fb7185; }
+.s2bg-bar { padding: 16px 26px; border-radius: 16px; background: rgba(15, 25, 34, 0.88); border: 1.5px solid rgba(255,255,255,0.14); font-size: 21px; font-weight: 800; color: #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.s2bg-bar b { color: #fbbf24; }
+.s2bg-grid { display: grid; grid-template-columns: 1fr 56px 1fr; align-items: stretch; gap: 10px; }
+.s2bg-arr { display: flex; align-items: center; justify-content: center; font-size: 42px; font-weight: 900; color: #34d399; }
+.s2bg-card { padding: 28px 30px; border-radius: 22px; background: rgba(12, 20, 28, 0.90); border: 2px solid rgba(255,255,255,0.16); display: flex; flex-direction: column; gap: 16px; }
+.s2bg-card.old { border-color: rgba(251, 113, 133, 0.50); }
+.s2bg-card.sol { border-color: rgba(52, 211, 153, 0.65); background: rgba(16, 185, 129, 0.10); box-shadow: 0 0 32px rgba(16,185,129,0.18); }
+.s2bg-ct { font-size: 28px; font-weight: 900; line-height: 1.2; }
+.s2bg-item { padding: 16px 20px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
+.s2bg-item b { display: block; font-size: 22px; font-weight: 900; color: #f8fafc; margin-bottom: 5px; }
+.s2bg-item span { display: block; font-size: 18px; font-weight: 700; color: #cbd5e1; line-height: 1.38; word-break: keep-all; }
+
+/* ===== NEW Slide 08: 3,335 Zero-Leakage Data Split & Sealed Wall ===== */
+.s8w-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 24px; min-height: 0; }
+.s8w-head { font-size: 50px; font-weight: 900; color: #f8fafc; letter-spacing: -0.03em; line-height: 1.18; }
+.s8w-head em { font-style: normal; color: #34d399; }
+.s8w-top { padding: 18px 28px; border-radius: 18px; background: rgba(15, 25, 34, 0.90); border: 1.5px solid rgba(56, 189, 248, 0.40); display: flex; justify-content: space-between; align-items: center; gap: 18px; flex-wrap: wrap; }
+.s8w-top-main { font-size: 24px; font-weight: 900; color: #f8fafc; }
+.s8w-top-main b { color: #38bdf8; }
+.s8w-top-tag { font-family: var(--font-mono); font-size: 18px; font-weight: 800; color: #bae6fd; padding: 8px 16px; border-radius: 999px; background: rgba(56,189,248,0.14); border: 1px solid rgba(56,189,248,0.38); }
+.s8w-grid { display: grid; grid-template-columns: 1fr 220px 1fr; gap: 18px; align-items: stretch; }
+.s8w-box { padding: 30px 28px; border-radius: 22px; background: rgba(12, 20, 28, 0.90); border: 2px solid rgba(255,255,255,0.16); display: flex; flex-direction: column; justify-content: space-between; gap: 14px; }
+.s8w-box.tune { border-color: rgba(56, 189, 248, 0.55); }
+.s8w-box.sealed { border-color: rgba(52, 211, 153, 0.72); background: rgba(16, 185, 129, 0.11); box-shadow: 0 0 34px rgba(16,185,129,0.22); }
+.s8w-badge { display: inline-block; align-self: flex-start; font-family: var(--font-mono); font-size: 15.5px; font-weight: 900; padding: 6px 14px; border-radius: 999px; }
+.s8w-num { font-family: var(--font-mono); font-size: 62px; font-weight: 900; line-height: 1; }
+.s8w-title { font-size: 26px; font-weight: 900; color: #ffffff; }
+.s8w-sub { font-size: 19px; font-weight: 700; color: #cbd5e1; line-height: 1.4; word-break: keep-all; }
+.s8w-wall { padding: 24px 16px; border-radius: 20px; background: linear-gradient(180deg, rgba(251,191,36,0.16), rgba(244,63,94,0.14)); border: 2px dashed #fbbf24; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; }
+.s8w-wall-t { font-family: var(--font-mono); font-size: 18px; font-weight: 900; color: #fde68a; letter-spacing: 0.06em; }
+.s8w-wall-big { font-family: var(--font-mono); font-size: 36px; font-weight: 900; color: #ffffff; line-height: 1.05; }
+.s8w-wall-s { font-size: 15.5px; font-weight: 800; color: #fef3c7; line-height: 1.35; word-break: keep-all; }
+.s8w-foot { font-size: 19.5px; font-weight: 700; color: #94a3b8; text-align: center; }
+
+
+/* Slide 08: OpenCV 5 core strength chips */
+.s8-chips { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.s8-chip { padding: 10px 18px; border-radius: 999px; background: rgba(16, 185, 129, 0.12); border: 1.5px solid rgba(52, 211, 153, 0.42); font-size: 18px; font-weight: 800; color: #a7f3d0; letter-spacing: -0.01em; }
+.s8-chip b { font-family: var(--font-mono); color: #34d399; margin-right: 6px; }
+
+</style>
+</head>
+<body>
+<div class="deck-viewport">
+  <div class="deck-frame" id="deck-frame" style="transform: scale(0.7177);">
+    <canvas id="factory-canvas" width="1920" height="1080"></canvas>
+
+    <!-- SLIDE 1: HERO -->
+    <section class="slide active" data-slide="1">
+      <div class="top-bar">
+        <div class="white-pill"><span class="white-pill-ico">SS</span><span>PROJECT 02 · <em>auditable</em>, zero-CDN</span></div>
+        <div class="slide-num-pill">01 / 12</div>
+      </div>
+
+      <div class="hero-grid">
+        <div>
+          <h1 class="hero-title">SURFACE<br><span class="accent">SENTINEL</span></h1>
+          <p class="hero-sub">금속 표면 스크래치 검사에서 출발한<br>현장형 검토 시스템</p>
+          <div class="hero-chips">
+            <span class="hero-chip">r20 FROZEN</span>
+            <span class="hero-chip">4-STATE TRIAGE</span>
+            <span class="hero-chip">100% OFFLINE</span>
+          </div>
+        </div>
+
+        <div class="bezel-wrap">
+          <div class="bezel-tab"><span class="dot"></span><span>KSDD2 #20117 · 검사 단계</span></div>
+          <div class="bezel-box">
+            <div class="bezel-inner">
+              <div class="hero-stack-preview">
+                <div class="hero-mini-layer" style="--lc:#38bdf8">
+                  <img src="assets/slide-5d22088b81.jpg" alt="Original">
+                  <div class="hero-mini-cap">01 ORIGINAL</div>
+                </div>
+                <div class="hero-mini-layer" style="--lc:#a855f7">
+                  <img src="assets/slide-9a2c15c5c1.jpg" alt="Z-Map">
+                  <div class="hero-mini-cap">04 Z-MAP</div>
+                </div>
+                <div class="hero-mini-layer" style="--lc:#f43f5e">
+                  <img src="assets/slide-099c3ad148.jpg" alt="Overlay">
+                  <div class="hero-mini-cap">07 NG · 1.1992</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-caption"><span>SCOPE</span>KolektorSDD2 3,335장 기반 · 픽셀 기반 결함 후보 검사 &amp; 사람 검토 보조</div>
+    </section>
+
+<section class="slide" data-slide="2">
+      <div class="top-bar">
+        <div class="white-pill"><span class="white-pill-ico">01</span><span>Field <em>Pain Point</em> &amp; Why 4-State</span></div>
+        <div class="slide-num-pill">02 / 12</div>
+      </div>
+      <div class="s2bg-wrap">
+        <div class="s2bg-head">왜 기존 <em class="r">OK/NG 2분류</em>는 금속 현장에서 실패할까?</div>
+        <div class="s2bg-bar">
+          <span>현장 난제: <b>금속 조명 난반사</b> · <b>거친 표면 질감</b> · <b>미세 스크래치</b></span>
+          <span style="color:#94a3b8;font-size:18px;">육안 검사 피로 누적 + 애매한 경계 사례 필연 발생</span>
+        </div>
+
+        <div class="s2bg-grid">
+          <div class="s2bg-card old">
+            <div class="s2bg-ct" style="color:#fda4af;">기존 2분류 (OK / NG 강제)의 딜레마</div>
+            <div class="s2bg-item">
+              <b style="color:#fb7185;">① 기준을 빡빡하게 잡으면 → 정상 오탐(False-NG) 폭발</b>
+              <span>멀쩡한 금속 무늬까지 불량으로 찍어 양품 폐기 · 생산 라인 중단</span>
+            </div>
+            <div class="s2bg-item">
+              <b style="color:#fbbf24;">② 기준을 느슨하게 잡으면 → 불량 놓침(Escape) 증가</b>
+              <span>미세 흠집을 정상으로 통과시켜 출하 사고 · 고객 클레임 발생</span>
+            </div>
+          </div>
+
+          <div class="s2bg-arr">→</div>
+
+          <div class="s2bg-card sol">
+            <div class="s2bg-ct" style="color:#6ee7b7;">Surface Sentinel 해법: 4-State 완충 설계</div>
+            <div class="s2bg-item" style="border-color:rgba(52,211,153,0.35);">
+              <b style="color:#34d399;">① 확실한 것만 기계가 자동 처리 (OK · NG)</b>
+              <span>분명한 정상은 자동 통과, 확실한 불량(점수 ≥0.50)은 즉시 격리</span>
+            </div>
+            <div class="s2bg-item" style="border-color:rgba(52,211,153,0.35);">
+              <b style="color:#fde68a;">② 애매한 건 REVIEW로 분리 + 에이전트가 위험순 정렬</b>
+              <span>사람은 위험 상위 물량부터 빠르게 확정(4.09배) · 깨진 파일은 ERROR 격리</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+<section class="slide" data-slide="3">
+      <div class="top-bar">
+        <div class="white-pill"><span class="white-pill-ico">02</span><span>4-State <em>Truth Table</em> &amp; Contract</span></div>
+        <div class="slide-num-pill">03 / 12</div>
+      </div>
+      <div class="sx-wrap" style="gap:14px;">
+        <div class="sx-head">확실한 것만 자동, <em>애매한 건 사람</em>에게 넘깁니다</div>
+        <div class="s2ex-grid">
+          <div class="s2ex-card" style="border-color:rgba(52,211,153,0.52);">
+            <div class="s2ex-top">
+              <div class="s2ex-k" style="color:#34d399;">OK</div>
+              <div class="s2ex-v">확실한 정상</div>
+              <div class="s2ex-sub">자동 통과 · 결함 후보 없음</div>
+            </div>
+            <div class="s2ex-thumb" style="--ac:rgba(52,211,153,0.65);">
+              <div class="s2ex-img-wrap"><img src="assets/slide-f824494507.png" alt="OK 정상 제품 예시"></div>
+              <div class="s2ex-meta"><span>정상 부품 예시</span><span style="color:#34d399;">0.0000</span></div>
+            </div>
+          </div>
+
+          <div class="s2ex-card" style="border-color:rgba(251,113,133,0.52);">
+            <div class="s2ex-top">
+              <div class="s2ex-k" style="color:#fb7185;">NG</div>
+              <div class="s2ex-v">확실한 불량</div>
+              <div class="s2ex-sub">자동 격리 · 점수 ≥ 0.50</div>
+            </div>
+            <div class="s2ex-thumb" style="--ac:rgba(251,113,133,0.72);">
+              <div class="s2ex-img-wrap"><img src="assets/slide-6d437b8948.png" alt="NG 불량 제품 예시"></div>
+              <div class="s2ex-meta"><span>불량 부품 예시</span><span style="color:#fb7185;">1.5000</span></div>
+            </div>
+          </div>
+
+          <div class="s2ex-card" style="border-color:rgba(251,191,36,0.52);">
+            <div class="s2ex-top">
+              <div class="s2ex-k" style="color:#fbbf24;">REVIEW</div>
+              <div class="s2ex-v">애매함</div>
+              <div class="s2ex-sub">사람 확인 · 다수 약후보/경계</div>
+            </div>
+            <div class="s2ex-thumb" style="--ac:rgba(251,191,36,0.72);">
+              <div class="s2ex-img-wrap"><img src="assets/slide-b39f0fdcd3.png" alt="REVIEW 보류 제품 예시"></div>
+              <div class="s2ex-meta"><span>보류 부품 예시</span><span style="color:#fbbf24;">0.3839</span></div>
+            </div>
+          </div>
+
+          <div class="s2ex-card" style="border-color:rgba(148,163,184,0.45);">
+            <div class="s2ex-top">
+              <div class="s2ex-k" style="color:#94a3b8;">ERROR</div>
+              <div class="s2ex-v">사진 손상</div>
+              <div class="s2ex-sub">검사 제외 · E_INPUT_*</div>
+            </div>
+            <div class="s2ex-thumb" style="--ac:rgba(148,163,184,0.55);">
+              <div class="s2ex-img-wrap"><svg viewBox="0 0 180 270" style="width:100%;height:100%;max-height:458px;display:block;" role="img" aria-label="손상 또는 규격 초과 파일 예시">
+  <defs>
+    <pattern id="errDiag" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="14" stroke="rgba(148,163,184,0.14)" stroke-width="4"></line>
+    </pattern>
+  </defs>
+  <rect x="26" y="10" width="128" height="250" rx="8" fill="#0d1520" stroke="rgba(148,163,184,0.45)" stroke-width="1.8" stroke-dasharray="6 5"></rect>
+  <rect x="28" y="12" width="124" height="246" rx="6" fill="url(#errDiag)"></rect>
+  <!-- Corrupted scanline blocks -->
+  <rect x="34" y="34" width="112" height="16" fill="rgba(148,163,184,0.18)"></rect>
+  <rect x="34" y="56" width="74" height="10" fill="rgba(251,113,133,0.22)"></rect>
+  <rect x="34" y="198" width="112" height="14" fill="rgba(148,163,184,0.14)"></rect>
+  <rect x="52" y="218" width="94" height="9" fill="rgba(251,113,133,0.18)"></rect>
+  <!-- Warning circle + broken file icon -->
+  <circle cx="90" cy="122" r="30" fill="rgba(248,113,113,0.14)" stroke="#f87171" stroke-width="2.2"></circle>
+  <path d="M78 110 L102 134 M102 110 L78 134" stroke="#fca5a5" stroke-width="4" stroke-linecap="round"></path>
+  <text x="90" y="172" text-anchor="middle" fill="#f8fafc" font-size="13.5" font-family="monospace" font-weight="900">DECODE FAIL</text>
+  <text x="90" y="189" text-anchor="middle" fill="#94a3b8" font-size="11.5" font-weight="700">깨진 파일 · 규격 초과</text>
+</svg></div>
+              <div class="s2ex-meta"><span>오류 입력 예시</span><span style="color:#cbd5e1;">E_INPUT_*</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="sx-foot" style="font-size:17.5px;">핵심 원칙: 확실한 건 자동 판정(OK/NG), 애매한 건 사람 검토(REVIEW), 오류는 안전 제외(ERROR) · 실제 tune 부품 예시</div>
+      </div>
+    </section>
+
+<section class="slide" data-slide="4">
+      <div class="top-bar">
+        <div class="white-pill"><span class="white-pill-ico">03</span><span>10-Stage Pipeline &amp; <em>minAreaRect</em></span></div>
+        <div class="slide-num-pill">04 / 12</div>
+      </div>
+      <div class="s5f-wrap">
+        <div class="s5f-head-row">
+          <div class="s5f-head">사진 한 장이 판정까지 가는 <em>전체 10단계</em></div>
+          <div class="s5f-legend">
+            <span class="s5f-lg"><i style="background:#34d399;"></i>실선: 영상 처리(사진 변화)</span>
+            <span class="s5f-lg"><i style="background:#fbbf24;"></i>점선: 코드·수식 계산 단계</span>
+          </div>
+        </div>
+
+        <div class="s5f-rows">
+          <!-- ROW 1: 01 -> 02 -> 03 -> 04 -> 05 -->
+          <div class="s5f-row">
+            <!-- 01 -->
+            <div class="s5f-card calc" style="--ac:#38bdf8;">
+              <div class="s5f-top"><span class="s5f-num">01</span><span class="s5f-tag code">코드 검사</span></div>
+              <div class="s5f-calc-body">
+                <div class="s5f-calc-ico">SHA-256</div>
+                <div class="s5f-calc-main">파일 손상·크기 검증</div>
+                <div class="s5f-calc-sub">깨진 파일·규격 초과는<br>즉시 ERROR 제외<br>(아직 이미지 열기 전)</div>
+              </div>
+              <div class="s5f-foot">
+                <div class="s5f-title">입력 검증</div>
+                <div class="s5f-fn">validate_input</div>
+              </div>
+            </div>
+            <div class="s5f-arr">→</div>
+
+            <!-- 02 -->
+            <div class="s5f-card" style="--ac:#38bdf8;">
+              <div class="s5f-top"><span class="s5f-num">02</span><span class="s5f-tag">5.3ms</span></div>
+              <div class="s5f-body"><img src="assets/slide-5d22088b81.jpg" alt="02 원본 로드"></div>
+              <div class="s5f-foot">
+                <div class="s5f-title">원본 로드 · 흑백 변환</div>
+                <div class="s5f-fn">load_image</div>
+              </div>
+            </div>
+            <div class="s5f-arr">→</div>
+
+            <!-- 03 -->
+            <div class="s5f-card" style="--ac:#10b981;">
+              <div class="s5f-top"><span class="s5f-num">03</span><span class="s5f-tag">2.3ms</span></div>
+              <div class="s5f-body"><img src="assets/slide-0750688eb4.jpg" alt="03 ROI 분리"></div>
+              <div class="s5f-foot">
+                <div class="s5f-title">검사 영역(ROI) 분리</div>
+                <div class="s5f-fn">prepare_roi</div>
+              </div>
+            </div>
+            <div class="s5f-arr">→</div>
+
+            <!-- 04 -->
+            <div class="s5f-card" style="--ac:#a855f7;">
+              <div class="s5f-top"><span class="s5f-num">04</span><span class="s5f-tag">30.6ms</span></div>
+              <div class="s5f-body dual"><img src="assets/slide-8bcf0b970c.jpg" alt="Dual Morph"><img src="assets/slide-9a2c15c5c1.jpg" alt="MAD Z-Map"></div>
+              <div class="s5f-foot">
+                <div class="s5f-title">Dual Morph · Z-Map</div>
+                <div class="s5f-fn">preprocess</div>
+              </div>
+            </div>
+            <div class="s5f-arr">→</div>
+
+            <!-- 05 -->
+            <div class="s5f-card" style="--ac:#06b6d4;">
+              <div class="s5f-top"><span class="s5f-num">05</span><span class="s5f-tag">1.0ms</span></div>
+              <div class="s5f-body"><img src="assets/slide-22252999d9.jpg" alt="05 결함 후보 추출"></div>
+              <div class="s5f-foot">
+                <div class="s5f-title">후보 추출 (z≥7.6)</div>
+                <div class="s5f-fn">generate_candidates</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ROW 2: 06 -> 07 -> 08 -> 09 -> 10 -->
+          <div class="s5f-row">
+            <!-- 06 -->
+            <div class="s5f-card" style="--ac:#ec4899;">
+              <div class="s5f-top"><span class="s5f-num">06</span><span class="s5f-tag">2.6ms</span></div>
+              <div class="s5f-body"><img src="assets/slide-edb01acc0e.jpg" alt="06 마스크 정제"></div>
+              <div class="s5f-foot">
+                <div class="s5f-title">잡음 제거 (≥40px)</div>
+                <div class="s5f-fn">refine_mask (open3·close5)</div>
+              </div>
+            </div>
+            <div class="s5f-arr">→</div>
+
+            <!-- 07 -->
+            <div class="s5f-card" style="--ac:#fbbf24;border-width:2.6px;box-shadow:0 0 24px rgba(251,191,36,0.34);">
+              <div class="s5f-top"><span class="s5f-num">07</span><span class="s5f-tag">34.3ms</span></div>
+              <div class="s5f-body"><img src="assets/slide-099c3ad148.jpg" alt="07 minAreaRect 계측"></div>
+              <div class="s5f-foot">
+                <div class="s5f-title">외접박스 계측 (767px)</div>
+                <div class="s5f-fn">analyze_components</div>
+              </div>
+            </div>
+            <div class="s5f-arr">→</div>
+
+            <!-- 08 -->
+            <div class="s5f-card calc" style="--ac:#fbbf24;">
+              <div class="s5f-top"><span class="s5f-num">08</span><span class="s5f-tag code">수식 계산</span></div>
+              <div class="s5f-calc-body">
+                <div class="s5f-calc-ico">√(면적/800 × 대비/22)<br>각 항 상한 1.5</div>
+                <div class="s5f-calc-big" style="color:#fbbf24;">1.1992</div>
+                <div class="s5f-calc-sub">#20117: 767/800 = 0.96<br>122/22 → 상한 1.5<br>√(0.96 × 1.5) = 1.1992</div>
+              </div>
+              <div class="s5f-foot">
+                <div class="s5f-title">결함 점수 계산</div>
+                <div class="s5f-fn">calculate_score</div>
+              </div>
+            </div>
+            <div class="s5f-arr">→</div>
+
+            <!-- 09 -->
+            <div class="s5f-card calc final" style="--ac:#fb7185;">
+              <div class="s5f-top"><span class="s5f-num">09</span><span class="s5f-tag code">기준 판정</span></div>
+              <div class="s5f-calc-body">
+                <div class="s5f-calc-ico">기준: NG ≥ 0.50</div>
+                <div class="s5f-calc-big" style="color:#fb7185;">NG 확정</div>
+                <div class="s5f-calc-sub">1.1992 ≥ 0.50 충족<br>OK / NG / REVIEW 중<br>최종 상태 결정</div>
+              </div>
+              <div class="s5f-foot">
+                <div class="s5f-title">4-State 최종 판정</div>
+                <div class="s5f-fn">decide_status</div>
+              </div>
+            </div>
+            <div class="s5f-arr">→</div>
+
+            <!-- 10 -->
+            <div class="s5f-card calc" style="--ac:#34d399;">
+              <div class="s5f-top"><span class="s5f-num">10</span><span class="s5f-tag code">기록 저장</span></div>
+              <div class="s5f-calc-body">
+                <div class="s5f-calc-ico">PNG + JSONL + DB</div>
+                <div class="s5f-calc-main" style="color:#6ee7b7;">원본 보존 저장</div>
+                <div class="s5f-calc-sub">오버레이 증거 사진과<br>SQLite Append-Only(8/8)<br>감사 이력 영구 기록</div>
+              </div>
+              <div class="s5f-foot">
+                <div class="s5f-title">증거 · 이력 저장</div>
+                <div class="s5f-fn">save_evidence</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+<section class="slide" data-slide="5">
+      <div class="top-bar">
+        <div class="white-pill"><span class="white-pill-ico">04</span><span>3,335 <em>Zero-Leakage</em> Split &amp; Seal</span></div>
+        <div class="slide-num-pill">05 / 12</div>
+      </div>
+      <div class="s8w-wrap">
+        <div class="s8w-head">3,335장 데이터 <em>누출 제로</em> 봉인 구조</div>
+
+        <div class="s8w-top">
+          <div class="s8w-top-main">전체 KolektorSDD2 <b>3,335장</b> <span style="font-size:19px;color:#cbd5e1;">(정상 2,979장 · 결함 356장)</span></div>
+          <div class="s8w-top-tag">유사한 부품 사진 군집 기준 원천 분할</div>
+        </div>
+
+        <div class="s8w-grid">
+          <div class="s8w-box tune">
+            <span class="s8w-badge" style="background:rgba(56,189,248,0.18);color:#7dd3fc;border:1px solid #38bdf8;">개발 · 튜닝용 (완전 공개)</span>
+            <div>
+              <div class="s8w-num" style="color:#38bdf8;">2,001장</div>
+              <div class="s8w-title" style="margin-top:8px;">tune 분할 (60%)</div>
+            </div>
+            <div class="s8w-sub">정상 1,787장 · 결함 214장<br>• 전처리 3종 비교 · 23개 설정 조합 탐색<br>• <strong>r20 채택 및 규칙 동결</strong>에만 사용</div>
+          </div>
+
+          <div class="s8w-wall">
+            <svg width="46" height="46" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+  <rect x="10" y="21" width="28" height="21" rx="5" fill="rgba(251,191,36,0.22)" stroke="#fbbf24" stroke-width="2.6"></rect>
+  <path d="M16 21V15C16 10.58 19.58 7 24 7C28.42 7 32 10.58 32 15V21" stroke="#fde68a" stroke-width="2.8" stroke-linecap="round"></path>
+  <circle cx="24" cy="31" r="3" fill="#fbbf24"></circle>
+</svg>
+            <div class="s8w-wall-t">DATA WALL</div>
+            <div class="s8w-wall-big">중복 0장</div>
+            <div class="s8w-wall-s">비슷한 제품 군집 분리<br>잠금 파일로 접근 차단<br>사후 수정 원천 차단</div>
+          </div>
+
+          <div class="s8w-box sealed">
+            <span class="s8w-badge" style="background:rgba(16,185,129,0.22);color:#6ee7b7;border:1px solid #34d399;">독립 봉인 시험 (접근 잠금)</span>
+            <div>
+              <div class="s8w-num" style="color:#34d399;">1,334장</div>
+              <div class="s8w-title" style="margin-top:8px;">sealed test 분할 (40%)</div>
+            </div>
+            <div class="s8w-sub">정상 1,192장 · 결함 142장<br>• r20 동결 전까지 <strong>단 1장도 미열람</strong><br>• 최종 성적 검증(09장)에 쓴 <strong>순수 블라인드 시험지</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+<section class="slide" data-slide="6">
+      <div class="top-bar">
+        <div class="white-pill"><span class="white-pill-ico">05</span><span>Preprocess <em>Benchmark</em> &amp; r20 Adoption</span></div>
+        <div class="slide-num-pill">06 / 12</div>
+      </div>
+      <div class="s3b-wrap">
+        <div class="s3b-head">전처리 3종 중 <em>Dual Morphology</em>만 불량을 제대로 찾았습니다<div style="font-size:21px;font-weight:700;color:#94a3b8;margin-top:10px;letter-spacing:0;">막대 = 흠집 위치 적중률 · 개발 데이터 동일 조건 비교</div></div>
+        <div class="s3b-bars">
+          <div class="s3b-row">
+            <div class="s3b-name">CLAHE<small>국소 대비 · 조명 얼룩 증폭</small></div>
+            <div class="s3b-track"><div class="s3b-fill" style="width:24.3%"></div></div>
+            <div class="s3b-pct">15.5%</div>
+            <div class="s3b-sub">놓침 52.7%<small>과검 0.0% · P95 8.4ms</small></div>
+          </div>
+          <div class="s3b-row">
+            <div class="s3b-name">Sobel<small>경계선 · 결함 내부 파편화</small></div>
+            <div class="s3b-track"><div class="s3b-fill" style="width:39.3%"></div></div>
+            <div class="s3b-pct">25.0%</div>
+            <div class="s3b-sub">놓침 44.5%<small>과검 0.0% · P95 6.8ms</small></div>
+          </div>
+          <div class="s3b-row s3b-win">
+            <div class="s3b-name">Dual Morph<small>Top-hat + Black-hat (r20)</small></div>
+            <div class="s3b-track"><div class="s3b-fill s3b-fill-win" style="width:100%"></div></div>
+            <div class="s3b-pct">63.7%</div>
+            <div class="s3b-sub">놓침 11.6%<small>과검 4.9% · P95 16.1ms</small></div>
+          </div>
+        </div>
+        <div class="s3b-explain">
+          <div class="s3b-explain-row"><b>Dual Morphology란?</b>흠집을 제외한 주변 바탕 밝기를 먼저 추정한 뒤, 그 바탕보다 <strong>유난히 밝은 긁힘</strong>과 <strong>유난히 어두운 찍힘</strong>만 뽑아내는 전처리입니다.</div>
+          <div class="s3b-explain-row"><b>왜 이걸 채택했나?</b>금속 표면은 밝은 스크래치와 어두운 파임이 함께 생깁니다. CLAHE·Sobel은 과검은 0%였지만 불량을 절반 안팎(44.5~52.7%) 놓쳤고, Dual Morphology만 결함 위치 63.7%를 적중하며 놓침을 11.6%로 줄였습니다. 대가로 과검 4.9%를 받아들였습니다.</div>
+        </div>
+      </div>
+    </section>
+
+<section class="slide" data-slide="7">
+      <div class="top-bar">
+        <div class="white-pill"><span class="white-pill-ico">06</span><span>Why <em>r20</em>? · T05 Adoption Evidence</span></div>
+        <div class="slide-num-pill">07 / 12</div>
+      </div>
+      <div class="s4b-wrap">
+        <div class="s4b-head">23개 중 <em>5개만</em> 게이트를 넘었고, 그중 <em>r20</em> 채택</div>
+        <div class="s4b-meta">23가지 설정 중 5가지 합격 기준을 모두 넘은 5개 비교 · r20 (민감도 7.6 · 밝기차 16 · 최소 크기 40px)</div>
+
+        <div class="s4b-gates">
+          <div class="s4b-gate">불량 놓침<span>Escape</span><b>≤15%</b></div>
+          <div class="s4b-gate">통계 오차상한<span>Wilson 95%</span><b>≤20%</b></div>
+          <div class="s4b-gate">정상 오탐<span>False-NG</span><b>≤20%</b></div>
+          <div class="s4b-gate">사람 검토율<span>Review</span><b>≤40%</b></div>
+          <div class="s4b-gate">위치 맞춤<span>Recall@0.10</span><b>≥50%</b></div>
+        </div>
+
+        <div class="s4b-chart-box">
+          <div class="s4b-chart-top">
+            <div class="s4b-chart-title">5개 통과 후보 + 탈락 1개(r23) 비교 — 낮을수록 좋은 과검률과 잘림 건수</div>
+            <div class="s4b-legend">
+              <span class="s4b-lg"><i class="s4b-dot" style="background:#38bdf8;"></i>정상 오탐(False-NG)</span>
+              <span class="s4b-lg"><i class="s4b-dot" style="background:#34d399;"></i>r20 (채택)</span>
+              <span class="s4b-lg"><i class="s4b-dot" style="background:rgba(148,163,184,0.55);"></i>사람 검토율(Review)</span>
+              <span class="s4b-lg"><i class="s4b-dash"></i>검토율 상한 40%</span>
+            </div>
+          </div>
+          <svg viewBox="0 0 1150 296" style="width:100%;height:auto;max-height:330px;display:block;" role="img" aria-label="r17~r23 후보별 False-NG, Review, 잘림 건수 비교 그래프"><line x1="72" y1="230.0" x2="1128" y2="230.0" stroke="rgba(148,163,184,0.38)" stroke-width="1.8"></line><line x1="72" y1="145.0" x2="1128" y2="145.0" stroke="rgba(148,163,184,0.18)" stroke-width="1.2" stroke-dasharray="4 4"></line><line x1="72" y1="60.0" x2="1128" y2="60.0" stroke="#fb7185" stroke-width="2.4" stroke-dasharray="8 5"></line><text x="60" y="236.0" text-anchor="end" fill="#94a3b8" font-size="16" font-family="monospace" font-weight="800">0%</text><text x="60" y="151.0" text-anchor="end" fill="#94a3b8" font-size="16" font-family="monospace" font-weight="800">20%</text><text x="60" y="66.0" text-anchor="end" fill="#fb7185" font-size="16" font-family="monospace" font-weight="900">40%</text><rect x="118" y="16" width="80" height="24" rx="12" fill="rgba(148,163,184,0.18)" stroke="rgba(148,163,184,0.38)" stroke-width="1.2"></rect><text x="158" y="33" text-anchor="middle" fill="#e2e8f0" font-size="13.5" font-family="monospace" font-weight="800">5/5 PASS</text><rect x="106" y="173.6" width="46" height="56.4" rx="6" fill="#38bdf8"></rect><text x="129" y="165.6" text-anchor="middle" fill="#bae6fd" font-size="16" font-family="monospace" font-weight="900">13.26%</text><rect x="164" y="63.9" width="48" height="166.1" rx="6" fill="rgba(148,163,184,0.48)"></rect><text x="188" y="85.9" text-anchor="middle" fill="#f8fafc" font-size="14.5" font-family="monospace" font-weight="900">39.1%</text><text x="158" y="256" text-anchor="middle" fill="#e2e8f0" font-size="18" font-family="monospace" font-weight="800">r17 (z=7.0)</text><text x="158" y="279" text-anchor="middle" fill="#cbd5e1" font-size="15" font-weight="700">후보 잘림 163건</text><rect x="294" y="16" width="80" height="24" rx="12" fill="rgba(148,163,184,0.18)" stroke="rgba(148,163,184,0.38)" stroke-width="1.2"></rect><text x="334" y="33" text-anchor="middle" fill="#e2e8f0" font-size="13.5" font-family="monospace" font-weight="800">5/5 PASS</text><rect x="282" y="173.6" width="46" height="56.4" rx="6" fill="#38bdf8"></rect><text x="305" y="165.6" text-anchor="middle" fill="#bae6fd" font-size="16" font-family="monospace" font-weight="900">13.26%</text><rect x="340" y="74.5" width="48" height="155.5" rx="6" fill="rgba(148,163,184,0.48)"></rect><text x="364" y="96.5" text-anchor="middle" fill="#f8fafc" font-size="14.5" font-family="monospace" font-weight="900">36.6%</text><text x="334" y="256" text-anchor="middle" fill="#e2e8f0" font-size="18" font-family="monospace" font-weight="800">r18 (z=7.0)</text><text x="334" y="279" text-anchor="middle" fill="#cbd5e1" font-size="15" font-weight="700">후보 잘림 65건</text><rect x="470" y="16" width="80" height="24" rx="12" fill="rgba(148,163,184,0.18)" stroke="rgba(148,163,184,0.38)" stroke-width="1.2"></rect><text x="510" y="33" text-anchor="middle" fill="#e2e8f0" font-size="13.5" font-family="monospace" font-weight="800">5/5 PASS</text><rect x="458" y="191.0" width="46" height="39.0" rx="6" fill="#38bdf8"></rect><text x="481" y="183.0" text-anchor="middle" fill="#bae6fd" font-size="16" font-family="monospace" font-weight="900">9.18%</text><rect x="516" y="62.2" width="48" height="167.8" rx="6" fill="rgba(148,163,184,0.48)"></rect><text x="540" y="84.2" text-anchor="middle" fill="#f8fafc" font-size="14.5" font-family="monospace" font-weight="900">39.5%</text><text x="510" y="256" text-anchor="middle" fill="#e2e8f0" font-size="18" font-family="monospace" font-weight="800">r19 (z=7.3)</text><text x="510" y="279" text-anchor="middle" fill="#cbd5e1" font-size="15" font-weight="700">후보 잘림 19건</text><rect x="608" y="6" width="156" height="284" rx="16" fill="rgba(16,185,129,0.15)" stroke="#34d399" stroke-width="2.6"></rect><rect x="638" y="15" width="96" height="26" rx="13" fill="#10b981"></rect><text x="686" y="33" text-anchor="middle" fill="#04120c" font-size="14.5" font-weight="900">★ r20 채택</text><rect x="634" y="205.3" width="46" height="24.7" rx="6" fill="#34d399"></rect><text x="657" y="197.3" text-anchor="middle" fill="#6ee7b7" font-size="16" font-family="monospace" font-weight="900">5.82%</text><rect x="692" y="64.5" width="48" height="165.5" rx="6" fill="rgba(16,185,129,0.60)"></rect><text x="716" y="86.5" text-anchor="middle" fill="#ecfdf5" font-size="14.5" font-family="monospace" font-weight="900">38.9%</text><text x="686" y="256" text-anchor="middle" fill="#ffffff" font-size="19" font-family="monospace" font-weight="900">r20 (z=7.6)</text><text x="686" y="279" text-anchor="middle" fill="#34d399" font-size="15.5" font-weight="800">후보 잘림 0건 (유일)</text><rect x="822" y="16" width="80" height="24" rx="12" fill="rgba(148,163,184,0.18)" stroke="rgba(148,163,184,0.38)" stroke-width="1.2"></rect><text x="862" y="33" text-anchor="middle" fill="#e2e8f0" font-size="13.5" font-family="monospace" font-weight="800">5/5 PASS</text><rect x="810" y="191.0" width="46" height="39.0" rx="6" fill="#38bdf8"></rect><text x="833" y="183.0" text-anchor="middle" fill="#bae6fd" font-size="16" font-family="monospace" font-weight="900">9.18%</text><rect x="868" y="73.0" width="48" height="157.0" rx="6" fill="rgba(148,163,184,0.48)"></rect><text x="892" y="95.0" text-anchor="middle" fill="#f8fafc" font-size="14.5" font-family="monospace" font-weight="900">36.9%</text><text x="862" y="256" text-anchor="middle" fill="#e2e8f0" font-size="18" font-family="monospace" font-weight="800">r21 (z=7.3)</text><text x="862" y="279" text-anchor="middle" fill="#cbd5e1" font-size="15" font-weight="700">후보 잘림 5건</text><rect x="988" y="12" width="100" height="26" rx="13" fill="rgba(251,113,133,0.24)" stroke="#fb7185" stroke-width="1.3"></rect><text x="1038" y="30" text-anchor="middle" fill="#fda4af" font-size="14" font-weight="900">FAIL (&gt;40%)</text><rect x="986" y="214.1" width="46" height="15.9" rx="6" fill="#475569"></rect><text x="1009" y="206.1" text-anchor="middle" fill="#94a3b8" font-size="16" font-family="monospace" font-weight="900">3.75%</text><rect x="1044" y="53.1" width="48" height="176.9" rx="6" fill="#fb7185"></rect><text x="1068" y="75.1" text-anchor="middle" fill="#fff1f2" font-size="14.5" font-family="monospace" font-weight="900">41.6%</text><text x="1038" y="256" text-anchor="middle" fill="#fb7185" font-size="18" font-family="monospace" font-weight="900" text-decoration="line-through">r23 (z=8.0)</text><text x="1038" y="279" text-anchor="middle" fill="#fbbf24" font-size="15" font-weight="800">검토율 초과 (잘림 3)</text></svg>
+        </div>
+
+        <div class="s4b-why">
+          <div class="s4b-why-item"><span class="s4b-big">5.82%</span><span class="s4b-txt">정상 과검(False-NG) — 통과 5개 중 최저<small>불량 놓침 11.68% · 위치 적중 59.92%</small></span></div>
+          <div class="s4b-why-item"><span class="s4b-big">0건</span><span class="s4b-txt">후보 잘림 — 통과 5개 중 유일<small>의심 점이 너무 많아 진짜 흠집이 밀려 잘리는 일 없음</small></span></div>
+        </div>
+      </div>
+    </section>
+
+<section class="slide" data-slide="8">
+      <div class="top-bar">
+        <div class="white-pill"><span class="white-pill-ico">07</span><span>OpenCV vs <em>YOLO</em> vs <em>GBDT</em></span></div>
+        <div class="slide-num-pill">08 / 12</div>
+      </div>
+      <div class="sx-wrap">
+        <div class="sx-head" style="font-size:45px;">딥러닝·머신러닝도 비교했지만, <em>더 나은 성능은 확인되지 않았습니다</em></div>
+        <div class="sx-grid3">
+          <div class="sx-box" style="border-color:rgba(52,211,153,0.6);background:rgba(16,185,129,0.12);">
+            <div class="sx-k" style="color:#34d399;">OpenCV r20</div>
+            <div class="sx-verdict" style="color:#34d399;">채택</div>
+            <div class="sx-lbl">과검 5.82% · 놓침 11.68%</div>
+            <div class="sx-sub">규칙 기반 · GPU 없이 동작</div>
+          </div>
+          <div class="sx-box" style="border-color:rgba(251,191,36,0.45);">
+            <div class="sx-k" style="color:#fbbf24;">YOLO</div>
+            <div class="sx-verdict" style="color:#fbbf24;">보류</div>
+            <div class="sx-lbl">불량 절반 이상(55.8%) 놓침</div>
+            <div class="sx-sub">400장 검증 · OpenCV에 합쳐도 추가 이득 0</div>
+          </div>
+          <div class="sx-box" style="border-color:rgba(148,163,184,0.4);">
+            <div class="sx-k" style="color:#94a3b8;">GBDT</div>
+            <div class="sx-verdict" style="color:#94a3b8;">보류</div>
+            <div class="sx-lbl">놓침 6.98% · 과검 0.56%</div>
+            <div class="sx-sub">400장 검증 · 놓침 개선 통계 미입증(−2.3%p)</div>
+          </div>
+        </div>
+        <div class="s8-chips">
+          <span class="s8-chip"><b>01</b>재현 오차 0.0</span>
+          <span class="s8-chip"><b>02</b>100% 오프라인</span>
+          <span class="s8-chip"><b>03</b>CPU 158ms 실시간</span>
+          <span class="s8-chip"><b>04</b>학습·GPU 불필요</span>
+          <span class="s8-chip"><b>05</b>100% 설명 가능</span>
+        </div>
+      </div>
+    </section>
+
+<section class="slide" data-slide="9">
+      <div class="top-bar">
+        <div class="white-pill"><span class="white-pill-ico">08</span><span>Final Test (1,334) &amp; <em>Trust</em></span></div>
+        <div class="slide-num-pill">09 / 12</div>
+      </div>
+      <div class="s7c-wrap">
+        <div class="s7c-head">처음 본 <em>1,334장</em> 최종 시험 결과와 <em>신뢰 잠금장치</em></div>
+        <div class="s7c-sub">개발용(2,001장)과 중복 0장인 봉인 시험지 기준 · 미리 정한 5가지 목표 중 <b style="color:#fbbf24;">4개 통과</b> (통계 오차 상한 1개 초과)</div>
+
+        <div class="s7c-kpis">
+          <div class="s7c-kpi">
+            <div class="s7c-kpi-k">정상 오탐</div>
+            <div class="s7c-kpi-en">False-NG</div>
+            <div class="s7c-kpi-v">7.21%</div>
+            <div class="s7c-kpi-d">86 / 1,192장</div>
+            <div class="s7c-kpi-s">기준 ≤20% 통과</div>
+          </div>
+          <div class="s7c-kpi">
+            <div class="s7c-kpi-k">불량 놓침</div>
+            <div class="s7c-kpi-en">Escape</div>
+            <div class="s7c-kpi-v" style="color:#38bdf8;">14.79%</div>
+            <div class="s7c-kpi-d">21 / 142장</div>
+            <div class="s7c-kpi-s">점추정 ≤15% 통과 · <span style="color:#fbbf24;">상한 21.55%</span></div>
+          </div>
+          <div class="s7c-kpi">
+            <div class="s7c-kpi-k">사람 검토율</div>
+            <div class="s7c-kpi-en">REVIEW</div>
+            <div class="s7c-kpi-v" style="color:#fbbf24;">34.7%</div>
+            <div class="s7c-kpi-d">463 / 1,334장</div>
+            <div class="s7c-kpi-s">기준 ≤40% 통과</div>
+          </div>
+          <div class="s7c-kpi">
+            <div class="s7c-kpi-k">1장 처리 속도</div>
+            <div class="s7c-kpi-en">CPU Batch P95</div>
+            <div class="s7c-kpi-v" style="color:#e2e8f0;">0.16초</div>
+            <div class="s7c-kpi-d">158ms / 장 (P50 105ms)</div>
+            <div class="s7c-kpi-s">tune 20장 배치 · 저장 포함 · GPU 없음</div>
+          </div>
+        </div>
+
+        <div class="s7c-note">
+          <b>현 단계 결론:</b>불량 표본(142장) 기준 통계 최악 오차(21.55%)가 안전선(20%)을 살짝 넘어, <strong>무인 투입보다 사람 검토 보조용</strong>으로 운용합니다.
+        </div>
+
+        <div class="s7c-trust">
+          <div class="s7c-pill"><b>기록 조작 원천 차단</b><span>DB 수정·삭제 잠금 (8/8)</span></div>
+          <div class="s7c-pill"><b>보고서 = 웹 실서버 일치</b><span>결과 재현 검사 통과</span></div>
+          <div class="s7c-pill"><b>자동 안전 검증 완료</b><span>안전 게이트 6/6 · 자동 테스트 998건 통과</span></div>
+        </div>
+      </div>
+    </section>
+
+<section class="slide" data-slide="10">
+      <div class="top-bar">
+        <div class="white-pill"><span class="white-pill-ico">09</span><span>Simple <em>GUI</em> &amp; Human Collaboration</span></div>
+        <div class="slide-num-pill">10 / 12</div>
+      </div>
+      <div class="sx-wrap" style="gap:28px;">
+        <div class="sx-head" style="font-size:44px;white-space:nowrap;">판정은 기계가, <em>우선순위는 에이전트가</em>, 확정은 사람이</div>
+        <div class="sx-grid3">
+          <div class="sx-box" style="border-color:rgba(52,211,153,0.45);">
+            <div class="sx-k" style="color:#34d399;font-size:23px;white-space:nowrap;">100% 오프라인 콘솔</div>
+            <div class="sx-verdict" style="white-space:nowrap;">4개 화면</div>
+            <div class="sx-lbl">10단계 과정 · 사진 검사<br>허브 · 통계</div>
+            <div class="sx-sub">인터넷 없이 공장 PC에서<br>바로 실행</div>
+          </div>
+          <div class="sx-box" style="border-color:rgba(56,189,248,0.45);">
+            <div class="sx-k" style="color:#38bdf8;font-size:23px;white-space:nowrap;">연속 검사 &amp; 원본 보존 DB</div>
+            <div class="sx-verdict" style="white-space:nowrap;">20장 한 번에</div>
+            <div class="sx-lbl">엑셀(CSV) 저장<br>불량 이력 보관</div>
+            <div class="sx-sub">DB 잠금으로 검사 기록<br>수정·삭제 차단</div>
+          </div>
+          <div class="sx-box" style="border-color:rgba(251,191,36,0.5);">
+            <div class="sx-k" style="color:#fbbf24;font-size:23px;white-space:nowrap;">우선순위 에이전트 (정렬 전용)</div>
+            <div class="sx-verdict" style="color:#fbbf24;white-space:nowrap;">4.09배 효율</div>
+            <div class="sx-lbl">상위 10%만 봐도<br>결함 40.9% 발견</div>
+            <div class="sx-sub">위험한 REVIEW부터 줄 세우기<br>기계 판정 수정 0건</div>
+          </div>
+        </div>
+        <div class="s3b-explain" style="background:rgba(56,189,248,0.08);border-color:rgba(56,189,248,0.36);">
+          <div class="s3b-explain-row"><b style="color:#38bdf8;">웹 구현 방식</b><strong>FastAPI + 순수 HTML·JS</strong>로 만들어 외부 인터넷 없이 100% 오프라인으로 동작합니다.</div>
+          <div class="s3b-explain-row"><b style="color:#38bdf8;">엔진·DB 연동</b>화면에서 바로 <strong>OpenCV r20 엔진</strong>을 호출해 검사하고, 모든 판정과 사람 검토 기록은 수정 불가능한 DB에 남깁니다.</div>
+        </div>
+      </div>
+    </section>
+
+<section class="slide" data-slide="11">
+      <div class="top-bar">
+        <div class="white-pill"><span class="white-pill-ico">10</span><span>Live <em>OpenCV r20</em> Console Demo</span></div>
+        <div class="slide-num-pill">11 / 12</div>
+      </div>
+      <div class="sx-wrap">
+        <div class="sx-head"><em>실제 화면</em>으로 보여드리겠습니다</div>
+        <div class="sx-grid3" style="gap:18px;">
+          <div class="sx-box" style="padding:0;overflow:hidden;border-color:rgba(52,211,153,0.4);">
+            <img src="assets/slide-0ab097bf28.jpg" alt="시네마 시연 화면" style="width:100%;height:375px;object-fit:cover;object-position:top;display:block;">
+            <div style="padding:16px 18px;">
+              <div class="sx-v" style="font-size:26px;color:#34d399;">10단계 검사 과정</div>
+            </div>
+          </div>
+          <div class="sx-box" style="padding:0;overflow:hidden;border-color:rgba(56,189,248,0.4);">
+            <img src="assets/slide-b6b3cbcf60.jpg" alt="실시간 검사 화면" style="width:100%;height:375px;object-fit:cover;object-position:top;display:block;">
+            <div style="padding:16px 18px;">
+              <div class="sx-v" style="font-size:26px;color:#38bdf8;">사진 검사</div>
+            </div>
+          </div>
+          <div class="sx-box" style="padding:0;overflow:hidden;border-color:rgba(251,191,36,0.4);">
+            <img src="assets/slide-0c2af12d03.jpg" alt="REVIEW 상세 화면" style="width:100%;height:375px;object-fit:cover;object-position:top;display:block;">
+            <div style="padding:16px 18px;">
+              <div class="sx-v" style="font-size:26px;color:#fbbf24;">상세 보기</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+<section class="slide" data-slide="12">
+      <div class="top-bar">
+        <div class="white-pill"><span class="white-pill-ico">11</span><span>Explicit <em>Limitations</em> &amp; Next Steps</span></div>
+        <div class="slide-num-pill">12 / 12</div>
+      </div>
+      <div class="sx-wrap" style="gap:28px;">
+        <div class="sx-head"><em>한계</em>와 <em>개선 방향</em></div>
+        <div class="sx-grid3" style="gap:22px;">
+          <div class="sx-panel" style="border-color:rgba(251,191,36,0.45);display:flex;flex-direction:column;justify-content:center;gap:22px;padding:34px 28px;">
+            <div class="sx-panel-t" style="color:#fbbf24;font-size:34px;">① 실제 크기</div>
+            <div class="sx-line" style="font-size:27px;">mm 단위는 못 잼</div>
+            <div class="sx-line" style="font-size:27px;color:#34d399;">→ 카메라 보정</div>
+          </div>
+          <div class="sx-panel" style="border-color:rgba(251,191,36,0.45);display:flex;flex-direction:column;justify-content:center;gap:22px;padding:34px 28px;">
+            <div class="sx-panel-t" style="color:#fbbf24;font-size:34px;">② 데이터 부족</div>
+            <div class="sx-line" style="font-size:27px;">불량 사진이 적음</div>
+            <div class="sx-line" style="font-size:27px;color:#34d399;">→ 현장 데이터로 재검증</div>
+          </div>
+          <div class="sx-panel" style="border-color:rgba(251,191,36,0.45);display:flex;flex-direction:column;justify-content:center;gap:22px;padding:34px 28px;">
+            <div class="sx-panel-t" style="color:#fbbf24;font-size:34px;">③ 사람 확인 34.7%</div>
+            <div class="sx-line" style="font-size:27px;">3장 중 1장은 사람이 봄</div>
+            <div class="sx-line" style="font-size:27px;color:#34d399;">→ 반사 보강으로 줄이기</div>
+          </div>
+        </div>
+        <div class="sx-foot" style="font-size:40px;font-weight:900;color:#f8fafc;letter-spacing:0.06em;margin-top:4px;text-shadow:0 0 28px rgba(52,211,153,0.45);">감사합니다 · <span style="color:#34d399;">Q &amp; A</span></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="deck-nav" id="deck-nav">
+  <button type="button" id="nav-prev">← 이전</button>
+  <span id="nav-counter">1 / 12</span>
+  <button type="button" id="nav-next">다음 →</button>
+  <button type="button" id="nav-fs" style="display:none">전체화면</button>
+</div>
+
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var isStatic = params.get("static") === "1";
+  if (isStatic) { document.body.classList.add("static-capture"); }
+
+  var frame = document.getElementById("deck-frame");
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var counter = document.getElementById("nav-counter");
+  var canvas = document.getElementById("factory-canvas");
+  var ctx = canvas.getContext("2d");
+  var cur = Math.max(0, Math.min(slides.length - 1, (parseInt(params.get("slide"), 10) || 1) - 1));
+  var phase = 0;
+
+  function fit() {
+    var sx = window.innerWidth / 1920;
+    var sy = window.innerHeight / 1080;
+    var scale = Math.min(sx, sy);
+    frame.style.transform = "scale(" + scale.toFixed(4) + ")";
+  }
+
+  function show(idx) {
+    cur = Math.max(0, Math.min(slides.length - 1, idx));
+    slides.forEach(function (s, i) { s.classList.toggle("active", i === cur); });
+    counter.textContent = (cur + 1) + " / " + slides.length;
+    drawBg(cur, phase);
+  }
+
+  function drawBg(slideIdx, t) {
+    var w = 1920, h = 1080;
+    ctx.clearRect(0, 0, w, h);
+    var g = ctx.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0, "#050a0d");
+    g.addColorStop(0.5, "#0a1512");
+    g.addColorStop(1, "#140e07");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+
+    var pan = (slideIdx - 3.5) * 42;
+    // Warm amber & emerald volumetric bokeh
+    var b1 = ctx.createRadialGradient(340 - pan, 260, 20, 340 - pan, 260, 680);
+    b1.addColorStop(0, "rgba(245, 158, 11, 0.24)");
+    b1.addColorStop(1, "rgba(245, 158, 11, 0)");
+    ctx.fillStyle = b1;
+    ctx.fillRect(0, 0, w, h);
+
+    var b2 = ctx.createRadialGradient(1520 + pan * 0.7, 380, 20, 1520 + pan * 0.7, 380, 720);
+    b2.addColorStop(0, "rgba(16, 185, 129, 0.22)");
+    b2.addColorStop(1, "rgba(16, 185, 129, 0)");
+    ctx.fillStyle = b2;
+    ctx.fillRect(0, 0, w, h);
+
+    // Perspective conveyor belt floor
+    var hy = 670, vx = 980 - pan * 1.5;
+    ctx.save();
+    ctx.strokeStyle = "rgba(251, 191, 36, 0.13)";
+    ctx.lineWidth = 2;
+    for (var i = -6; i <= 6; i++) {
+      ctx.beginPath();
+      ctx.moveTo(vx + i * 36, hy);
+      ctx.lineTo(vx + i * 340, h + 60);
+      ctx.stroke();
+    }
+    for (var r = 1; r <= 7; r++) {
+      var f = ((r + (t % 1)) / 7);
+      var ry = hy + Math.pow(f, 1.85) * (h - hy + 30);
+      ctx.strokeStyle = "rgba(52, 211, 153, " + (0.04 + f * 0.10).toFixed(3) + ")";
+      ctx.beginPath();
+      ctx.moveTo(0, ry);
+      ctx.lineTo(w, ry);
+      ctx.stroke();
+    }
+
+    // Glowing scanner arch in background
+    ctx.strokeStyle = "rgba(52, 211, 153, 0.26)";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(vx, hy + 20, 340, Math.PI, 0);
+    ctx.stroke();
+
+    // Overhead warm light bars
+    ctx.strokeStyle = "rgba(253, 230, 138, 0.25)";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(460 - pan * 0.4, 130); ctx.lineTo(740 - pan * 0.4, 72);
+    ctx.moveTo(1260 - pan * 0.4, 80); ctx.lineTo(1540 - pan * 0.4, 140);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Slide 4 interactive highlight
+  var l7Cards = document.querySelectorAll(".l7-card");
+  l7Cards.forEach(function (card) {
+    card.addEventListener("click", function () {
+      l7Cards.forEach(function (c) { c.classList.remove("active"); });
+      card.classList.add("active");
+    });
+  });
+
+  document.getElementById("nav-prev").addEventListener("click", function () { show(cur - 1); });
+  document.getElementById("nav-next").addEventListener("click", function () { show(cur + 1); });
+  document.getElementById("nav-fs").addEventListener("click", function () {
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen();
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.code === "ArrowRight" || e.code === "Space" || e.code === "PageDown") {
+      e.preventDefault(); show(cur + 1);
+    } else if (e.code === "ArrowLeft" || e.code === "PageUp") {
+      e.preventDefault(); show(cur - 1);
+    } else if (e.key === "f" || e.key === "F") {
+      e.preventDefault();
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) { document.documentElement.requestFullscreen(); } else if (document.exitFullscreen) { document.exitFullscreen(); }
+    } else if (e.key >= "1" && e.key <= "9") {
+      show(parseInt(e.key, 10) - 1);
+    }
+  });
+  window.addEventListener("resize", fit);
+
+  fit();
+  show(cur);
+  if (!isStatic) {
+    (function loop() {
+      phase = (phase + 0.004) % 1;
+      drawBg(cur, phase);
+      requestAnimationFrame(loop);
+    })();
+  }
+})();
+</script>
+
+</body></html>

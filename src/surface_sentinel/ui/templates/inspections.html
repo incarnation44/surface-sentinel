@@ -172,7 +172,7 @@
         } else {
           foot.appendChild(el("span", "meta", ""));
         }
-        var dl = el("a", "", "근거 보기 →"); dl.href = link.href; dl.style.fontWeight = "800";
+        var dl = el("a", "", "상세 보기 →"); dl.href = link.href; dl.style.fontWeight = "800";
         foot.appendChild(dl);
         card.appendChild(foot);
       } catch (err) {
@@ -193,7 +193,7 @@
     }
     kpi("", "속도 (저장 포함)", Math.round(ms) + " ms/장");
     if (firstId !== null) {
-      var a = el("a", "", n === 1 ? "근거 보기 →" : "첫 결과 근거 보기 →"); a.href = "/inspections/" + encodeURIComponent(firstId); a.style.fontWeight = "800";
+      var a = el("a", "", n === 1 ? "상세 보기 →" : "첫 결과 상세 보기 →"); a.href = "/inspections/" + encodeURIComponent(firstId); a.style.fontWeight = "800";
       bar.appendChild(a);
     }
     var re = el("button", "", "기록 표 새로고침"); re.type = "button"; re.style.padding = "4px 10px"; re.style.fontSize = "12px";
